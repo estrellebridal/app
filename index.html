@@ -249,6 +249,7 @@
                 <div class="grid-main">
                     <div>
                         <div class="card" style="margin-bottom:14px"><div class="card-header"><h2 class="card-title">Today's Appointments</h2></div><div class="card-body" id="dashToday"><div class="loading">Loading</div></div></div>
+                        <div class="card" style="margin-bottom:14px" id="followUpCard"><div class="card-header" style="background:var(--blush)"><h2 class="card-title">📞 Follow-ups Due</h2></div><div class="card-body" id="dashFollowUps"><div class="loading">Loading</div></div></div>
                         <div class="card"><div class="card-header"><h2 class="card-title">This Week</h2></div><div class="card-body" id="dashWeek"><div class="loading">Loading</div></div></div>
                     </div>
                     <div class="card"><div class="card-header"><h2 class="card-title">Recent</h2></div><div class="card-body" id="dashRecent"><div class="loading">Loading</div></div></div>
@@ -634,6 +635,10 @@
                             <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
                             <div class="card-body" id="cOptions"></div>
                         </div>
+                        <div class="card">
+                            <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
+                            <div class="card-body" id="cPhotos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
+                        </div>
                     </div>
                     <div>
                         <div class="card" style="margin-bottom:12px">
@@ -715,7 +720,7 @@
                 
                 <!-- Appointment Details -->
                 <div style="background:var(--cream);padding:12px;border-radius:5px;margin-bottom:12px">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate"></div><div class="form-group"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate" onchange="updateFollowUpDate()"></div><div class="form-group"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
                     <div class="form-row">
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input" id="aType" onchange="toggleConsultationReason()"><option value="consultation">Consultation</option><option value="first fitting">First Fitting</option><option value="fitting">Fitting</option><option value="final fitting">Final Fitting</option><option value="pickup">Pickup</option></select></div>
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input" id="aConsultant"><option value="">Select...</option></select></div>
@@ -790,6 +795,30 @@
                     <div class="form-group">
                         <label class="form-label">Next Steps / Follow-up</label>
                         <input type="text" class="form-input" id="aLogNextSteps" placeholder="e.g. Coming back Saturday with mom, order Aria sample size 6">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">📅 Follow-up Reminder</label>
+                            <select class="form-input" id="aFollowUp" onchange="updateFollowUpDate()">
+                                <option value="">No follow-up</option>
+                                <option value="0">Immediate (today)</option>
+                                <option value="1">Tomorrow</option>
+                                <option value="2">In 2 days</option>
+                                <option value="3">In 3 days</option>
+                                <option value="5">In 5 days</option>
+                                <option value="7">In 1 week</option>
+                                <option value="14">In 2 weeks</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="followUpDateDisplay" style="display:none">
+                            <label class="form-label">Follow-up Date</label>
+                            <input type="text" class="form-input" id="aFollowUpDate" readonly style="background:var(--blush)">
+                        </div>
+                    </div>
+                    <div class="form-group" id="followUpNotesGroup" style="display:none">
+                        <label class="form-label">📝 Follow-up Notes (for staff)</label>
+                        <textarea class="form-input" id="aFollowUpNotes" style="min-height:50px" placeholder="e.g. Call to check if she decided on the Aria dress, mention we can hold it for 48 hours..."></textarea>
                     </div>
                     
                     <div class="form-group">
@@ -920,6 +949,7 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="confirmApptId">
+                <div id="followUpNotesReminder" style="display:none"></div>
                 <div class="form-row" style="margin-bottom:12px">
                     <div class="form-group">
                         <label class="form-label">To</label>
@@ -1067,9 +1097,10 @@
                 <div class="steps">
                     <div class="step active" id="ys1"><span class="step-num">1</span><div class="step-label">Measurements</div></div>
                     <div class="step" id="ys2"><span class="step-num">2</span><div class="step-label">Order</div></div>
-                    <div class="step" id="ys3"><span class="step-num">3</span><div class="step-label">Contract</div></div>
-                    <div class="step" id="ys4"><span class="step-num">4</span><div class="step-label">Signature</div></div>
-                    <div class="step" id="ys5"><span class="step-num">5</span><div class="step-label">Email</div></div>
+                    <div class="step" id="ys3"><span class="step-num">3</span><div class="step-label">Photos</div></div>
+                    <div class="step" id="ys4"><span class="step-num">4</span><div class="step-label">Contract</div></div>
+                    <div class="step" id="ys5"><span class="step-num">5</span><div class="step-label">Signature</div></div>
+                    <div class="step" id="ys6"><span class="step-num">6</span><div class="step-label">Email</div></div>
                 </div>
                 <div id="yStep1">
                     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
@@ -1198,9 +1229,27 @@
                     </div>
                 </div>
                 <div id="yStep3" style="display:none">
-                    <div class="contract" id="contractPreview" style="max-height:65vh;overflow-y:auto;font-size:12px;padding:20px"></div>
+                    <p style="font-size:11px;color:var(--rose);margin-bottom:12px">Upload photos of the bride in her dress. These will be saved to Google Drive and can be sent to the designer.</p>
+                    
+                    <div style="border:2px dashed var(--champagne);border-radius:8px;padding:30px;text-align:center;margin-bottom:16px;cursor:pointer;transition:all 0.2s" id="photoDropZone" onclick="$('photoInput').click()">
+                        <div style="font-size:32px;margin-bottom:8px">📸</div>
+                        <div style="font-size:12px;color:var(--taupe)">Click to select photos or drag & drop</div>
+                        <div style="font-size:10px;color:var(--rose);margin-top:4px">JPG, PNG up to 10MB each</div>
+                        <input type="file" id="photoInput" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(event)">
+                    </div>
+                    
+                    <div id="photoPreviewGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px;margin-bottom:16px"></div>
+                    
+                    <div id="photoUploadStatus" style="display:none;padding:10px;background:var(--blush);border-radius:5px;font-size:11px;margin-bottom:12px">
+                        <span id="photoUploadText">Uploading photos...</span>
+                    </div>
+                    
+                    <p style="font-size:10px;color:var(--taupe)">💡 Tip: Photos are optional. You can skip this step and add photos later from the client profile.</p>
                 </div>
                 <div id="yStep4" style="display:none">
+                    <div class="contract" id="contractPreview" style="max-height:65vh;overflow-y:auto;font-size:12px;padding:20px"></div>
+                </div>
+                <div id="yStep5" style="display:none">
                     <div class="grid-2">
                         <div>
                             <p style="font-size:11px;font-weight:600;margin-bottom:8px">Measurement Initials</p>
@@ -1235,7 +1284,7 @@
                         </div>
                     </div>
                 </div>
-                <div id="yStep5" style="display:none">
+                <div id="yStep6" style="display:none">
                     <p style="font-size:11px;color:var(--rose);margin-bottom:12px">Review the email before sending. You can edit the subject and message.</p>
                     <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="emailTo" readonly style="background:var(--blush)"></div>
                     <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="emailSubject"></div>
@@ -1568,6 +1617,33 @@
                     </div>
                 </div>`;
             }).join('') : '<div class="empty">No appointments today</div>';
+
+            // Follow-ups due today or overdue
+            const todayStr = today();
+            const followUps = data.appointments
+                .filter(a => a.FollowUpDate && !a.FollowUpDone && getDateStr(a.FollowUpDate) <= todayStr)
+                .sort((a, b) => getDateStr(a.FollowUpDate).localeCompare(getDateStr(b.FollowUpDate)));
+            
+            $('followUpCard').style.display = followUps.length ? 'block' : 'none';
+            $('dashFollowUps').innerHTML = followUps.length ? followUps.map(a => {
+                const c = getClient(a.ClientID);
+                const isOverdue = getDateStr(a.FollowUpDate) < todayStr;
+                const hasNotes = a.FollowUpNotes && a.FollowUpNotes.trim();
+                return `<div class="list-item" style="${isOverdue ? 'background:#fff5f5;' : ''}flex-direction:column;align-items:stretch;gap:8px">
+                    <div style="display:flex;align-items:center;gap:10px" onclick="${c ? `openClient(${a.ClientID})` : ''}">
+                        <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
+                        <div class="item-info" style="flex:1">
+                            <div class="item-name">${c ? c.FirstName + ' ' + c.LastName : '?'}</div>
+                            <div class="item-meta">${isOverdue ? '⚠️ Overdue from ' + fmtDate(a.FollowUpDate) : 'Due today'} · ${a.Type||''} on ${fmtDate(a.Date)}</div>
+                        </div>
+                        <div style="display:flex;gap:4px">
+                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openFollowUpEmail(${a.ID})">📧 Email</button>
+                            <button class="btn btn-sm btn-success" onclick="event.stopPropagation();markFollowUpDone(${a.ID})">✓ Done</button>
+                        </div>
+                    </div>
+                    ${hasNotes ? `<div style="background:var(--cream);padding:8px 10px;border-radius:5px;font-size:11px;margin-left:38px;border-left:3px solid var(--rose)"><strong>📝 Notes:</strong> ${a.FollowUpNotes}</div>` : ''}
+                </div>`;
+            }).join('') : '<div class="empty">No follow-ups due</div>';
 
             // Weekly appointments (excluding today)
             const weekAppts = data.appointments
@@ -2053,6 +2129,10 @@ The Estrelle Bridal Team`;
             $('confirmSubject').value = `Estrelle Bridal - Appointment Confirmation for ${client.FirstName}`;
             $('confirmBody').value = body;
             
+            // Hide follow-up notes reminder for regular confirmations
+            const notesDiv = $('followUpNotesReminder');
+            if (notesDiv) notesDiv.style.display = 'none';
+            
             openModal('confirmEmail');
         }
 
@@ -2093,6 +2173,83 @@ The Estrelle Bridal Team`;
             }
         }
 
+        // ========== FOLLOW-UP EMAILS ==========
+        function openFollowUpEmail(apptId) {
+            const appt = data.appointments.find(a => a.ID == apptId);
+            if (!appt) { toast('Appointment not found', 'error'); return; }
+            
+            const client = getClient(appt.ClientID);
+            if (!client) { toast('Client not found', 'error'); return; }
+            
+            if (!client.Email) { 
+                toast('No email address for this client', 'error'); 
+                return; 
+            }
+            
+            // Get client's top options (starred)
+            const topOptions = data.topoptions
+                .filter(o => o.ClientID == client.ID && (o.IsFavorite === true || o.IsFavorite === 'TRUE'))
+                .map(o => `${o.Designer} - ${o.Style}`)
+                .join(', ');
+            
+            // Build follow-up email template
+            const body = `Hi ${client.FirstName},
+
+It was so lovely meeting you at your ${appt.Type || 'consultation'} on ${fmtDate(appt.Date)}! I wanted to follow up and see how you're feeling about everything.
+
+${topOptions ? `You looked absolutely stunning in your top choices:\n• ${topOptions.split(', ').join('\n• ')}\n` : ''}
+If you have any questions about any of the dresses you tried on, or if you'd like to schedule another appointment, please don't hesitate to reach out!
+
+We're here to help you find THE dress.
+
+Warmly,
+The Estrelle Bridal Team`;
+            
+            $('confirmApptId').value = apptId;
+            $('confirmTo').value = client.Email;
+            $('confirmSubject').value = `Following up on your Estrelle Bridal visit, ${client.FirstName}!`;
+            $('confirmBody').value = body;
+            
+            // Show follow-up notes if they exist
+            const notesDiv = $('followUpNotesReminder');
+            if (notesDiv) {
+                if (appt.FollowUpNotes && appt.FollowUpNotes.trim()) {
+                    notesDiv.innerHTML = `<div style="background:#fff3cd;padding:10px;border-radius:5px;margin-bottom:12px;font-size:11px;border-left:3px solid #f0ad4e"><strong>📝 Consultant Notes:</strong> ${appt.FollowUpNotes}</div>`;
+                    notesDiv.style.display = 'block';
+                } else {
+                    notesDiv.style.display = 'none';
+                }
+            }
+            
+            openModal('confirmEmail');
+        }
+        
+        async function markFollowUpDone(apptId) {
+            updateRecord('Appointments', apptId, { FollowUpDone: true });
+            
+            // Update local data
+            const appt = data.appointments.find(a => a.ID == apptId);
+            if (appt) appt.FollowUpDone = true;
+            
+            toast('Follow-up marked complete', 'success');
+            renderDash();
+        }
+        
+        function updateFollowUpDate() {
+            const days = $('aFollowUp').value;
+            if (days === '') {
+                $('followUpDateDisplay').style.display = 'none';
+                $('followUpNotesGroup').style.display = 'none';
+                $('aFollowUpDate').value = '';
+            } else {
+                const apptDate = new Date($('aDate').value + 'T00:00:00');
+                apptDate.setDate(apptDate.getDate() + parseInt(days));
+                $('aFollowUpDate').value = fmtDate(apptDate.toISOString().split('T')[0]);
+                $('followUpDateDisplay').style.display = 'block';
+                $('followUpNotesGroup').style.display = 'block';
+            }
+        }
+
         function populateApptModal(forClientId = null) {
             // Reset fields
             $('editApptId').value = '';
@@ -2112,6 +2269,13 @@ The Estrelle Bridal Team`;
             
             // Reset structured visit log fields
             ['aLogDresses','aLogFeedback','aLogStyle','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => $(id).value = '');
+            
+            // Reset follow-up
+            $('aFollowUp').value = '';
+            $('followUpDateDisplay').style.display = 'none';
+            $('followUpNotesGroup').style.display = 'none';
+            $('aFollowUpDate').value = '';
+            $('aFollowUpNotes').value = '';
             
             // Reset consultation reason
             $('consultationReasonGroup').style.display = 'block'; // Show by default (consultation)
@@ -2301,6 +2465,30 @@ The Estrelle Bridal Team`;
                 $('aLogOther').value = notes;
             }
             
+            // Load follow-up setting
+            if (a.FollowUpDate) {
+                // Calculate days from appointment date to follow-up date
+                const apptDate = new Date(getDateStr(a.Date) + 'T00:00:00');
+                const followDate = new Date(getDateStr(a.FollowUpDate) + 'T00:00:00');
+                const daysDiff = Math.round((followDate - apptDate) / (1000 * 60 * 60 * 24));
+                
+                // Try to match to dropdown option
+                const options = [0, 1, 2, 3, 5, 7, 14];
+                const closest = options.includes(daysDiff) ? daysDiff : '';
+                $('aFollowUp').value = closest !== '' ? String(closest) : '';
+                
+                $('aFollowUpDate').value = fmtDate(a.FollowUpDate);
+                $('followUpDateDisplay').style.display = 'block';
+                $('followUpNotesGroup').style.display = 'block';
+                $('aFollowUpNotes').value = a.FollowUpNotes || '';
+            } else {
+                $('aFollowUp').value = '';
+                $('aFollowUpDate').value = '';
+                $('followUpDateDisplay').style.display = 'none';
+                $('followUpNotesGroup').style.display = 'none';
+                $('aFollowUpNotes').value = '';
+            }
+            
             openModal('newAppt');
         }
 
@@ -2365,13 +2553,30 @@ The Estrelle Bridal Team`;
             if (nextSteps) noteParts.push(`📋 Next: ${nextSteps}`);
             if (other) noteParts.push(`📝 Notes: ${other}`);
             
+            // Calculate follow-up date
+            let followUpDate = '';
+            const followUpDays = $('aFollowUp').value;
+            if (followUpDays !== '') {
+                const apptDate = new Date($('aDate').value + 'T00:00:00');
+                apptDate.setDate(apptDate.getDate() + parseInt(followUpDays));
+                followUpDate = apptDate.toISOString().split('T')[0];
+            }
+            
+            // Get client name for easier sheet viewing
+            const client = getClient(clientId);
+            const clientName = client ? `${client.FirstName} ${client.LastName}` : '';
+            
             const record = { 
-                ClientID: +clientId, 
+                ClientID: +clientId,
+                ClientName: clientName,
                 Date: $('aDate').value, 
                 Time: $('aTime').value, 
                 Type: $('aType').value, 
                 Consultant: $('aConsultant').value, 
-                Notes: noteParts.join('\n\n')
+                Notes: noteParts.join('\n\n'),
+                FollowUpDate: followUpDate,
+                FollowUpNotes: $('aFollowUpNotes').value.trim(),
+                FollowUpDone: false
             };
             
             // Close immediately
@@ -4453,6 +4658,7 @@ www.estrellebridal.com`;
             renderTimeline();
             renderClientAppts();
             renderClientOptions();
+            renderClientPhotos();
             renderVisitHistory();
             showPage('consult', true); // true = skip unsaved check since we're opening
         }
@@ -4728,7 +4934,8 @@ www.estrellebridal.com`;
                 if (!designer) { toast('Enter custom designer name'); return; }
             }
             
-            const record = { ClientID: currentClient.ID, Designer: designer, Style: $('oStyle').value, Price: +$('oPrice').value || 0, Size: $('oSize').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
+            const clientName = `${currentClient.FirstName} ${currentClient.LastName}`;
+            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Price: +$('oPrice').value || 0, Size: $('oSize').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
             if (!record.Designer) { toast('Select designer'); return; }
             
             closeModal('addOption');
@@ -4754,6 +4961,103 @@ www.estrellebridal.com`;
             renderClientOptions();
             toast('Deleted', 'success');
         }
+
+        // ========== CLIENT PHOTOS ==========
+        function renderClientPhotos() {
+            if (!currentClient) return;
+            
+            let photos = [];
+            if (currentClient.Photos) {
+                try {
+                    photos = typeof currentClient.Photos === 'string' ? JSON.parse(currentClient.Photos) : currentClient.Photos;
+                } catch (e) {
+                    photos = [];
+                }
+            }
+            
+            $('cPhotos').innerHTML = photos.length ? photos.map((url, idx) => `
+                <div style="position:relative;border-radius:6px;overflow:hidden;aspect-ratio:1;background:var(--cream);cursor:pointer" onclick="viewPhoto('${url}')">
+                    <img src="${url}" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;color:var(--rose);font-size:10px\\'>Failed</div>'">
+                    <button onclick="event.stopPropagation();deleteClientPhoto(${idx})" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:white;border:none;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px">×</button>
+                </div>
+            `).join('') : '<div class="empty" style="grid-column:1/-1">No photos yet</div>';
+        }
+        
+        function viewPhoto(url) {
+            window.open(url, '_blank');
+        }
+        
+        async function deleteClientPhoto(idx) {
+            if (!confirm('Delete this photo?')) return;
+            
+            let photos = [];
+            try {
+                photos = typeof currentClient.Photos === 'string' ? JSON.parse(currentClient.Photos) : currentClient.Photos;
+            } catch (e) {
+                return;
+            }
+            
+            photos.splice(idx, 1);
+            updateRecord('Clients', currentClient.ID, { Photos: JSON.stringify(photos) });
+            currentClient.Photos = JSON.stringify(photos);
+            renderClientPhotos();
+            toast('Photo deleted', 'success');
+        }
+        
+        function openPhotoUpload() {
+            // Create a quick file input for direct upload
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.multiple = true;
+            input.onchange = async (e) => {
+                const files = Array.from(e.target.files);
+                toast('Uploading...', 'success');
+                
+                let uploadedUrls = [];
+                for (const file of files) {
+                    if (!file.type.startsWith('image/')) continue;
+                    if (file.size > 10 * 1024 * 1024) {
+                        toast(`${file.name} too large`, 'error');
+                        continue;
+                    }
+                    
+                    const reader = new FileReader();
+                    const dataUrl = await new Promise(resolve => {
+                        reader.onload = (ev) => resolve(ev.target.result);
+                        reader.readAsDataURL(file);
+                    });
+                    
+                    try {
+                        const result = await api('POST', {
+                            action: 'uploadPhoto',
+                            clientId: currentClient.ID,
+                            clientName: `${currentClient.FirstName}_${currentClient.LastName}`,
+                            fileName: file.name,
+                            data: dataUrl
+                        });
+                        if (result && result.url) uploadedUrls.push(result.url);
+                    } catch (err) {
+                        console.error('Upload error:', err);
+                    }
+                }
+                
+                if (uploadedUrls.length > 0) {
+                    let existing = [];
+                    try {
+                        existing = currentClient.Photos ? (typeof currentClient.Photos === 'string' ? JSON.parse(currentClient.Photos) : currentClient.Photos) : [];
+                    } catch (e) {}
+                    
+                    const allPhotos = [...existing, ...uploadedUrls];
+                    updateRecord('Clients', currentClient.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                    renderClientPhotos();
+                    toast(`${uploadedUrls.length} photo(s) uploaded!`, 'success');
+                }
+            };
+            input.click();
+        }
+
 
         async function saveClientNotes() {
             updateRecord('Clients', currentClient.ID, {
@@ -4855,6 +5159,8 @@ www.estrellebridal.com`;
             customMeasurements = [];
             measUnit = 'in';
             setMeasUnit('in');
+            pendingPhotos = [];
+            renderPhotoPreview();
             const meas = typeof currentClient.Measurements === 'string' ? JSON.parse(currentClient.Measurements || '{}') : (currentClient.Measurements || {});
             ['mBust','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = meas[id.slice(1).toLowerCase()] || '');
             $('mNotes').value = '';
@@ -4976,18 +5282,18 @@ www.estrellebridal.com`;
         }
 
         function updateYSteps() {
-            [1,2,3,4,5].forEach(i => {
+            [1,2,3,4,5,6].forEach(i => {
                 $('ys'+i).classList.remove('active','done');
                 $('yStep'+i).style.display = 'none';
                 if (i < yStep) $('ys'+i).classList.add('done');
                 if (i === yStep) { $('ys'+i).classList.add('active'); $('yStep'+i).style.display = 'block'; }
             });
             $('yPrev').style.display = yStep > 1 ? 'inline-flex' : 'none';
-            $('yNext').style.display = yStep < 5 ? 'inline-flex' : 'none';
-            $('yDone').style.display = yStep === 5 ? 'inline-flex' : 'none';
-            if (yStep === 3) genContract();
-            if (yStep === 4) initSig();
-            if (yStep === 5) prepareEmail();
+            $('yNext').style.display = yStep < 6 ? 'inline-flex' : 'none';
+            $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            if (yStep === 4) genContract();
+            if (yStep === 5) initSig();
+            if (yStep === 6) prepareEmail();
         }
 
         function yNext() {
@@ -5004,7 +5310,7 @@ www.estrellebridal.com`;
                     custom: [...customMeasurements]
                 };
             }
-            if (yStep === 4) {
+            if (yStep === 5) {
                 // Validate required fields
                 const bustInit = $('init_bust')?.value?.trim();
                 const waistInit = $('init_waist')?.value?.trim();
@@ -5044,7 +5350,7 @@ www.estrellebridal.com`;
                 currentOrder.consultant = consultant ? consultant.Name : '';
                 currentOrder.initials = collectInitials();
             }
-            if (yStep < 5) { yStep++; updateYSteps(); }
+            if (yStep < 6) { yStep++; updateYSteps(); }
         }
         
         function isCanvasBlank(canvas) {
@@ -5058,6 +5364,107 @@ www.estrellebridal.com`;
         }
         
         function yPrev() { if (yStep > 1) { yStep--; updateYSteps(); } }
+
+        // ========== PHOTO UPLOAD ==========
+        let pendingPhotos = [];
+        
+        // Drag and drop handlers
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = $('photoDropZone');
+            if (dropZone) {
+                dropZone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = 'var(--rose)';
+                    dropZone.style.background = 'var(--blush)';
+                });
+                dropZone.addEventListener('dragleave', () => {
+                    dropZone.style.borderColor = 'var(--champagne)';
+                    dropZone.style.background = '';
+                });
+                dropZone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropZone.style.borderColor = 'var(--champagne)';
+                    dropZone.style.background = '';
+                    handlePhotoSelect({ target: { files: e.dataTransfer.files } });
+                });
+            }
+        });
+        
+        function handlePhotoSelect(event) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                if (!file.type.startsWith('image/')) {
+                    toast('Only image files allowed', 'error');
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    toast(`${file.name} is too large (max 10MB)`, 'error');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const photoId = 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    pendingPhotos.push({
+                        id: photoId,
+                        name: file.name,
+                        data: e.target.result,
+                        file: file
+                    });
+                    renderPhotoPreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            // Clear input so same file can be selected again
+            event.target.value = '';
+        }
+        
+        function renderPhotoPreview() {
+            const grid = $('photoPreviewGrid');
+            grid.innerHTML = pendingPhotos.map(p => `
+                <div style="position:relative;border-radius:8px;overflow:hidden;aspect-ratio:1;background:var(--cream)">
+                    <img src="${p.data}" style="width:100%;height:100%;object-fit:cover">
+                    <button onclick="removePhoto('${p.id}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.6);color:white;border:none;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:14px">×</button>
+                </div>
+            `).join('');
+        }
+        
+        function removePhoto(id) {
+            pendingPhotos = pendingPhotos.filter(p => p.id !== id);
+            renderPhotoPreview();
+        }
+        
+        async function uploadPhotos() {
+            if (pendingPhotos.length === 0) return [];
+            
+            const uploadedUrls = [];
+            $('photoUploadStatus').style.display = 'block';
+            
+            for (let i = 0; i < pendingPhotos.length; i++) {
+                const photo = pendingPhotos[i];
+                $('photoUploadText').textContent = `Uploading photo ${i + 1} of ${pendingPhotos.length}...`;
+                
+                try {
+                    const result = await api('POST', {
+                        action: 'uploadPhoto',
+                        clientId: currentClient.ID,
+                        clientName: `${currentClient.FirstName}_${currentClient.LastName}`,
+                        fileName: photo.name,
+                        data: photo.data
+                    });
+                    
+                    if (result && result.url) {
+                        uploadedUrls.push(result.url);
+                    }
+                } catch (e) {
+                    console.error('Photo upload error:', e);
+                    toast(`Failed to upload ${photo.name}`, 'error');
+                }
+            }
+            
+            $('photoUploadStatus').style.display = 'none';
+            return uploadedUrls;
+        }
 
         function toggleOrderItemFields() {
             const type = $('oiType').value;
@@ -5557,8 +5964,10 @@ www.estrellebridal.com`;
             
             const hst = o.hst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
             const total = subtotal + hst;
+            const clientName = `${c.FirstName} ${c.LastName}`;
             const record = {
                 ClientID: c.ID,
+                ClientName: clientName,
                 OrderDate: today(),
                 Status: 'ordered',
                 Total: total,
@@ -5776,6 +6185,22 @@ Estrelle Bridal`;
                 return;
             }
             
+            // Upload photos first if any
+            if (pendingPhotos.length > 0) {
+                toast('Uploading photos...', 'success');
+                const photoUrls = await uploadPhotos();
+                if (photoUrls.length > 0) {
+                    // Save photo URLs to client record
+                    const existingPhotos = c.Photos ? (typeof c.Photos === 'string' ? JSON.parse(c.Photos) : c.Photos) : [];
+                    const allPhotos = [...existingPhotos, ...photoUrls];
+                    updateRecord('Clients', c.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                    toast(`${photoUrls.length} photo(s) uploaded!`, 'success');
+                }
+                pendingPhotos = [];
+                renderPhotoPreview();
+            }
+            
             // Save order first
             await completeOrder();
             
@@ -5813,6 +6238,9 @@ Estrelle Bridal`;
             api('POST', { action: 'sendContract', contractData })
                 .then(() => toast('Email sent to ' + brideEmail, 'success'))
                 .catch(e => toast('Email failed: ' + (e.message || 'Unknown error'), 'error'));
+                
+            // Render client profile to show photos
+            if (currentClient) renderClientPhotos();
         }
 
         // ========== INIT ==========
