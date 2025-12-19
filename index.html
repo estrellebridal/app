@@ -1831,7 +1831,7 @@
                     Status: 'new',
                     LastVisit: today()
                 };
-                const result = saveRecord('Clients', newClient);
+                const result = await saveRecord('Clients', newClient);
                 clientId = result.id;
             }
             
