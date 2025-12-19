@@ -930,13 +930,16 @@
                         <input type="text" class="form-input" id="confirmSubject">
                     </div>
                 </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:10px;background:var(--blush);border-radius:5px">
+                    <span style="font-size:11px;color:var(--taupe)">📝 Template Settings</span>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-secondary btn-sm" onclick="resetConfirmTemplate()">Reset to Default</button>
+                        <button class="btn btn-secondary btn-sm" onclick="saveConfirmTemplate()">Save as Template</button>
+                    </div>
+                </div>
                 <div class="form-group">
                     <label class="form-label">Email Body</label>
-                    <textarea class="form-input" id="confirmBody" style="min-height:400px;font-size:12px;line-height:1.5"></textarea>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-                    <button class="btn btn-secondary btn-sm" onclick="resetConfirmTemplate()">Reset to Default</button>
-                    <button class="btn btn-secondary btn-sm" onclick="saveConfirmTemplate()">Save as Template</button>
+                    <textarea class="form-input" id="confirmBody" style="min-height:350px;font-size:12px;line-height:1.5"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -1580,10 +1583,10 @@
                 const dateStr = fmtDate(a.Date);
                 return `<div class="list-item" onclick="${c ? `openClient(${a.ClientID})` : ''}">
                     <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
-                    <div class="item-info"><div class="item-name">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div class="item-meta">${dateStr} ${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div></div>
+                    <div class="item-info"><div class="item-name">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div class="item-meta">${dateStr} ${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}${a.ConfirmationSent ? ' · ✓' : ''}</div></div>
                     <div style="display:flex;gap:4px">
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">📧</button>
+                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
                     </div>
                 </div>`;
@@ -1852,11 +1855,11 @@
                                 <div style="display:flex;align-items:center;gap:12px">
                                     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px">${fmtTime(a.Time)}</div>
                                     <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
-                                    <div><div style="font-weight:500">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}</div></div>
+                                    <div><div style="font-weight:500">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}${a.ConfirmationSent ? ' · ✓ Confirmed' : ''}</div></div>
                                 </div>
                                 <div>
                                     <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})" style="margin-right:4px">✕</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})" style="margin-right:4px">📧</button>
+                                    <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})" style="margin-right:4px" title="${a.ConfirmationSent ? 'Confirmation sent - click to resend' : 'Send confirmation email'}">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
                                     <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})" style="margin-right:4px">Edit</button>
                                     <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})"${c ? '' : ' disabled'}>Start</button>
                                 </div>
@@ -1916,10 +1919,10 @@
                     <td>${fmtTime(a.Time)}</td>
                     <td>${c ? c.FirstName + ' ' + c.LastName : '?'}</td>
                     <td><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
-                    <td>${a.Consultant || ''}</td>
+                    <td>${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
                     <td style="text-align:right">
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">📧</button>
+                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
                     </td>
                 </tr>`;
@@ -2024,8 +2027,17 @@ The Estrelle Bridal Team`;
                 return; 
             }
             
-            // Format appointment date and time
-            const apptDate = fmtDateLong(appt.Date);
+            // Format appointment date (handle Google Sheets serial dates)
+            let apptDate = '';
+            if (appt.Date) {
+                let dateObj;
+                if (typeof appt.Date === 'number') {
+                    dateObj = new Date((appt.Date - 25569) * 86400 * 1000);
+                } else {
+                    dateObj = new Date(String(appt.Date).split('T')[0] + 'T00:00:00');
+                }
+                apptDate = dateObj.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'});
+            }
             const apptTime = fmtTime(appt.Time);
             
             // Fill in template
@@ -2062,7 +2074,20 @@ The Estrelle Bridal Team`;
                     subject: subject, 
                     body: body 
                 });
-                toast('Confirmation email sent!', 'success');
+                
+                // Mark appointment as confirmation sent
+                updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
+                
+                // Update local data
+                const appt = data.appointments.find(a => a.ID == apptId);
+                if (appt) appt.ConfirmationSent = new Date().toISOString();
+                
+                toast('✓ Confirmation email sent!', 'success');
+                
+                // Re-render views
+                renderDash();
+                renderWeek();
+                renderAllAppointments();
             } catch (e) {
                 toast('Failed to send email', 'error');
             }
