@@ -216,7 +216,8 @@
                 <div class="nav-item active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Dashboard</span></div>
                 <div class="nav-label">Clients</div>
                 <div class="nav-item" data-page="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Clients</span></div>
-                <div class="nav-item" data-page="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg><span>Today</span></div>
+                <div class="nav-item" data-page="week"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>This Week</span></div>
+                <div class="nav-item" data-page="appointments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/></svg><span>All Appointments</span></div>
                 <div class="nav-label">Operations</div>
                 <div class="nav-item" data-page="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>Orders</span></div>
                 <div class="nav-item" data-page="alterations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span>Alterations</span></div>
@@ -246,7 +247,10 @@
                     <div class="stat"><div class="stat-label">Clients</div><div class="stat-value" id="statClients">-</div></div>
                 </div>
                 <div class="grid-main">
-                    <div class="card"><div class="card-header"><h2 class="card-title">Today's Appointments</h2></div><div class="card-body" id="dashToday"><div class="loading">Loading</div></div></div>
+                    <div>
+                        <div class="card" style="margin-bottom:14px"><div class="card-header"><h2 class="card-title">Today's Appointments</h2></div><div class="card-body" id="dashToday"><div class="loading">Loading</div></div></div>
+                        <div class="card"><div class="card-header"><h2 class="card-title">This Week</h2></div><div class="card-body" id="dashWeek"><div class="loading">Loading</div></div></div>
+                    </div>
                     <div class="card"><div class="card-header"><h2 class="card-title">Recent</h2></div><div class="card-body" id="dashRecent"><div class="loading">Loading</div></div></div>
                 </div>
             </section>
@@ -263,13 +267,61 @@
                 </div></div>
             </section>
 
-            <!-- Today -->
-            <section class="section" id="page-today">
+            <!-- This Week -->
+            <section class="section" id="page-week">
                 <div class="header">
-                    <div><h1 class="title">Today</h1><p class="subtitle" id="todaySub"></p></div>
+                    <div><h1 class="title" id="weekTitle">This Week</h1><p class="subtitle" id="weekSub"></p></div>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-secondary" onclick="changeWeek(-1)">← Prev</button>
+                        <button class="btn btn-secondary" onclick="changeWeek(0)">Today</button>
+                        <button class="btn btn-secondary" onclick="changeWeek(1)">Next →</button>
+                        <button class="btn btn-secondary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
+                    </div>
+                </div>
+                <div id="weekList"></div>
+            </section>
+
+            <!-- All Appointments -->
+            <section class="section" id="page-appointments">
+                <div class="header">
+                    <div><h1 class="title">All Appointments</h1><p class="subtitle" id="apptCount"></p></div>
                     <button class="btn btn-secondary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
                 </div>
-                <div id="todayList"></div>
+                <div class="card" style="margin-bottom:14px">
+                    <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Filter</label>
+                            <select class="form-input" id="apptFilter" onchange="renderAllAppointments()" style="width:auto">
+                                <option value="all">All</option>
+                                <option value="upcoming">Upcoming</option>
+                                <option value="past">Past</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Type</label>
+                            <select class="form-input" id="apptTypeFilter" onchange="renderAllAppointments()" style="width:auto">
+                                <option value="">All Types</option>
+                                <option value="consultation">Consultation</option>
+                                <option value="first fitting">First Fitting</option>
+                                <option value="second fitting">Second Fitting</option>
+                                <option value="final fitting">Final Fitting</option>
+                                <option value="pickup">Pickup</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label">Search</label>
+                            <input type="text" class="form-input" id="apptSearch" placeholder="Client name..." oninput="renderAllAppointments()" style="width:150px">
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="padding:0">
+                        <table class="table">
+                            <thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Type</th><th>Consultant</th><th></th></tr></thead>
+                            <tbody id="allApptTable"></tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- Orders -->
@@ -663,7 +715,7 @@
                 
                 <!-- Appointment Details -->
                 <div style="background:var(--cream);padding:12px;border-radius:5px;margin-bottom:12px">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate"></div><div class="form-group"><label class="form-label">Time</label><input type="time" class="form-input" id="aTime"></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate"></div><div class="form-group"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
                     <div class="form-row">
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input" id="aType" onchange="toggleConsultationReason()"><option value="consultation">Consultation</option><option value="first fitting">First Fitting</option><option value="fitting">Fitting</option><option value="final fitting">Final Fitting</option><option value="pickup">Pickup</option></select></div>
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input" id="aConsultant"><option value="">Select...</option></select></div>
@@ -842,13 +894,55 @@
         <div class="modal">
             <div class="modal-header"><h2 class="modal-title">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
             <div class="modal-body">
-                <div class="form-row"><div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner"></select></div><div class="form-group"><label class="form-label">Style</label><input type="text" class="form-input" id="oStyle"></div></div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()"></select></div>
+                    <div class="form-group"><label class="form-label">Style</label><input type="text" class="form-input" id="oStyle"></div>
+                </div>
+                <div class="form-group" id="customDesignerGroup" style="display:none">
+                    <label class="form-label">Custom Designer Name</label>
+                    <input type="text" class="form-input" id="oCustomDesigner" placeholder="Enter designer name">
+                </div>
                 <div class="form-row"><div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oPrice"></div><div class="form-group"><label class="form-label">Size</label><input type="text" class="form-input" id="oSize"></div></div>
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom"></textarea></div>
                 <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="oOptionNotes"></textarea></div>
                 <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> Mark as top choice</label>
             </div>
             <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addOption')">Cancel</button><button class="btn btn-primary" onclick="saveOption()">Add</button></div>
+        </div>
+    </div>
+
+    <!-- Confirmation Email -->
+    <div class="modal-overlay" id="modal-confirmEmail">
+        <div class="modal wide">
+            <div class="modal-header">
+                <h2 class="modal-title">Send Confirmation Email</h2>
+                <button class="modal-close" onclick="closeModal('confirmEmail')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="confirmApptId">
+                <div class="form-row" style="margin-bottom:12px">
+                    <div class="form-group">
+                        <label class="form-label">To</label>
+                        <input type="email" class="form-input" id="confirmTo" readonly style="background:#f5f5f5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-input" id="confirmSubject">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Body</label>
+                    <textarea class="form-input" id="confirmBody" style="min-height:400px;font-size:12px;line-height:1.5"></textarea>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                    <button class="btn btn-secondary btn-sm" onclick="resetConfirmTemplate()">Reset to Default</button>
+                    <button class="btn btn-secondary btn-sm" onclick="saveConfirmTemplate()">Save as Template</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('confirmEmail')">Cancel</button>
+                <button class="btn btn-primary" onclick="sendConfirmationEmail()">Send Email</button>
+            </div>
         </div>
     </div>
 
@@ -1162,13 +1256,15 @@
 
     <script>
         // ========== CONFIG ==========
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzsIKI2B9if239LtS1phthlbqtHNnjJD4ahpto17PuLjo6_FLZtHAQSsb3qxn4CnrdCBQ/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxXUdFREGtFzs9WHo6hYlPjE6yrtOg0sTjiY20DmWE7ETAhDG5NZOuRALwbthIQYzCzyw/exec';
 
         // ========== DATA ==========
-        let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [] };
+        const CACHE_KEY = 'estrelle_data_cache';
+        let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [], visitnotes: [] };
         let currentClient = null;
         let currentOrder = { items: [], measurements: {} };
         let editingDesigner = null;
+        let originalClientNotes = { style: '', notes: '', budget: '' };
 
         // ========== HELPERS ==========
         const $ = id => document.getElementById(id);
@@ -1200,6 +1296,29 @@
                 return date.toISOString().split('T')[0] === todayStr;
             }
             return String(d).split('T')[0] === todayStr;
+        };
+        const isThisWeek = (d) => {
+            if (!d) return false;
+            let dateObj;
+            if (typeof d === 'number') {
+                dateObj = new Date((d - 25569) * 86400 * 1000);
+            } else {
+                dateObj = new Date(String(d).split('T')[0] + 'T00:00:00');
+            }
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setHours(0, 0, 0, 0);
+            const endOfWeek = new Date(now);
+            endOfWeek.setDate(endOfWeek.getDate() + 7);
+            endOfWeek.setHours(23, 59, 59, 999);
+            return dateObj >= startOfWeek && dateObj <= endOfWeek;
+        };
+        const getDateStr = (d) => {
+            if (!d) return '';
+            if (typeof d === 'number') {
+                return new Date((d - 25569) * 86400 * 1000).toISOString().split('T')[0];
+            }
+            return String(d).split('T')[0];
         };
         const fmtDate = d => {
             if (!d) return '—';
@@ -1261,7 +1380,39 @@
             }
         }
 
-        async function loadData() {
+        function loadCachedData() {
+            try {
+                const cached = localStorage.getItem(CACHE_KEY);
+                if (cached) {
+                    const parsed = JSON.parse(cached);
+                    data = {
+                        clients: parsed.clients || [],
+                        appointments: parsed.appointments || [],
+                        topoptions: parsed.topoptions || [],
+                        orders: parsed.orders || [],
+                        alterations: parsed.alterations || [],
+                        designers: parsed.designers || [],
+                        consultants: parsed.consultants || [],
+                        visitnotes: parsed.visitnotes || []
+                    };
+                    renderDash();
+                    return true;
+                }
+            } catch (e) {
+                console.log('Cache read error:', e);
+            }
+            return false;
+        }
+
+        function saveCachedData() {
+            try {
+                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+            } catch (e) {
+                console.log('Cache write error:', e);
+            }
+        }
+
+        async function loadData(showToast = false) {
             try {
                 const d = await api('GET');
                 data = { 
@@ -1274,7 +1425,9 @@
                     consultants: d.consultants || [],
                     visitnotes: d.visitnotes || []
                 };
+                saveCachedData();
                 renderDash();
+                if (showToast) toast('Data refreshed', 'success');
             } catch (e) { toast('Failed to load: ' + e.message, 'error'); }
         }
 
@@ -1285,6 +1438,7 @@
             const sheetKey = sheet.toLowerCase();
             if (data[sheetKey]) {
                 data[sheetKey].push(newRecord);
+                saveCachedData();
             }
             
             // Send to server in background
@@ -1294,6 +1448,7 @@
                     if (res && res.id && data[sheetKey]) {
                         const idx = data[sheetKey].findIndex(r => r.ID === tempId);
                         if (idx >= 0) data[sheetKey][idx].ID = res.id;
+                        saveCachedData();
                     }
                 })
                 .catch(e => {
@@ -1301,6 +1456,7 @@
                     if (data[sheetKey]) {
                         const idx = data[sheetKey].findIndex(r => r.ID === tempId);
                         if (idx >= 0) data[sheetKey].splice(idx, 1);
+                        saveCachedData();
                     }
                     toast('Save failed - please refresh', 'error');
                 });
@@ -1315,6 +1471,7 @@
                 const idx = data[sheetKey].findIndex(r => r.ID == id);
                 if (idx >= 0) {
                     data[sheetKey][idx] = { ...data[sheetKey][idx], ...record };
+                    saveCachedData();
                 }
             }
             
@@ -1328,36 +1485,41 @@
         async function deleteRecord(sheet, id) {
             // Optimistic update - remove from local data immediately
             const sheetKey = sheet.toLowerCase();
-            let removedRecord = null;
-            let removedIdx = -1;
             if (data[sheetKey]) {
-                removedIdx = data[sheetKey].findIndex(r => r.ID == id);
+                const removedIdx = data[sheetKey].findIndex(r => r.ID == id);
                 if (removedIdx >= 0) {
-                    removedRecord = data[sheetKey].splice(removedIdx, 1)[0];
+                    data[sheetKey].splice(removedIdx, 1);
+                    saveCachedData();
                 }
             }
             
-            // Send to server in background
-            api('POST', { action: 'delete', sheet, id })
-                .catch(e => {
-                    // Restore on error
-                    if (removedRecord && data[sheetKey]) {
-                        data[sheetKey].splice(removedIdx, 0, removedRecord);
-                    }
-                    toast('Delete failed - please refresh', 'error');
-                });
+            // Send to server in background (fire and forget)
+            api('POST', { action: 'delete', sheet, id }).catch(() => {});
         }
 
-        function refreshData() { loadData(); toast('Refreshing...'); }
+        function refreshData() { loadData(true); }
 
         // ========== NAV ==========
-        function showPage(name) {
+        function showPage(name, skipUnsavedCheck = false) {
+            // Check for unsaved changes when leaving consult page
+            const currentPage = document.querySelector('.section.active')?.id;
+            if (!skipUnsavedCheck && currentPage === 'page-consult' && name !== 'consult') {
+                if (hasUnsavedClientNotes()) {
+                    if (!confirm('You have unsaved notes. Leave without saving?')) {
+                        return; // Stay on current page
+                    }
+                }
+                // Clear currentClient when leaving consult
+                currentClient = null;
+            }
+            
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
             if (name === 'clients') renderClients();
-            if (name === 'today') renderToday();
+            if (name === 'week') renderWeek();
+            if (name === 'appointments') renderAllAppointments();
             if (name === 'orders') renderOrders();
             if (name === 'alterations') renderAlts();
             if (name === 'designers') renderDesigners();
@@ -1394,12 +1556,38 @@
             const appts = todayAppts.sort((a,b) => (a.Time||'').localeCompare(b.Time||''));
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
-                return `<div class="list-item" onclick="openClient(${a.ClientID})">
+                return `<div class="list-item" onclick="${c ? `openClient(${a.ClientID})` : ''}">
                     <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
                     <div class="item-info"><div class="item-name">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div class="item-meta">${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div></div>
-                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})">Start</button>
+                    <div style="display:flex;gap:4px">
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
+                        ${c ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})">Start</button>` : ''}
+                    </div>
                 </div>`;
             }).join('') : '<div class="empty">No appointments today</div>';
+
+            // Weekly appointments (excluding today)
+            const weekAppts = data.appointments
+                .filter(a => isThisWeek(a.Date) && !isToday(a.Date))
+                .sort((a,b) => {
+                    const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
+                    if (dateCompare !== 0) return dateCompare;
+                    return (a.Time||'').localeCompare(b.Time||'');
+                });
+            
+            $('dashWeek').innerHTML = weekAppts.length ? weekAppts.map(a => {
+                const c = getClient(a.ClientID);
+                const dateStr = fmtDate(a.Date);
+                return `<div class="list-item" onclick="${c ? `openClient(${a.ClientID})` : ''}">
+                    <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
+                    <div class="item-info"><div class="item-name">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div class="item-meta">${dateStr} ${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div></div>
+                    <div style="display:flex;gap:4px">
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">📧</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
+                    </div>
+                </div>`;
+            }).join('') : '<div class="empty">No more appointments this week</div>';
 
             const recent = [...data.clients].sort((a,b) => (b.LastVisit||'').localeCompare(a.LastVisit||'')).slice(0, 5);
             $('dashRecent').innerHTML = recent.length ? recent.map(c => `
@@ -1566,9 +1754,7 @@
             if (!currentClient) return;
             const name = `${currentClient.FirstName} ${currentClient.LastName}`;
             
-            const confirmText = prompt(`⚠️ DELETE "${name}"?\n\nThis is permanent. Type DELETE to confirm:`);
-            if (confirmText !== 'DELETE') {
-                toast('Deletion cancelled', '');
+            if (!confirm(`⚠️ DELETE "${name}"?\n\nThis is permanent and cannot be undone.`)) {
                 return;
             }
             
@@ -1577,22 +1763,309 @@
             showPage('clients');
         }
 
-        // ========== TODAY ==========
-        function renderToday() {
-            $('todaySub').textContent = fmtDateLong(today());
-            const appts = data.appointments.filter(a => isToday(a.Date)).sort((a,b) => String(a.Time||'').localeCompare(String(b.Time||'')));
-            $('todayList').innerHTML = appts.length ? appts.map(a => {
-                const c = getClient(a.ClientID);
-                const typeClass = `appt-type-${a.Type || 'consultation'}`;
-                return `<div class="card ${typeClass}" style="margin-bottom:10px"><div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-                    <div style="display:flex;align-items:center;gap:12px">
-                        <div style="font-family:'Cormorant Garamond',serif;font-size:20px;width:50px">${fmtTime(a.Time)}</div>
-                        <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
-                        <div><div style="font-weight:500">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}</div></div>
+        // ========== THIS WEEK ==========
+        let weekOffset = 0; // 0 = current week, -1 = last week, 1 = next week, etc.
+        
+        function changeWeek(delta) {
+            if (delta === 0) {
+                weekOffset = 0; // Reset to current week
+            } else {
+                weekOffset += delta;
+            }
+            renderWeek();
+        }
+        
+        function renderWeek() {
+            const now = new Date();
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(startOfWeek.getDate() + (weekOffset * 7));
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(endOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+            
+            // Update title based on offset
+            if (weekOffset === 0) {
+                $('weekTitle').textContent = 'This Week';
+            } else if (weekOffset === -1) {
+                $('weekTitle').textContent = 'Last Week';
+            } else if (weekOffset === 1) {
+                $('weekTitle').textContent = 'Next Week';
+            } else if (weekOffset < 0) {
+                $('weekTitle').textContent = `${Math.abs(weekOffset)} Weeks Ago`;
+            } else {
+                $('weekTitle').textContent = `${weekOffset} Weeks Ahead`;
+            }
+            
+            const formatSubDate = d => d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+            $('weekSub').textContent = `${formatSubDate(startOfWeek)} – ${formatSubDate(endOfWeek)}, ${startOfWeek.getFullYear()}`;
+            
+            // Get all appointments for the selected week
+            const weekAppts = data.appointments
+                .filter(a => {
+                    let dateObj;
+                    if (typeof a.Date === 'number') {
+                        dateObj = new Date((a.Date - 25569) * 86400 * 1000);
+                    } else {
+                        dateObj = new Date(String(a.Date).split('T')[0] + 'T00:00:00');
+                    }
+                    return dateObj >= startOfWeek && dateObj <= endOfWeek;
+                })
+                .sort((a,b) => {
+                    const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
+                    if (dateCompare !== 0) return dateCompare;
+                    return (a.Time||'').localeCompare(b.Time||'');
+                });
+            
+            if (!weekAppts.length) {
+                $('weekList').innerHTML = '<div class="card"><div class="card-body empty">No appointments this week</div></div>';
+                return;
+            }
+            
+            // Group by date
+            const grouped = {};
+            weekAppts.forEach(a => {
+                const dateKey = getDateStr(a.Date);
+                if (!grouped[dateKey]) grouped[dateKey] = [];
+                grouped[dateKey].push(a);
+            });
+            
+            // Render grouped
+            let html = '';
+            Object.keys(grouped).sort().forEach(dateKey => {
+                const appts = grouped[dateKey];
+                const dateObj = new Date(dateKey + 'T00:00:00');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+                const isTodays = dateKey === today();
+                
+                html += `<div class="card" style="margin-bottom:14px">
+                    <div class="card-header" style="background:${isTodays ? 'var(--blush)' : 'var(--cream)'}">
+                        <h2 class="card-title">${dayName}${isTodays ? ' (Today)' : ''}</h2>
+                        <span style="font-size:11px;color:var(--rose)">${appts.length} appointment${appts.length > 1 ? 's' : ''}</span>
                     </div>
-                    <div><button class="btn btn-sm btn-secondary" onclick="editAppt(${a.ID})" style="margin-right:4px">Edit</button><button class="btn btn-sm btn-primary" onclick="openClient(${a.ClientID})">Start</button></div>
-                </div></div>`;
-            }).join('') : '<div class="card"><div class="card-body empty">No appointments today</div></div>';
+                    <div class="card-body" style="padding:0">
+                        ${appts.map(a => {
+                            const c = getClient(a.ClientID);
+                            const typeClass = `appt-type-${a.Type || 'consultation'}`;
+                            return `<div class="${typeClass}" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush)">
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px">${fmtTime(a.Time)}</div>
+                                    <div class="avatar">${c ? initials(c.FirstName, c.LastName) : '?'}</div>
+                                    <div><div style="font-weight:500">${c ? c.FirstName + ' ' + c.LastName : '?'}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}</div></div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})" style="margin-right:4px">✕</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})" style="margin-right:4px">📧</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})" style="margin-right:4px">Edit</button>
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})"${c ? '' : ' disabled'}>Start</button>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            });
+            
+            $('weekList').innerHTML = html;
+        }
+
+        // ========== ALL APPOINTMENTS ==========
+        function renderAllAppointments() {
+            const filter = $('apptFilter').value;
+            const typeFilter = $('apptTypeFilter').value;
+            const search = $('apptSearch').value.toLowerCase();
+            const todayStr = today();
+            
+            let appts = [...data.appointments];
+            
+            // Filter by time
+            if (filter === 'upcoming') {
+                appts = appts.filter(a => getDateStr(a.Date) >= todayStr);
+            } else if (filter === 'past') {
+                appts = appts.filter(a => getDateStr(a.Date) < todayStr);
+            }
+            
+            // Filter by type
+            if (typeFilter) {
+                appts = appts.filter(a => (a.Type || '').toLowerCase().includes(typeFilter.toLowerCase()));
+            }
+            
+            // Filter by search
+            if (search) {
+                appts = appts.filter(a => {
+                    const c = getClient(a.ClientID);
+                    const clientName = c ? `${c.FirstName} ${c.LastName}`.toLowerCase() : '';
+                    return clientName.includes(search);
+                });
+            }
+            
+            // Sort by date descending for past, ascending for upcoming/all
+            appts.sort((a, b) => {
+                const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
+                if (filter === 'past') return -dateCompare; // Most recent first for past
+                return dateCompare; // Soonest first for upcoming/all
+            });
+            
+            $('apptCount').textContent = `${appts.length} appointment${appts.length !== 1 ? 's' : ''}`;
+            
+            $('allApptTable').innerHTML = appts.length ? appts.map(a => {
+                const c = getClient(a.ClientID);
+                const isPast = getDateStr(a.Date) < todayStr;
+                return `<tr style="${isPast ? 'opacity:0.6' : ''}" onclick="${c ? `openClient(${a.ClientID})` : ''}">
+                    <td>${fmtDate(a.Date)}</td>
+                    <td>${fmtTime(a.Time)}</td>
+                    <td>${c ? c.FirstName + ' ' + c.LastName : '?'}</td>
+                    <td><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
+                    <td>${a.Consultant || ''}</td>
+                    <td style="text-align:right">
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">📧</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
+                    </td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="6" class="empty">No appointments found</td></tr>';
+        }
+
+        async function deleteAppt(id) {
+            if (!confirm('Delete this appointment?')) return;
+            
+            // Remove from local data immediately (optimistic)
+            const removedIdx = data.appointments.findIndex(a => a.ID == id);
+            if (removedIdx >= 0) {
+                data.appointments.splice(removedIdx, 1);
+                saveCachedData();
+            }
+            
+            // Update UI immediately
+            toast('Appointment deleted', 'success');
+            renderDash();
+            renderWeek();
+            renderAllAppointments();
+            if (currentClient) renderClientAppts();
+            
+            // Send to server in background (fire and forget)
+            api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(() => {});
+        }
+
+        // ========== CONFIRMATION EMAIL ==========
+        const DEFAULT_CONFIRM_TEMPLATE = `Hi {{firstName}}, 
+
+Thank you for booking a bridal consultation with us at Estrelle Bridal, we can't wait to meet you and help you find the one!
+
+Appointment: {{appointmentDate}} @{{appointmentTime}}
+
+WHAT TO EXPECT DURING YOUR BRIDAL CONSULTATION
+
+1. You're allowed up to 4 guests MAXIMUM
+2. Shoes are not permitted in the private fitting rooms. We provide slippers and shoe covers for every guest
+3. We provide heels, spanx, and hair ties; we recommend wearing nude or white underwear
+4. We require a 48 hour notice for cancellations to ensure you get your full refund. Includes one rescheduling
+5. Please give us a call if you are running late. If you are more than 15 minutes late to your consultation, you will automatically have a shorter appointment time. If you don't respond within 30 min of contacting you, your appointment is automatically cancelled!
+
+I am not sure if you are familiar with our assortment or if you have a particular dress direction you are hoping to explore? If you can share some of your inspirations with us that would be great!
+
+Below I have included a list of our collections with some additional details that I thought could prove to be helpful to you in your initial research. 
+
+Our designers and price ranges:
+Vivienne Westwood $8,000- $20,000
+Netta Benshabu $12,800- $17,000 
+Lihi Hod $10,000-$15,000
+Nicole + Felicia $3,900- $11,000
+Stephane Rolland $10,000- $17,000
+Corston Couture $6,000- $9,000
+Tina Valerdi $3,900-$6,000
+Enaura Bridal $6,000- $10,000
+
+*Please note that most of our dresses are customizable* 
+
+Parking:
+There is paid underground parking in the Yorkville Village building, look for the Wholefoods.
+We are located on the upper level of the mall, near the escalators and across from TNT Fashion.  
+
+Please let me know if you have any questions at all or if I can provide any additional information to you prior to your consultation with us. 
+
+I recommend browsing our website and coming to the appointment prepared with dresses that you want to try on. 
+
+Please respond to this message to confirm the details above. 
+
+We look forward to hearing from you soon! :)
+
+Best regards, 
+The Estrelle Bridal Team`;
+
+        const CONFIRM_TEMPLATE_KEY = 'estrelle_confirm_template';
+
+        function getConfirmTemplate() {
+            return localStorage.getItem(CONFIRM_TEMPLATE_KEY) || DEFAULT_CONFIRM_TEMPLATE;
+        }
+
+        function saveConfirmTemplate() {
+            localStorage.setItem(CONFIRM_TEMPLATE_KEY, $('confirmBody').value);
+            toast('Template saved!', 'success');
+        }
+
+        function resetConfirmTemplate() {
+            if (!confirm('Reset to default template? Your saved template will be lost.')) return;
+            localStorage.removeItem(CONFIRM_TEMPLATE_KEY);
+            const apptId = $('confirmApptId').value;
+            if (apptId) openConfirmEmailModal(+apptId);
+            toast('Template reset to default', 'success');
+        }
+
+        function openConfirmEmailModal(apptId) {
+            const appt = data.appointments.find(a => a.ID == apptId);
+            if (!appt) { toast('Appointment not found', 'error'); return; }
+            
+            const client = getClient(appt.ClientID);
+            if (!client) { toast('Client not found', 'error'); return; }
+            
+            if (!client.Email) { 
+                toast('No email address for this client. Please add one first.', 'error'); 
+                return; 
+            }
+            
+            // Format appointment date and time
+            const apptDate = fmtDateLong(appt.Date);
+            const apptTime = fmtTime(appt.Time);
+            
+            // Fill in template
+            let body = getConfirmTemplate();
+            body = body.replace(/\{\{firstName\}\}/g, client.FirstName || '');
+            body = body.replace(/\{\{lastName\}\}/g, client.LastName || '');
+            body = body.replace(/\{\{appointmentDate\}\}/g, apptDate);
+            body = body.replace(/\{\{appointmentTime\}\}/g, apptTime);
+            body = body.replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+            
+            $('confirmApptId').value = apptId;
+            $('confirmTo').value = client.Email;
+            $('confirmSubject').value = `Estrelle Bridal - Appointment Confirmation for ${client.FirstName}`;
+            $('confirmBody').value = body;
+            
+            openModal('confirmEmail');
+        }
+
+        async function sendConfirmationEmail() {
+            const apptId = $('confirmApptId').value;
+            const to = $('confirmTo').value;
+            const subject = $('confirmSubject').value;
+            const body = $('confirmBody').value;
+            
+            if (!to) { toast('No email address', 'error'); return; }
+            
+            closeModal('confirmEmail');
+            toast('Sending email...', 'success');
+            
+            try {
+                await api('POST', { 
+                    action: 'sendConfirmation', 
+                    email: to, 
+                    subject: subject, 
+                    body: body 
+                });
+                toast('Confirmation email sent!', 'success');
+            } catch (e) {
+                toast('Failed to send email', 'error');
+            }
         }
 
         function populateApptModal(forClientId = null) {
@@ -1833,6 +2306,10 @@
                 };
                 const result = await saveRecord('Clients', newClient);
                 clientId = result.id;
+                
+                // Add to local data so client is immediately available
+                newClient.ID = clientId;
+                data.clients.push(newClient);
             }
             
             if (!clientId || !$('aDate').value) { 
@@ -1886,7 +2363,8 @@
                 renderClientAppts();
                 renderVisitHistory();
             }
-            renderToday();
+            renderWeek();
+            renderAllAppointments();
             renderDash();
         }
 
@@ -3937,6 +4415,13 @@ www.estrellebridal.com`;
             $('cNotes').value = c.Notes || '';
             $('cBudget').value = c.Budget || '';
             
+            // Save original values to detect unsaved changes
+            originalClientNotes = {
+                style: c.StylePreferences || '',
+                notes: c.Notes || '',
+                budget: c.Budget || ''
+            };
+            
             // Check for saved draft
             $('draftIndicator').style.display = hasDraft(c.ID) ? 'inline' : 'none';
             
@@ -3944,7 +4429,14 @@ www.estrellebridal.com`;
             renderClientAppts();
             renderClientOptions();
             renderVisitHistory();
-            showPage('consult');
+            showPage('consult', true); // true = skip unsaved check since we're opening
+        }
+        
+        function hasUnsavedClientNotes() {
+            if (!currentClient) return false;
+            return $('cStyle').value !== originalClientNotes.style ||
+                   $('cNotes').value !== originalClientNotes.notes ||
+                   $('cBudget').value !== originalClientNotes.budget;
         }
 
         function toggleDesignerTable() {
@@ -4173,42 +4665,61 @@ www.estrellebridal.com`;
         }
 
         function populateOptionModal() {
-            $('oDesigner').innerHTML = '<option value="">Select...</option>' + designerData.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            $('oDesigner').innerHTML = '<option value="">Select...</option>' + 
+                designerData.map(d => `<option value="${d.name}">${d.name}</option>`).join('') +
+                '<option value="custom">+ Custom Designer</option>';
+            $('customDesignerGroup').style.display = 'none';
+            $('oCustomDesigner').value = '';
+        }
+
+        function toggleCustomDesigner() {
+            const isCustom = $('oDesigner').value === 'custom';
+            $('customDesignerGroup').style.display = isCustom ? 'block' : 'none';
+            if (isCustom) $('oCustomDesigner').focus();
         }
 
         function renderClientOptions() {
             const opts = data.topoptions.filter(o => o.ClientID == currentClient.ID);
-            $('cOptions').innerHTML = opts.length ? opts.map(o => `
-                <div class="option-card ${o.IsFavorite === true || o.IsFavorite === 'TRUE' ? 'favorite' : ''}">
+            $('cOptions').innerHTML = opts.length ? opts.map(o => {
+                const isTop = o.IsFavorite === true || o.IsFavorite === 'TRUE';
+                return `
+                <div class="option-card ${isTop ? 'favorite' : ''}">
                     <div class="option-designer">${o.Designer} — ${o.Style}</div>
                     <div class="option-style">${o.Size ? 'Size ' + o.Size : ''} ${o.Price ? '· ' + money(o.Price) : ''}</div>
                     ${o.Customizations ? `<div class="option-notes"><b>Custom:</b> ${o.Customizations}</div>` : ''}
                     ${o.Notes ? `<div class="option-notes">${o.Notes}</div>` : ''}
                     <div class="option-actions">
-                        ${o.IsFavorite !== true && o.IsFavorite !== 'TRUE' ? `<button class="action-btn" onclick="markFavorite(${o.ID})">⭐</button>` : '<span style="font-size:9px;color:var(--dusty)">★ Top</span>'}
+                        <button class="action-btn" onclick="toggleFavorite(${o.ID})">${isTop ? '★ Top' : '⭐'}</button>
                         <button class="action-btn" onclick="deleteOptionConfirm(${o.ID})">Delete</button>
                     </div>
-                </div>
-            `).join('') : '<div class="empty">No options</div>';
+                </div>`;
+            }).join('') : '<div class="empty">No options</div>';
         }
 
         async function saveOption() {
-            const record = { ClientID: currentClient.ID, Designer: $('oDesigner').value, Style: $('oStyle').value, Price: +$('oPrice').value || 0, Size: $('oSize').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
+            let designer = $('oDesigner').value;
+            if (designer === 'custom') {
+                designer = $('oCustomDesigner').value.trim();
+                if (!designer) { toast('Enter custom designer name'); return; }
+            }
+            
+            const record = { ClientID: currentClient.ID, Designer: designer, Style: $('oStyle').value, Price: +$('oPrice').value || 0, Size: $('oSize').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
             if (!record.Designer) { toast('Select designer'); return; }
             
             closeModal('addOption');
             saveRecord('TopOptions', record);
-            ['oDesigner','oStyle','oPrice','oSize','oCustom','oOptionNotes'].forEach(i => $(i).value = '');
+            ['oDesigner','oStyle','oPrice','oSize','oCustom','oOptionNotes','oCustomDesigner'].forEach(i => $(i).value = '');
             $('oFavorite').checked = false;
+            $('customDesignerGroup').style.display = 'none';
             renderClientOptions();
             toast('Added!', 'success');
         }
 
-        async function markFavorite(id) {
-            const opts = data.topoptions.filter(o => o.ClientID == currentClient.ID);
-            for (const o of opts) {
-                updateRecord('TopOptions', o.ID, { IsFavorite: o.ID == id });
-            }
+        async function toggleFavorite(id) {
+            const opt = data.topoptions.find(o => o.ID == id);
+            if (!opt) return;
+            const newValue = !(opt.IsFavorite === true || opt.IsFavorite === 'TRUE');
+            updateRecord('TopOptions', id, { IsFavorite: newValue });
             renderClientOptions();
         }
 
@@ -4231,6 +4742,14 @@ www.estrellebridal.com`;
             currentClient.StylePreferences = $('cStyle').value;
             currentClient.Notes = $('cNotes').value;
             currentClient.Budget = $('cBudget').value;
+            
+            // Update original values so unsaved check passes
+            originalClientNotes = {
+                style: $('cStyle').value,
+                notes: $('cNotes').value,
+                budget: $('cBudget').value
+            };
+            
             toast('Saved!', 'success');
         }
 
@@ -5274,6 +5793,8 @@ Estrelle Bridal`;
         // ========== INIT ==========
         document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => { if (n.dataset.page) showPage(n.dataset.page); }));
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
+        // Init: load cached data immediately, then fetch fresh data in background
+        loadCachedData();
         loadData();
         setInterval(loadData, 30000); // Auto-refresh every 30 seconds
     </script>
