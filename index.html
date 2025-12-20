@@ -307,6 +307,7 @@
                 <div class="nav-label">Operations</div>
                 <div class="nav-item" data-page="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>Orders</span></div>
                 <div class="nav-item" data-page="alterations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><span>Alterations</span></div>
+                <div class="nav-item" data-page="anniversaries"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><span>Anniversaries</span></div>
                 <div class="nav-item" data-page="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Analytics</span></div>
                 <div class="nav-label">Settings</div>
                 <div class="nav-item" data-page="designers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v10M1 12h6m6 0h10"/></svg><span>Designers</span></div>
@@ -509,6 +510,73 @@
                             </thead>
                             <tbody id="designersTable"></tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Anniversaries -->
+            <section class="section" id="page-anniversaries">
+                <div class="header">
+                    <div><h1 class="title">💕 Wedding Anniversaries</h1><p class="subtitle" id="anniversaryCount">Celebrate your brides</p></div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <div style="display:flex;border:1px solid var(--champagne);border-radius:4px;overflow:hidden">
+                            <button class="btn btn-sm" id="annViewList" onclick="setAnniversaryView('list')" style="border-radius:0;border:none">📋 List</button>
+                            <button class="btn btn-sm btn-secondary" id="annViewCal" onclick="setAnniversaryView('calendar')" style="border-radius:0;border:none;border-left:1px solid var(--champagne)">📅 Calendar</button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="openAnniversaryTemplateModal()">✏️ Edit Template</button>
+                    </div>
+                </div>
+                
+                <!-- List View -->
+                <div id="anniversaryListView">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Upcoming Anniversaries</h2>
+                            <select class="form-input" id="annFilterMonth" onchange="renderAnniversaries()" style="width:auto">
+                                <option value="">All Months</option>
+                                <option value="0">January</option>
+                                <option value="1">February</option>
+                                <option value="2">March</option>
+                                <option value="3">April</option>
+                                <option value="4">May</option>
+                                <option value="5">June</option>
+                                <option value="6">July</option>
+                                <option value="7">August</option>
+                                <option value="8">September</option>
+                                <option value="9">October</option>
+                                <option value="10">November</option>
+                                <option value="11">December</option>
+                            </select>
+                        </div>
+                        <div class="card-body" style="padding:0">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Bride</th>
+                                        <th>Wedding Date</th>
+                                        <th>Anniversary</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="anniversaryTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Calendar View -->
+                <div id="anniversaryCalendarView" style="display:none">
+                    <div style="display:flex;gap:8px;margin-bottom:16px;justify-content:center;align-items:center">
+                        <button class="btn btn-secondary" onclick="changeAnnCalMonth(-1)">←</button>
+                        <h2 style="min-width:150px;text-align:center" id="annCalTitle">January 2025</h2>
+                        <button class="btn btn-secondary" onclick="changeAnnCalMonth(1)">→</button>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div id="anniversaryCalendar" style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px"></div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -1218,6 +1286,54 @@
         </div>
     </div>
     
+    <!-- Anniversary Email Modal -->
+    <div class="modal-overlay" id="modal-anniversaryEmail">
+        <div class="modal">
+            <div class="modal-header"><h2 class="modal-title">💕 Send Anniversary Email</h2><button class="modal-close" onclick="closeModal('anniversaryEmail')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="annEmailClientId">
+                <div style="background:var(--blush);padding:12px;border-radius:5px;margin-bottom:12px">
+                    <div style="font-weight:600" id="annEmailBrideName">Bride Name</div>
+                    <div style="font-size:11px;color:var(--taupe)" id="annEmailDetails">Celebrating 1st Anniversary</div>
+                </div>
+                <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="annEmailTo" readonly style="background:var(--cream)"></div>
+                <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="annEmailSubject"></div>
+                <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="annEmailBody" style="min-height:200px;font-size:12px;line-height:1.6"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('anniversaryEmail')">Cancel</button><button class="btn btn-primary" onclick="sendAnniversaryEmail()">📧 Send Email</button></div>
+        </div>
+    </div>
+    
+    <!-- Anniversary Template Modal -->
+    <div class="modal-overlay" id="modal-anniversaryTemplate">
+        <div class="modal">
+            <div class="modal-header"><h2 class="modal-title">✏️ Edit Anniversary Template</h2><button class="modal-close" onclick="closeModal('anniversaryTemplate')">×</button></div>
+            <div class="modal-body">
+                <p style="font-size:11px;color:var(--taupe);margin-bottom:12px">Use these placeholders: <code>{{firstName}}</code>, <code>{{lastName}}</code>, <code>{{weddingDate}}</code>, <code>{{years}}</code>, <code>{{ordinal}}</code> (1st, 2nd, etc.)</p>
+                <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="annTemplateSubject"></div>
+                <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="annTemplateBody" style="min-height:250px;font-size:12px;line-height:1.6"></textarea></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="resetAnniversaryTemplate()">Reset to Default</button>
+                <button class="btn btn-primary" onclick="saveAnniversaryTemplate()">💾 Save Template</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Bride Modal -->
+    <div class="modal-overlay" id="modal-editBride">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header"><h2 class="modal-title">✏️ Edit Wedding Details</h2><button class="modal-close" onclick="closeModal('editBride')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editBrideClientId">
+                <div class="form-group"><label class="form-label">Bride Name</label><input type="text" class="form-input" id="editBrideName" readonly style="background:var(--cream)"></div>
+                <div class="form-group"><label class="form-label">Wedding Date</label><input type="date" class="form-input" id="editBrideWeddingDate"></div>
+                <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="editBrideEmail"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('editBride')">Cancel</button><button class="btn btn-primary" onclick="saveBrideDetails()">Save</button></div>
+        </div>
+    </div>
+    
     <!-- QA Checklist Modal -->
     <div class="modal-overlay" id="modal-qa">
         <div class="modal" style="max-width:600px">
@@ -1809,6 +1925,7 @@
             if (name === 'consultants') renderConsultants();
             if (name === 'analytics') renderAnalytics();
             if (name === 'settings') renderSettings();
+            if (name === 'anniversaries') renderAnniversaries();
             
             updateFloatingBackButton();
         }
@@ -4996,11 +5113,62 @@ www.estrellebridal.com`;
         function renderServiceTypes() {
             const types = getServiceTypes();
             $('serviceTypesList').innerHTML = types.length ? types.map((type, idx) => `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--cream);border-radius:4px;margin-bottom:6px">
-                    <span style="font-size:12px">📅 ${type}</span>
-                    <button class="action-btn" style="color:#e74c3c" onclick="removeServiceType(${idx})">×</button>
+                <div class="service-type-item" draggable="true" data-idx="${idx}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--cream);border-radius:4px;margin-bottom:6px;cursor:grab">
+                    <span style="font-size:12px;display:flex;align-items:center;gap:8px"><span style="color:var(--rose);cursor:grab">⋮⋮</span> 📅 ${type}</span>
+                    <div style="display:flex;gap:4px;align-items:center">
+                        <button class="action-btn" onclick="editServiceType(${idx})" title="Edit">✏️</button>
+                        <button class="action-btn" style="color:#e74c3c" onclick="removeServiceType(${idx})" title="Delete">×</button>
+                    </div>
                 </div>
             `).join('') : '<div class="empty" style="font-size:11px">No service types. Add some below.</div>';
+            
+            // Add drag and drop handlers
+            initServiceTypeDragDrop();
+        }
+        
+        function initServiceTypeDragDrop() {
+            const items = document.querySelectorAll('.service-type-item');
+            let draggedItem = null;
+            
+            items.forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    draggedItem = item;
+                    item.style.opacity = '0.5';
+                });
+                
+                item.addEventListener('dragend', () => {
+                    item.style.opacity = '1';
+                    draggedItem = null;
+                    document.querySelectorAll('.service-type-item').forEach(i => i.style.borderTop = '');
+                });
+                
+                item.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    if (draggedItem && draggedItem !== item) {
+                        item.style.borderTop = '2px solid var(--rose)';
+                    }
+                });
+                
+                item.addEventListener('dragleave', () => {
+                    item.style.borderTop = '';
+                });
+                
+                item.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    item.style.borderTop = '';
+                    
+                    if (draggedItem && draggedItem !== item) {
+                        const fromIdx = parseInt(draggedItem.dataset.idx);
+                        const toIdx = parseInt(item.dataset.idx);
+                        
+                        const types = getServiceTypes();
+                        const [moved] = types.splice(fromIdx, 1);
+                        types.splice(toIdx, 0, moved);
+                        localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+                        renderServiceTypes();
+                    }
+                });
+            });
         }
         
         function addServiceType() {
@@ -5030,10 +5198,371 @@ www.estrellebridal.com`;
                 toast('Need at least one service type', 'error');
                 return;
             }
+            if (!confirm(`Delete "${types[idx]}"?`)) return;
             types.splice(idx, 1);
             localStorage.setItem('estrelle_service_types', JSON.stringify(types));
             renderServiceTypes();
             toast('Service type removed', 'success');
+        }
+        
+        function editServiceType(idx) {
+            const types = getServiceTypes();
+            const oldName = types[idx];
+            const newName = prompt('Edit service type name:', oldName);
+            
+            if (!newName || newName.trim() === '') return;
+            if (newName.trim() === oldName) return;
+            
+            // Check for duplicates
+            if (types.some((t, i) => i !== idx && t.toLowerCase() === newName.trim().toLowerCase())) {
+                toast('Type already exists', 'error');
+                return;
+            }
+            
+            types[idx] = newName.trim();
+            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            renderServiceTypes();
+            toast('Service type updated!', 'success');
+        }
+        
+        function moveServiceType(idx, direction) {
+            const types = getServiceTypes();
+            const newIdx = idx + direction;
+            
+            if (newIdx < 0 || newIdx >= types.length) return;
+            
+            // Swap
+            [types[idx], types[newIdx]] = [types[newIdx], types[idx]];
+            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            renderServiceTypes();
+        }
+        
+        // ========== ANNIVERSARIES ==========
+        let anniversaryView = 'list';
+        let annCalMonth = new Date().getMonth();
+        let annCalYear = new Date().getFullYear();
+        
+        const DEFAULT_ANNIVERSARY_TEMPLATE = {
+            subject: 'Happy {{ordinal}} Anniversary, {{firstName}}! 💕',
+            body: `Hi {{firstName}},
+
+Happy {{ordinal}} Wedding Anniversary! 🎉
+
+It's hard to believe it's been {{years}} year(s) since you found your dream dress with us and married the love of your life on {{weddingDate}}.
+
+We hope this year has been filled with love, laughter, and beautiful memories. Thank you for letting us be a part of your special day — it was truly an honor.
+
+Wishing you many more years of happiness together!
+
+With love,
+${getStoreInfo().name || 'Estrelle Bridal'}`
+        };
+        
+        function getAnniversaryTemplate() {
+            const saved = localStorage.getItem('estrelle_anniversary_template');
+            if (saved) {
+                try {
+                    return JSON.parse(saved);
+                } catch (e) {
+                    return { ...DEFAULT_ANNIVERSARY_TEMPLATE };
+                }
+            }
+            return { ...DEFAULT_ANNIVERSARY_TEMPLATE };
+        }
+        
+        function getOrdinal(n) {
+            const s = ['th', 'st', 'nd', 'rd'];
+            const v = n % 100;
+            return n + (s[(v - 20) % 10] || s[v] || s[0]);
+        }
+        
+        function getBridesWithOrders() {
+            // Get clients who have orders (brides who purchased)
+            const clientsWithOrders = new Set(data.orders.map(o => o.ClientID));
+            return data.clients.filter(c => clientsWithOrders.has(c.ID) && c.WeddingDate);
+        }
+        
+        function getAnniversaryInfo(weddingDate) {
+            const wedding = new Date(getDateStr(weddingDate));
+            const today = new Date();
+            const thisYear = today.getFullYear();
+            
+            // Anniversary this year
+            const annThisYear = new Date(thisYear, wedding.getMonth(), wedding.getDate());
+            const annNextYear = new Date(thisYear + 1, wedding.getMonth(), wedding.getDate());
+            
+            // Years married
+            let years = thisYear - wedding.getFullYear();
+            let nextAnniversary = annThisYear;
+            
+            if (annThisYear < today) {
+                // Anniversary passed this year
+                years++;
+                nextAnniversary = annNextYear;
+            }
+            
+            const daysUntil = Math.ceil((nextAnniversary - today) / (1000 * 60 * 60 * 24));
+            
+            return {
+                years,
+                ordinal: getOrdinal(years),
+                nextAnniversary,
+                daysUntil,
+                month: wedding.getMonth(),
+                day: wedding.getDate()
+            };
+        }
+        
+        function setAnniversaryView(view) {
+            anniversaryView = view;
+            $('annViewList').className = view === 'list' ? 'btn btn-sm' : 'btn btn-sm btn-secondary';
+            $('annViewCal').className = view === 'calendar' ? 'btn btn-sm' : 'btn btn-sm btn-secondary';
+            $('anniversaryListView').style.display = view === 'list' ? 'block' : 'none';
+            $('anniversaryCalendarView').style.display = view === 'calendar' ? 'block' : 'none';
+            renderAnniversaries();
+        }
+        
+        function renderAnniversaries() {
+            const brides = getBridesWithOrders();
+            $('anniversaryCount').textContent = `${brides.length} bride${brides.length !== 1 ? 's' : ''} in your wedding calendar`;
+            
+            if (anniversaryView === 'list') {
+                renderAnniversaryList(brides);
+            } else {
+                renderAnniversaryCalendar(brides);
+            }
+        }
+        
+        function renderAnniversaryList(brides) {
+            const filterMonth = $('annFilterMonth').value;
+            
+            let bridesWithInfo = brides.map(c => ({
+                ...c,
+                annInfo: getAnniversaryInfo(c.WeddingDate)
+            }));
+            
+            // Filter by month if selected
+            if (filterMonth !== '') {
+                bridesWithInfo = bridesWithInfo.filter(b => b.annInfo.month === parseInt(filterMonth));
+            }
+            
+            // Sort by days until next anniversary
+            bridesWithInfo.sort((a, b) => a.annInfo.daysUntil - b.annInfo.daysUntil);
+            
+            // Get sent emails from localStorage
+            const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
+            
+            $('anniversaryTable').innerHTML = bridesWithInfo.length ? bridesWithInfo.map(b => {
+                const sentKey = `${b.ID}-${new Date().getFullYear()}`;
+                const wasSent = sentEmails[sentKey];
+                const isUpcoming = b.annInfo.daysUntil <= 30;
+                const isToday = b.annInfo.daysUntil === 0;
+                
+                return `<tr style="${isToday ? 'background:#fff3e0' : isUpcoming ? 'background:#f5fff5' : ''}">
+                    <td>
+                        <div style="font-weight:500">${b.FirstName} ${b.LastName}</div>
+                    </td>
+                    <td>${fmtDate(b.WeddingDate)}</td>
+                    <td>
+                        <span style="font-weight:600;color:var(--rose)">${b.annInfo.ordinal}</span>
+                        <div style="font-size:10px;color:var(--taupe)">${isToday ? '🎉 Today!' : b.annInfo.daysUntil + ' days'}</div>
+                    </td>
+                    <td style="font-size:11px">${b.Email || '<span style="color:var(--rose)">No email</span>'}</td>
+                    <td>
+                        ${wasSent ? `<span style="color:var(--sage);font-size:11px">✓ Sent ${fmtDate(wasSent)}</span>` : '<span style="color:var(--taupe);font-size:11px">Not sent</span>'}
+                    </td>
+                    <td style="text-align:right">
+                        <button class="btn btn-sm btn-secondary" onclick="openEditBrideModal(${b.ID})">✏️</button>
+                        <button class="btn btn-sm ${wasSent ? 'btn-secondary' : 'btn-primary'}" onclick="openAnniversaryEmailModal(${b.ID})" ${!b.Email ? 'disabled' : ''}>📧</button>
+                    </td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="6" class="empty">No brides found</td></tr>';
+        }
+        
+        function renderAnniversaryCalendar(brides) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            $('annCalTitle').textContent = `${monthNames[annCalMonth]} ${annCalYear}`;
+            
+            // Get brides with anniversaries this month
+            const bridesThisMonth = brides.filter(b => {
+                const wedding = new Date(getDateStr(b.WeddingDate));
+                return wedding.getMonth() === annCalMonth;
+            });
+            
+            // Build calendar grid
+            const firstDay = new Date(annCalYear, annCalMonth, 1).getDay();
+            const daysInMonth = new Date(annCalYear, annCalMonth + 1, 0).getDate();
+            
+            let html = '';
+            
+            // Day headers
+            ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(day => {
+                html += `<div style="text-align:center;font-size:10px;font-weight:600;color:var(--taupe);padding:8px">${day}</div>`;
+            });
+            
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                html += '<div></div>';
+            }
+            
+            // Days
+            for (let day = 1; day <= daysInMonth; day++) {
+                const bridesOnDay = bridesThisMonth.filter(b => {
+                    const wedding = new Date(getDateStr(b.WeddingDate));
+                    return wedding.getDate() === day;
+                });
+                
+                const isToday = annCalYear === new Date().getFullYear() && annCalMonth === new Date().getMonth() && day === new Date().getDate();
+                
+                html += `<div style="min-height:60px;padding:4px;border:1px solid var(--champagne);border-radius:4px;${isToday ? 'background:var(--blush);' : ''}">
+                    <div style="font-size:11px;font-weight:${isToday ? '600' : '400'};margin-bottom:4px">${day}</div>
+                    ${bridesOnDay.map(b => `
+                        <div style="font-size:9px;background:var(--dusty);color:white;padding:2px 4px;border-radius:3px;margin-bottom:2px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="openAnniversaryEmailModal(${b.ID})" title="${b.FirstName} ${b.LastName}">
+                            💕 ${b.FirstName}
+                        </div>
+                    `).join('')}
+                </div>`;
+            }
+            
+            $('anniversaryCalendar').innerHTML = html;
+        }
+        
+        function changeAnnCalMonth(delta) {
+            annCalMonth += delta;
+            if (annCalMonth > 11) {
+                annCalMonth = 0;
+                annCalYear++;
+            } else if (annCalMonth < 0) {
+                annCalMonth = 11;
+                annCalYear--;
+            }
+            renderAnniversaryCalendar(getBridesWithOrders());
+        }
+        
+        function openAnniversaryEmailModal(clientId) {
+            const c = getClient(clientId);
+            if (!c) return;
+            
+            const annInfo = getAnniversaryInfo(c.WeddingDate);
+            const template = getAnniversaryTemplate();
+            
+            // Replace placeholders
+            let subject = template.subject
+                .replace(/\{\{firstName\}\}/g, c.FirstName)
+                .replace(/\{\{lastName\}\}/g, c.LastName)
+                .replace(/\{\{ordinal\}\}/g, annInfo.ordinal)
+                .replace(/\{\{years\}\}/g, annInfo.years)
+                .replace(/\{\{weddingDate\}\}/g, fmtDate(c.WeddingDate));
+                
+            let body = template.body
+                .replace(/\{\{firstName\}\}/g, c.FirstName)
+                .replace(/\{\{lastName\}\}/g, c.LastName)
+                .replace(/\{\{ordinal\}\}/g, annInfo.ordinal)
+                .replace(/\{\{years\}\}/g, annInfo.years)
+                .replace(/\{\{weddingDate\}\}/g, fmtDate(c.WeddingDate));
+            
+            $('annEmailClientId').value = clientId;
+            $('annEmailBrideName').textContent = `${c.FirstName} ${c.LastName}`;
+            $('annEmailDetails').textContent = `Celebrating ${annInfo.ordinal} Anniversary • Wedding: ${fmtDate(c.WeddingDate)}`;
+            $('annEmailTo').value = c.Email || '';
+            $('annEmailSubject').value = subject;
+            $('annEmailBody').value = body;
+            
+            openModal('anniversaryEmail');
+        }
+        
+        async function sendAnniversaryEmail() {
+            const clientId = $('annEmailClientId').value;
+            const to = $('annEmailTo').value;
+            const subject = $('annEmailSubject').value;
+            const body = $('annEmailBody').value;
+            
+            if (!to) {
+                toast('No email address', 'error');
+                return;
+            }
+            
+            closeModal('anniversaryEmail');
+            toast('Sending email...', 'success');
+            
+            try {
+                await api('POST', {
+                    action: 'sendConfirmation',
+                    email: to,
+                    subject: subject,
+                    body: body
+                });
+                
+                // Track sent email
+                const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
+                sentEmails[`${clientId}-${new Date().getFullYear()}`] = today();
+                localStorage.setItem('estrelle_anniversary_sent', JSON.stringify(sentEmails));
+                
+                toast('Anniversary email sent! 💕', 'success');
+                renderAnniversaries();
+            } catch (e) {
+                toast('Failed to send email', 'error');
+            }
+        }
+        
+        function openAnniversaryTemplateModal() {
+            const template = getAnniversaryTemplate();
+            $('annTemplateSubject').value = template.subject;
+            $('annTemplateBody').value = template.body;
+            openModal('anniversaryTemplate');
+        }
+        
+        function saveAnniversaryTemplate() {
+            const template = {
+                subject: $('annTemplateSubject').value,
+                body: $('annTemplateBody').value
+            };
+            localStorage.setItem('estrelle_anniversary_template', JSON.stringify(template));
+            closeModal('anniversaryTemplate');
+            toast('Template saved!', 'success');
+        }
+        
+        function resetAnniversaryTemplate() {
+            if (!confirm('Reset to default template?')) return;
+            localStorage.removeItem('estrelle_anniversary_template');
+            const template = getAnniversaryTemplate();
+            $('annTemplateSubject').value = template.subject;
+            $('annTemplateBody').value = template.body;
+            toast('Template reset', 'success');
+        }
+        
+        function openEditBrideModal(clientId) {
+            const c = getClient(clientId);
+            if (!c) return;
+            
+            $('editBrideClientId').value = clientId;
+            $('editBrideName').value = `${c.FirstName} ${c.LastName}`;
+            $('editBrideWeddingDate').value = getDateStr(c.WeddingDate);
+            $('editBrideEmail').value = c.Email || '';
+            
+            openModal('editBride');
+        }
+        
+        async function saveBrideDetails() {
+            const clientId = $('editBrideClientId').value;
+            const weddingDate = $('editBrideWeddingDate').value;
+            const email = $('editBrideEmail').value;
+            
+            await updateRecord('Clients', clientId, {
+                WeddingDate: weddingDate,
+                Email: email
+            });
+            
+            // Update local data
+            const c = getClient(clientId);
+            if (c) {
+                c.WeddingDate = weddingDate;
+                c.Email = email;
+            }
+            
+            closeModal('editBride');
+            toast('Updated!', 'success');
+            renderAnniversaries();
         }
         
         function initConsultantSigPad() {
