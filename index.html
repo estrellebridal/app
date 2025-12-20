@@ -588,10 +588,9 @@
                 <div class="timeline-box" id="timelineBox">
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
                         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
-                            <div style="text-align:center;min-width:120px">
+                            <div style="text-align:center;min-width:100px">
                                 <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.05em;color:var(--taupe);margin-bottom:4px">Wedding In</div>
-                                <div style="font-size:36px;font-weight:600;color:var(--charcoal);line-height:1" id="tlMonths">—</div>
-                                <div style="font-size:9px;color:var(--taupe);margin-top:4px">months</div>
+                                <div style="font-size:32px;font-weight:600;color:var(--charcoal);line-height:1" id="tlMonths">—</div>
                             </div>
                             
                             <div style="text-align:center;min-width:120px">
@@ -1389,11 +1388,12 @@
         const money = n => '$' + Number(n||0).toLocaleString();
         const getClient = id => data.clients.find(c => c.ID == id);
         const toast = (msg, type='') => { const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + type; setTimeout(() => t.className = 'toast', 3000); };
-        const monthsUntil = d => { 
+        
+        // Calculate time until wedding (accounts for weekends - designers don't work weekends)
+        const timeUntilWedding = d => { 
             if (!d) return null; 
             let weddingDate;
             if (typeof d === 'number') {
-                // Google Sheets serial date
                 weddingDate = new Date((d - 25569) * 86400 * 1000);
             } else {
                 weddingDate = new Date(d);
@@ -1402,10 +1402,47 @@
             today.setHours(0, 0, 0, 0);
             weddingDate.setHours(0, 0, 0, 0);
             const diffMs = weddingDate - today;
-            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-            // 1 month = 4 weeks = 28 days
-            const months = Math.floor(diffDays / 28);
-            return Math.max(0, months);
+            const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            
+            // Calculate business days (exclude weekends)
+            let businessDays = 0;
+            let currentDate = new Date(today);
+            while (currentDate < weddingDate) {
+                const dayOfWeek = currentDate.getDay();
+                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
+                    businessDays++;
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            // Convert to business weeks (5 days = 1 week)
+            const businessWeeks = Math.floor(businessDays / 5);
+            const months = Math.floor(businessWeeks / 4);
+            const remainingWeeks = businessWeeks % 4;
+            
+            return { 
+                months, 
+                weeks: remainingWeeks, 
+                totalWeeks: businessWeeks,
+                totalDays,
+                businessDays
+            };
+        };
+        
+        // Legacy function for backward compatibility
+        const monthsUntil = d => { 
+            const t = timeUntilWedding(d);
+            return t ? t.months : null;
+        };
+        
+        // Format time nicely: "9 months, 2 weeks"
+        const formatTimeUntil = d => {
+            const t = timeUntilWedding(d);
+            if (!t) return '—';
+            if (t.months === 0 && t.weeks === 0) return 'This week!';
+            if (t.months === 0) return `${t.weeks} week${t.weeks !== 1 ? 's' : ''}`;
+            if (t.weeks === 0) return `${t.months} month${t.months !== 1 ? 's' : ''}`;
+            return `${t.months}m ${t.weeks}w`;
         };
 
         // ========== API ==========
@@ -4787,7 +4824,8 @@ www.estrellebridal.com`;
         
         function updateTimeline() {
             const c = currentClient;
-            const totalMonths = monthsUntil(c.WeddingDate);
+            const timeInfo = timeUntilWedding(c.WeddingDate);
+            const totalMonths = timeInfo ? timeInfo.months : null;
             const altMonths = parseInt($('tlAltMonths').value) || 4;
             
             // Show alteration warning
@@ -4796,7 +4834,20 @@ www.estrellebridal.com`;
             // Calculate production months (total - alterations)
             const prodMonths = totalMonths !== null ? Math.max(0, totalMonths - altMonths) : null;
             
-            $('tlMonths').textContent = totalMonths !== null ? totalMonths : '—';
+            // Display months and weeks
+            if (timeInfo) {
+                if (timeInfo.months === 0 && timeInfo.weeks === 0) {
+                    $('tlMonths').textContent = 'This week!';
+                } else if (timeInfo.months === 0) {
+                    $('tlMonths').textContent = `${timeInfo.weeks}w`;
+                } else if (timeInfo.weeks === 0) {
+                    $('tlMonths').textContent = `${timeInfo.months}m`;
+                } else {
+                    $('tlMonths').textContent = `${timeInfo.months}m ${timeInfo.weeks}w`;
+                }
+            } else {
+                $('tlMonths').textContent = '—';
+            }
             
             // Count statuses
             let okCount = 0, rushCount = 0, inquireCount = 0;
