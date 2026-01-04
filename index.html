@@ -194,16 +194,120 @@
         .action-btn:hover { background: var(--blush); }
 
         @media (max-width: 900px) {
-            .sidebar { width: 60px; }
-            .sidebar .logo { padding: 10px 0; margin-bottom: 5px; }
-            .sidebar .logo div { font-size: 10px !important; letter-spacing: 0.1em !important; }
-            .sidebar .nav-item span { display: none; }
+            .sidebar { 
+                width: 100%; 
+                height: 60px;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                left: 0;
+                flex-direction: row;
+                border-right: none;
+                border-top: 1px solid var(--champagne);
+                z-index: 1000;
+                padding: 0;
+            }
+            .sidebar .logo { display: none; }
+            .sidebar .nav { 
+                display: flex; 
+                flex-direction: row; 
+                padding: 0; 
+                width: 100%;
+                justify-content: space-around;
+                align-items: center;
+                height: 100%;
+                overflow-x: auto;
+            }
+            .sidebar .nav-item { 
+                flex-direction: column; 
+                padding: 8px 12px; 
+                font-size: 9px;
+                min-width: 50px;
+                text-align: center;
+                gap: 2px;
+            }
+            .sidebar .nav-item span { display: block; font-size: 9px; }
+            .sidebar .nav-item svg { width: 18px; height: 18px; }
             .sidebar .nav-label { display: none; }
-            .sidebar .sync-status { font-size: 8px; padding: 8px; }
-            .main { margin-left: 60px; padding: 12px; }
-            .stats { grid-template-columns: repeat(2, 1fr); }
+            .sidebar .sync-status { display: none; }
+            .main { 
+                margin-left: 0; 
+                margin-bottom: 70px;
+                padding: 12px; 
+            }
+            .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+            .stat { padding: 10px; }
+            .stat-value { font-size: 20px; }
             .grid-main, .grid-2 { grid-template-columns: 1fr; }
             .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); }
+            
+            /* Header adjustments */
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+            .header > div:last-child { width: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+            .title { font-size: 20px; }
+            
+            /* Buttons */
+            .btn { padding: 10px 14px; font-size: 12px; }
+            .btn-sm { padding: 8px 12px; font-size: 11px; }
+            .action-btn { padding: 6px 10px; font-size: 11px; }
+            
+            /* Tables - horizontal scroll */
+            .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            .table { min-width: 600px; }
+            .table th, .table td { padding: 8px 6px; font-size: 11px; }
+            
+            /* Cards */
+            .card-body { padding: 10px; }
+            .card-header { padding: 10px; }
+            
+            /* Modals */
+            .modal { 
+                width: 95%; 
+                max-width: none; 
+                max-height: 90vh; 
+                margin: 5vh auto;
+            }
+            .modal.full { width: 100%; height: 100%; max-height: 100%; margin: 0; border-radius: 0; }
+            .modal-body { padding: 12px; max-height: calc(100vh - 140px); overflow-y: auto; }
+            
+            /* Form elements */
+            .form-input { padding: 10px; font-size: 14px; }
+            .form-row { flex-direction: column; gap: 10px; }
+            .form-row > .form-group { width: 100%; }
+            
+            /* Consultation header */
+            .consult-header { padding: 12px; flex-direction: column; align-items: flex-start; }
+            .consult-header.sticky { position: relative; margin: 0 0 14px 0; }
+            .consult-client { width: 100%; margin-bottom: 10px; }
+            .consult-name { font-size: 18px; }
+            
+            /* Floating back button repositioned */
+            .floating-back { left: 16px; bottom: 80px; }
+            
+            /* List items */
+            .list-item { padding: 12px 8px; flex-wrap: wrap; }
+            .list-item .avatar { width: 36px; height: 36px; font-size: 12px; }
+            
+            /* Appointment items */
+            .appt-item { padding: 10px; }
+            .appt-actions { margin-top: 8px; }
+            
+            /* Steps in She Said Yes */
+            .steps { overflow-x: auto; }
+            .step { min-width: 60px; }
+            .step-label { font-size: 8px; }
+            
+            /* Measurements grid */
+            .meas-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        
+        /* Even smaller screens */
+        @media (max-width: 480px) {
+            .sidebar .nav-item { padding: 6px 8px; min-width: 45px; }
+            .sidebar .nav-item span { font-size: 8px; }
+            .stats { grid-template-columns: 1fr 1fr; }
+            .grid-3, .grid-4 { grid-template-columns: 1fr; }
+            .meas-grid { grid-template-columns: 1fr 1fr; }
         }
         
         /* Floating back button */
@@ -352,7 +456,7 @@
                 </div>
                 <div class="card"><div class="card-body">
                     <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search..." id="clientSearch" oninput="filterClients()"></div>
-                    <table class="table"><thead><tr><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table>
+                    <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
                 </div></div>
             </section>
 
@@ -829,6 +933,10 @@
                         <div class="card">
                             <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
                             <div class="card-body" id="cPhotos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
+                        </div>
+                        <div class="card" style="margin-top:12px">
+                            <div class="card-header"><h2 class="card-title">📏 Measurements</h2><button class="btn btn-sm btn-secondary" onclick="openAddMeasurementModal()">+ Add</button></div>
+                            <div class="card-body" id="cMeasurements"></div>
                         </div>
                     </div>
                     <div>
@@ -1334,6 +1442,45 @@
         </div>
     </div>
     
+    <!-- Add Measurement Modal -->
+    <div class="modal-overlay" id="modal-addMeasurement">
+        <div class="modal" style="max-width:500px">
+            <div class="modal-header"><h2 class="modal-title">📏 Add Measurements</h2><button class="modal-close" onclick="closeModal('addMeasurement')">×</button></div>
+            <div class="modal-body">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <div class="form-group" style="margin:0"><label class="form-label">Date</label><input type="date" class="form-input" id="measDate" style="width:150px"></div>
+                    <div style="display:flex;align-items:center;gap:6px;font-size:11px">
+                        <span>Unit:</span>
+                        <button class="btn btn-sm" id="measUnitCm" onclick="setMeasModalUnit('cm')">CM</button>
+                        <button class="btn btn-sm btn-secondary" id="measUnitIn" onclick="setMeasModalUnit('in')" style="background:var(--charcoal);color:white">Inches</button>
+                    </div>
+                </div>
+                <div class="meas-grid">
+                    <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="measBust"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="measCup" placeholder="e.g. 34C"></div>
+                    <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="measWaist"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="measHip"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="measHeight"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="measHeels"><div class="meas-unit">in</div></div>
+                    <div class="meas-item"><div class="meas-label">Hollow to Hem</div><input type="text" class="meas-input" id="measHollow"><div class="meas-unit" data-meas-unit>in</div></div>
+                </div>
+                <div style="margin-top:12px">
+                    <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
+                    <div id="modalCustomMeasList"></div>
+                    <div class="form-row" style="margin-top:6px">
+                        <input type="text" class="form-input" id="modalCustomMeasName" placeholder="Name (e.g. Shoulder)">
+                        <div style="display:flex;gap:4px">
+                            <input type="text" class="form-input" id="modalCustomMeasValue" placeholder="Value" style="width:80px">
+                            <button class="btn btn-sm btn-secondary" onclick="addModalCustomMeas()">+ Add</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:12px"><label class="form-label">Notes</label><textarea class="form-input" id="measNotes" placeholder="e.g., Wearing spanx, with heels..." style="min-height:50px"></textarea></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addMeasurement')">Cancel</button><button class="btn btn-primary" onclick="saveMeasurement()">Save Measurements</button></div>
+        </div>
+    </div>
+    
     <!-- QA Checklist Modal -->
     <div class="modal-overlay" id="modal-qa">
         <div class="modal" style="max-width:600px">
@@ -1373,6 +1520,12 @@
                     <div class="step" id="ys6"><span class="step-num">6</span><div class="step-label">Email</div></div>
                 </div>
                 <div id="yStep1">
+                    <div id="savedMeasurementsSelector" style="display:none;margin-bottom:12px;padding:12px;background:var(--blush);border-radius:5px">
+                        <div style="font-size:11px;font-weight:600;margin-bottom:6px">📏 Load from saved measurements:</div>
+                        <select class="form-input" id="selectSavedMeasurement" onchange="loadSavedMeasurement()">
+                            <option value="">— Enter manually —</option>
+                        </select>
+                    </div>
                     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
                         <div style="display:flex;align-items:center;gap:6px;font-size:11px">
                             <span>Unit:</span>
@@ -1382,6 +1535,7 @@
                     </div>
                     <div class="meas-grid">
                         <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="mBust"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="mCup" placeholder="e.g. 34C"></div>
                         <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="mWaist"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight"><div class="meas-unit" data-unit>in</div></div>
@@ -5718,6 +5872,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             renderClientAppts();
             renderClientOptions();
             renderClientPhotos();
+            renderClientMeasurements();
             renderVisitHistory();
             showPage('consult', true); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
@@ -6176,6 +6331,162 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             input.click();
         }
 
+        // ========== MEASUREMENTS ==========
+        let measModalUnit = 'in';
+        let modalCustomMeasurements = [];
+        
+        function getClientMeasurements() {
+            if (!currentClient) return [];
+            try {
+                const meas = currentClient.MeasurementHistory;
+                if (!meas) return [];
+                return typeof meas === 'string' ? JSON.parse(meas) : meas;
+            } catch (e) {
+                return [];
+            }
+        }
+        
+        function renderClientMeasurements() {
+            const measurements = getClientMeasurements();
+            
+            if (measurements.length === 0) {
+                $('cMeasurements').innerHTML = '<div class="empty">No measurements recorded yet</div>';
+                return;
+            }
+            
+            // Sort by date, most recent first
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            
+            $('cMeasurements').innerHTML = measurements.map((m, idx) => {
+                const unit = m.unit || 'in';
+                const customHtml = (m.custom && m.custom.length > 0) ? 
+                    `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--champagne);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px">
+                        ${m.custom.map(c => `<div><span style="color:var(--taupe)">${c.name}:</span> ${c.value}</div>`).join('')}
+                    </div>` : '';
+                return `
+                <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}</div>
+                        <div style="display:flex;gap:4px">
+                            <button class="action-btn" onclick="deleteMeasurement(${idx})" title="Delete">×</button>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px">
+                        <div><span style="color:var(--taupe)">Bust:</span> ${m.bust || '—'} ${m.bust ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">Cup:</span> ${m.cup || '—'}</div>
+                        <div><span style="color:var(--taupe)">Waist:</span> ${m.waist || '—'} ${m.waist ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">Hip:</span> ${m.hip || '—'} ${m.hip ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">Height:</span> ${m.height || '—'} ${m.height ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">Heels:</span> ${m.heels || '—'} ${m.heels ? 'in' : ''}</div>
+                        <div><span style="color:var(--taupe)">HtH:</span> ${m.hollow || '—'} ${m.hollow ? unit : ''}</div>
+                    </div>
+                    ${customHtml}
+                    ${m.notes ? `<div style="font-size:10px;color:var(--taupe);margin-top:6px;font-style:italic">${m.notes}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+        
+        function openAddMeasurementModal() {
+            $('measDate').value = today();
+            $('measBust').value = '';
+            $('measCup').value = '';
+            $('measWaist').value = '';
+            $('measHip').value = '';
+            $('measHeight').value = '';
+            $('measHeels').value = '';
+            $('measHollow').value = '';
+            $('measNotes').value = '';
+            $('modalCustomMeasName').value = '';
+            $('modalCustomMeasValue').value = '';
+            modalCustomMeasurements = [];
+            renderModalCustomMeas();
+            measModalUnit = 'in';
+            updateMeasModalUnitDisplay();
+            openModal('addMeasurement');
+        }
+        
+        function setMeasModalUnit(unit) {
+            measModalUnit = unit;
+            updateMeasModalUnitDisplay();
+        }
+        
+        function updateMeasModalUnitDisplay() {
+            document.querySelectorAll('[data-meas-unit]').forEach(el => el.textContent = measModalUnit);
+            $('measUnitCm').className = measModalUnit === 'cm' ? 'btn btn-sm' : 'btn btn-sm btn-secondary';
+            $('measUnitIn').className = measModalUnit === 'in' ? 'btn btn-sm' : 'btn btn-sm btn-secondary';
+            $('measUnitIn').style.background = measModalUnit === 'in' ? 'var(--charcoal)' : '';
+            $('measUnitIn').style.color = measModalUnit === 'in' ? 'white' : '';
+            $('measUnitCm').style.background = measModalUnit === 'cm' ? 'var(--charcoal)' : '';
+            $('measUnitCm').style.color = measModalUnit === 'cm' ? 'white' : '';
+        }
+        
+        function addModalCustomMeas() {
+            const name = $('modalCustomMeasName').value.trim();
+            const value = $('modalCustomMeasValue').value.trim();
+            if (!name || !value) {
+                toast('Enter name and value', 'error');
+                return;
+            }
+            modalCustomMeasurements.push({ name, value });
+            $('modalCustomMeasName').value = '';
+            $('modalCustomMeasValue').value = '';
+            renderModalCustomMeas();
+        }
+        
+        function removeModalCustomMeas(idx) {
+            modalCustomMeasurements.splice(idx, 1);
+            renderModalCustomMeas();
+        }
+        
+        function renderModalCustomMeas() {
+            $('modalCustomMeasList').innerHTML = modalCustomMeasurements.map((m, idx) => `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--blush);border-radius:4px;margin-bottom:4px;font-size:11px">
+                    <span>${m.name}: ${m.value}</span>
+                    <button class="action-btn" onclick="removeModalCustomMeas(${idx})" style="font-size:10px">×</button>
+                </div>
+            `).join('');
+        }
+        
+        async function saveMeasurement() {
+            const measurement = {
+                date: $('measDate').value || today(),
+                bust: $('measBust').value.trim(),
+                cup: $('measCup').value.trim(),
+                waist: $('measWaist').value.trim(),
+                hip: $('measHip').value.trim(),
+                height: $('measHeight').value.trim(),
+                heels: $('measHeels').value.trim(),
+                hollow: $('measHollow').value.trim(),
+                notes: $('measNotes').value.trim(),
+                unit: measModalUnit,
+                custom: [...modalCustomMeasurements]
+            };
+            
+            // Get existing measurements
+            const measurements = getClientMeasurements();
+            measurements.push(measurement);
+            
+            // Save to client
+            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
+            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            
+            closeModal('addMeasurement');
+            renderClientMeasurements();
+            toast('Measurements saved!', 'success');
+        }
+        
+        async function deleteMeasurement(idx) {
+            if (!confirm('Delete this measurement record?')) return;
+            
+            const measurements = getClientMeasurements();
+            measurements.splice(idx, 1);
+            
+            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
+            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            
+            renderClientMeasurements();
+            toast('Measurement deleted', 'success');
+        }
 
         async function saveClientNotes() {
             updateRecord('Clients', currentClient.ID, {
@@ -6279,10 +6590,16 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             setMeasUnit('in');
             pendingPhotos = [];
             renderPhotoPreview();
-            const meas = typeof currentClient.Measurements === 'string' ? JSON.parse(currentClient.Measurements || '{}') : (currentClient.Measurements || {});
-            ['mBust','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = meas[id.slice(1).toLowerCase()] || '');
+            
+            // Populate saved measurements dropdown
+            populateSavedMeasurementsDropdown();
+            
+            // Clear measurement fields
+            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = '');
             $('mNotes').value = '';
             $('customMeasList').innerHTML = '';
+            $('selectSavedMeasurement').value = '';
+            
             $('orderItems').innerHTML = '';
             $('orderTotal').textContent = '$0';
             $('addHst').checked = false;
@@ -6296,10 +6613,75 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             checkForDraft();
         }
         
+        function populateSavedMeasurementsDropdown() {
+            const measurements = getClientMeasurements();
+            
+            if (measurements.length === 0) {
+                $('savedMeasurementsSelector').style.display = 'none';
+                return;
+            }
+            
+            // Sort by date, most recent first
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            
+            $('selectSavedMeasurement').innerHTML = '<option value="">— Enter manually —</option>' + 
+                measurements.map((m, idx) => {
+                    const unit = m.unit || 'in';
+                    const summary = [
+                        m.bust ? `B:${m.bust}` : '',
+                        m.waist ? `W:${m.waist}` : '',
+                        m.hip ? `H:${m.hip}` : ''
+                    ].filter(Boolean).join(' / ') || 'No measurements';
+                    return `<option value="${idx}">${fmtDate(m.date)} — ${summary} (${unit})</option>`;
+                }).join('');
+            
+            $('savedMeasurementsSelector').style.display = 'block';
+        }
+        
+        function loadSavedMeasurement() {
+            const idx = $('selectSavedMeasurement').value;
+            
+            if (idx === '') {
+                // Clear fields for manual entry
+                ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = '');
+                $('mNotes').value = '';
+                customMeasurements = [];
+                renderCustomMeas();
+                return;
+            }
+            
+            const measurements = getClientMeasurements();
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const m = measurements[parseInt(idx)];
+            
+            if (!m) return;
+            
+            // Set unit
+            measUnit = m.unit || 'in';
+            setMeasUnit(measUnit);
+            
+            // Fill in measurements
+            $('mBust').value = m.bust || '';
+            $('mCup').value = m.cup || '';
+            $('mWaist').value = m.waist || '';
+            $('mHip').value = m.hip || '';
+            $('mHeight').value = m.height || '';
+            $('mHeels').value = m.heels || '';
+            $('mHollow').value = m.hollow || '';
+            $('mNotes').value = m.notes || '';
+            
+            // Load custom measurements
+            customMeasurements = m.custom ? [...m.custom] : [];
+            renderCustomMeas();
+            
+            toast('Measurements loaded!', 'success');
+        }
+        
         function saveDraft() {
             // Collect current measurements from form
             const measurements = { 
-                bust: $('mBust').value, 
+                bust: $('mBust').value,
+                cup: $('mCup').value,
                 waist: $('mWaist').value, 
                 hip: $('mHip').value, 
                 height: $('mHeight').value, 
@@ -6354,6 +6736,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Restore measurements
             if (draft.measurements) {
                 $('mBust').value = draft.measurements.bust || '';
+                $('mCup').value = draft.measurements.cup || '';
                 $('mWaist').value = draft.measurements.waist || '';
                 $('mHip').value = draft.measurements.hip || '';
                 $('mHeight').value = draft.measurements.height || '';
@@ -6417,7 +6800,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function yNext() {
             if (yStep === 1) {
                 currentOrder.measurements = { 
-                    bust: $('mBust').value, 
+                    bust: $('mBust').value,
+                    cup: $('mCup').value,
                     waist: $('mWaist').value, 
                     hip: $('mHip').value, 
                     height: $('mHeight').value, 
@@ -6920,6 +7304,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 <table>
                     <tr><th>Item</th><th>Measurement</th><th style="width:80px">Client's Initial</th></tr>
                     <tr><td>Bust</td><td>${o.measurements.bust||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
+                    <tr><td>Cup Size</td><td>${o.measurements.cup||'—'}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Waist</td><td>${o.measurements.waist||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Hip</td><td>${o.measurements.hip||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Height</td><td>${o.measurements.height||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
@@ -6989,6 +7374,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             // Other measurements - grouped under one initial
             const otherMeasurements = [
+                { key: 'cup', label: 'Cup Size', value: o.measurements.cup, unit: '' },
                 { key: 'height', label: 'Height', value: o.measurements.height, unit: unit },
                 { key: 'hollow', label: 'Hollow to Hem', value: o.measurements.hollow, unit: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, unit: '"' }
@@ -7221,6 +7607,7 @@ ${store.name || 'Estrelle Bridal'}`;
             ];
             
             const otherMeas = [
+                { key: 'cup', label: 'Cup Size', value: o.measurements.cup, u: '' },
                 { key: 'height', label: 'Height', value: o.measurements.height, u: unit },
                 { key: 'hollow', label: 'Hollow to Hem', value: o.measurements.hollow, u: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, u: '"' }
