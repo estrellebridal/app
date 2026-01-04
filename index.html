@@ -191,6 +191,7 @@
         .empty { text-align: center; padding: 30px; color: var(--rose); font-size: 12px; }
 
         .action-btn { padding: 3px 6px; border: 1px solid var(--champagne); background: white; border-radius: 3px; font-size: 9px; cursor: pointer; }
+        input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: var(--rose); }
         .action-btn:hover { background: var(--blush); }
 
         @media (max-width: 900px) {
@@ -453,11 +454,14 @@
             <section class="section" id="page-clients">
                 <div class="header">
                     <div><h1 class="title">Clients</h1><p class="subtitle" id="clientCount">-</p></div>
-                    <button class="btn btn-primary" onclick="openModal('newClient')">+ New Client</button>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-secondary" id="btnDeleteClients" style="display:none;background:var(--rose);color:white" onclick="bulkDeleteClients()">🗑 Delete Selected</button>
+                        <button class="btn btn-primary" onclick="openModal('newClient')">+ New Client</button>
+                    </div>
                 </div>
                 <div class="card"><div class="card-body">
                     <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search..." id="clientSearch" oninput="filterClients()"></div>
-                    <div class="table-wrap"><table class="table"><thead><tr><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+                    <div class="table-wrap"><table class="table"><thead><tr><th style="width:30px"><input type="checkbox" id="selectAllClients" onchange="toggleAllClients(this.checked)"></th><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
                 </div></div>
             </section>
 
@@ -479,7 +483,8 @@
             <section class="section" id="page-appointments">
                 <div class="header">
                     <div><h1 class="title">All Appointments</h1><p class="subtitle" id="apptCount"></p></div>
-                    <div style="display:flex;gap:8px">
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-secondary" id="btnDeleteAppts" style="display:none;background:var(--rose);color:white" onclick="bulkDeleteAppointments()">🗑 Delete Selected</button>
                         <button class="btn btn-secondary" onclick="openModal('importTimely')">📥 Import from Timely</button>
                         <button class="btn btn-secondary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
                     </div>
@@ -508,10 +513,10 @@
                 </div>
                 <div class="card">
                     <div class="card-body" style="padding:0">
-                        <table class="table">
-                            <thead><tr><th>Date</th><th>Time</th><th>Client</th><th>Type</th><th>Consultant</th><th></th></tr></thead>
+                        <div class="table-wrap"><table class="table">
+                            <thead><tr><th style="width:30px"><input type="checkbox" id="selectAllAppts" onchange="toggleAllAppts(this.checked)"></th><th>Date</th><th>Time</th><th>Client</th><th>Type</th><th>Consultant</th><th></th></tr></thead>
                             <tbody id="allApptTable"></tbody>
-                        </table>
+                        </table></div>
                     </div>
                 </div>
             </section>
@@ -2248,15 +2253,65 @@
         function renderClients() {
             const activeClients = data.clients.filter(c => c.Status !== 'archived');
             $('clientCount').textContent = activeClients.length + ' clients';
+            $('selectAllClients').checked = false;
+            $('btnDeleteClients').style.display = 'none';
             $('clientsTable').innerHTML = activeClients.length ? activeClients.map(c => `
-                <tr onclick="openClient(${c.ID})">
-                    <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
-                    <td>${fmtDate(c.WeddingDate)}</td>
-                    <td><span class="status status-${c.Status||'new'}">${c.Status||'new'}</span></td>
-                    <td>${fmtDate(c.LastVisit)}</td>
+                <tr>
+                    <td onclick="event.stopPropagation()"><input type="checkbox" class="client-checkbox" data-id="${c.ID}" onchange="updateClientSelection()"></td>
+                    <td onclick="openClient(${c.ID})" style="cursor:pointer"><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
+                    <td onclick="openClient(${c.ID})" style="cursor:pointer">${fmtDate(c.WeddingDate)}</td>
+                    <td onclick="openClient(${c.ID})" style="cursor:pointer"><span class="status status-${c.Status||'new'}">${c.Status||'new'}</span></td>
+                    <td onclick="openClient(${c.ID})" style="cursor:pointer">${fmtDate(c.LastVisit)}</td>
                     <td><button class="action-btn" onclick="event.stopPropagation();editClient(${c.ID})">Edit</button></td>
                 </tr>
-            `).join('') : '<tr><td colspan="5" class="empty">No clients</td></tr>';
+            `).join('') : '<tr><td colspan="6" class="empty">No clients</td></tr>';
+        }
+        
+        function toggleAllClients(checked) {
+            document.querySelectorAll('.client-checkbox').forEach(function(cb) {
+                cb.checked = checked;
+            });
+            updateClientSelection();
+        }
+        
+        function updateClientSelection() {
+            const selected = document.querySelectorAll('.client-checkbox:checked').length;
+            $('btnDeleteClients').style.display = selected > 0 ? 'inline-block' : 'none';
+            $('btnDeleteClients').textContent = '🗑 Delete (' + selected + ')';
+        }
+        
+        async function bulkDeleteClients() {
+            const checkboxes = document.querySelectorAll('.client-checkbox:checked');
+            const count = checkboxes.length;
+            if (count === 0) return;
+            
+            if (!confirm('Delete ' + count + ' client(s) and all their appointments/orders? This cannot be undone.')) return;
+            
+            $('btnDeleteClients').disabled = true;
+            $('btnDeleteClients').textContent = 'Deleting...';
+            
+            try {
+                for (const cb of checkboxes) {
+                    const id = cb.dataset.id;
+                    await api('POST', { action: 'delete', sheet: 'Clients', id: id });
+                    data.clients = data.clients.filter(function(c) { return c.ID != id; });
+                    // Also delete related appointments
+                    const relatedAppts = data.appointments.filter(function(a) { return a.ClientID == id; });
+                    for (const appt of relatedAppts) {
+                        await api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID });
+                    }
+                    data.appointments = data.appointments.filter(function(a) { return a.ClientID != id; });
+                }
+                
+                toast(count + ' client(s) deleted', 'success');
+                renderClients();
+                renderAllAppointments();
+                renderDash();
+            } catch (err) {
+                toast('Delete failed: ' + err.message, 'error');
+            }
+            
+            $('btnDeleteClients').disabled = false;
         }
 
         function filterClients() {
@@ -2562,23 +2617,67 @@
             });
             
             $('apptCount').textContent = `${appts.length} appointment${appts.length !== 1 ? 's' : ''}`;
+            $('selectAllAppts').checked = false;
+            $('btnDeleteAppts').style.display = 'none';
             
             $('allApptTable').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isPast = getDateStr(a.Date) < todayStr;
-                return `<tr style="${isPast ? 'opacity:0.6' : ''}" onclick="openClient(${a.ClientID})">
-                    <td>${fmtDate(a.Date)}</td>
-                    <td>${fmtTime(a.Time)}</td>
-                    <td>${c.FirstName} ${c.LastName}</td>
-                    <td><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
-                    <td>${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
+                return `<tr style="${isPast ? 'opacity:0.6' : ''}">
+                    <td onclick="event.stopPropagation()"><input type="checkbox" class="appt-checkbox" data-id="${a.ID}" onchange="updateApptSelection()"></td>
+                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${fmtDate(a.Date)}</td>
+                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${fmtTime(a.Time)}</td>
+                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
+                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
+                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
                     <td style="text-align:right">
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
                         <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
                     </td>
                 </tr>`;
-            }).join('') : '<tr><td colspan="6" class="empty">No appointments found</td></tr>';
+            }).join('') : '<tr><td colspan="7" class="empty">No appointments found</td></tr>';
+        }
+        
+        function toggleAllAppts(checked) {
+            document.querySelectorAll('.appt-checkbox').forEach(function(cb) {
+                cb.checked = checked;
+            });
+            updateApptSelection();
+        }
+        
+        function updateApptSelection() {
+            const selected = document.querySelectorAll('.appt-checkbox:checked').length;
+            $('btnDeleteAppts').style.display = selected > 0 ? 'inline-block' : 'none';
+            $('btnDeleteAppts').textContent = '🗑 Delete (' + selected + ')';
+        }
+        
+        async function bulkDeleteAppointments() {
+            const checkboxes = document.querySelectorAll('.appt-checkbox:checked');
+            const count = checkboxes.length;
+            if (count === 0) return;
+            
+            if (!confirm('Delete ' + count + ' appointment(s)? This cannot be undone.')) return;
+            
+            $('btnDeleteAppts').disabled = true;
+            $('btnDeleteAppts').textContent = 'Deleting...';
+            
+            try {
+                for (const cb of checkboxes) {
+                    const id = cb.dataset.id;
+                    await api('POST', { action: 'delete', sheet: 'Appointments', id: id });
+                    data.appointments = data.appointments.filter(function(a) { return a.ID != id; });
+                }
+                
+                toast(count + ' appointment(s) deleted', 'success');
+                renderAllAppointments();
+                renderDash();
+                renderWeek();
+            } catch (err) {
+                toast('Delete failed: ' + err.message, 'error');
+            }
+            
+            $('btnDeleteAppts').disabled = false;
         }
 
         async function deleteAppt(id) {
@@ -6549,7 +6648,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function mapServiceType(timelyService) {
             const lower = (timelyService || '').toLowerCase();
             for (const [key, value] of Object.entries(SERVICE_TYPE_MAP)) {
-                if (lower.includes(key)) return value;
+                if (lower.indexOf(key) >= 0) return value;
             }
             // Default to consultation
             return 'consultation';
@@ -6565,114 +6664,120 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     const fileData = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(fileData, { type: 'array', cellDates: true });
                     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
                     
                     console.log('Rows found:', rows.length);
-                    console.log('First 10 rows:', rows.slice(0, 10));
                     
-                    // Find header row (contains "Customer", "Email", etc.)
+                    // Find header row - look for "Customer" text
                     let headerIdx = -1;
                     for (let i = 0; i < Math.min(rows.length, 15); i++) {
-                        const row = rows[i] || [];
-                        if (row.some(cell => String(cell || '').toLowerCase() === 'customer')) {
+                        const row = rows[i];
+                        if (!row) continue;
+                        const rowStr = row.map(function(x) { return String(x || ''); }).join(' ').toLowerCase();
+                        if (rowStr.indexOf('customer') >= 0 && rowStr.indexOf('email') >= 0) {
                             headerIdx = i;
                             break;
                         }
                     }
                     
                     if (headerIdx === -1) {
-                        toast('Invalid file format - no header found', 'error');
+                        toast('Invalid file - no header row found', 'error');
                         return;
                     }
                     
                     console.log('Header row index:', headerIdx);
                     console.log('Header row:', rows[headerIdx]);
                     
-                    const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim().replace(/\n/g, ' '));
-                    console.log('Parsed headers:', headers);
+                    // Build column index map by scanning header row
+                    const headerRow = rows[headerIdx];
+                    const colIdx = { date: -1, customer: -1, email: -1, phone: -1, sms: -1, status: -1, start: -1, staff: -1, service: -1 };
                     
-                    const colIdx = {
-                        date: headers.findIndex(h => h === 'date'),
-                        customer: headers.findIndex(h => h === 'customer'),
-                        email: headers.findIndex(h => h === 'email'),
-                        phone: headers.findIndex(h => h.includes('telephone') || h.includes('tel')),
-                        sms: headers.findIndex(h => h.includes('sms')),
-                        status: headers.findIndex(h => h === 'status'),
-                        start: headers.findIndex(h => h === 'start'),
-                        staff: headers.findIndex(h => h.includes('staff')),
-                        service: headers.findIndex(h => h.includes('service'))
-                    };
+                    for (let i = 0; i < headerRow.length; i++) {
+                        const h = String(headerRow[i] || '').toLowerCase().replace(/\n/g, ' ').trim();
+                        if (h === 'date') colIdx.date = i;
+                        else if (h === 'customer') colIdx.customer = i;
+                        else if (h === 'email') colIdx.email = i;
+                        else if (h === 'telephone') colIdx.phone = i;
+                        else if (h.indexOf('sms') >= 0) colIdx.sms = i;
+                        else if (h === 'status') colIdx.status = i;
+                        else if (h === 'start') colIdx.start = i;
+                        else if (h.indexOf('staff') >= 0) colIdx.staff = i;
+                        else if (h.indexOf('service') >= 0) colIdx.service = i;
+                    }
                     
                     console.log('Column indexes:', colIdx);
+                    
+                    if (colIdx.customer === -1) {
+                        toast('Invalid file - no Customer column', 'error');
+                        return;
+                    }
                     
                     timelyImportData = [];
                     
                     for (let i = headerIdx + 1; i < rows.length; i++) {
                         const row = rows[i];
-                        if (!row || row.length < 3) continue;
+                        if (!row) continue;
                         
+                        // Get customer name
                         const customerVal = row[colIdx.customer];
                         if (!customerVal) continue;
                         
-                        // Skip total/summary rows
-                        const firstCell = String(row[0] || row[1] || '').toLowerCase();
-                        if (firstCell.includes('total')) continue;
-                        
-                        const customer = String(customerVal || '').trim();
+                        const customer = String(customerVal).trim();
                         if (!customer) continue;
                         
-                        const email = colIdx.email >= 0 ? String(row[colIdx.email] || '').trim() : '';
-                        // Try both phone and sms columns
+                        // Skip total/summary rows
+                        if (customer.toLowerCase().indexOf('total') >= 0) continue;
+                        
+                        // Get email
+                        const email = colIdx.email >= 0 && row[colIdx.email] ? String(row[colIdx.email]).trim() : '';
+                        
+                        // Get phone - try SMS column first (that's where the data actually is)
                         let phone = '';
-                        if (colIdx.phone >= 0 && row[colIdx.phone]) {
-                            phone = String(row[colIdx.phone]).trim();
-                        }
-                        if (!phone && colIdx.sms >= 0 && row[colIdx.sms]) {
+                        if (colIdx.sms >= 0 && row[colIdx.sms]) {
                             phone = String(row[colIdx.sms]).trim();
                         }
+                        if (!phone && colIdx.phone >= 0 && row[colIdx.phone]) {
+                            phone = String(row[colIdx.phone]).trim();
+                        }
                         
-                        const status = colIdx.status >= 0 ? String(row[colIdx.status] || '').toLowerCase().trim() : '';
-                        const service = colIdx.service >= 0 ? String(row[colIdx.service] || '').trim() : '';
-                        const staff = colIdx.staff >= 0 ? String(row[colIdx.staff] || '').trim() : '';
+                        // Get status
+                        const status = colIdx.status >= 0 && row[colIdx.status] ? String(row[colIdx.status]).toLowerCase().trim() : '';
                         
-                        // Parse date and time
+                        // Get service
+                        const service = colIdx.service >= 0 && row[colIdx.service] ? String(row[colIdx.service]).trim() : '';
+                        
+                        // Get staff
+                        const staff = colIdx.staff >= 0 && row[colIdx.staff] ? String(row[colIdx.staff]).trim() : '';
+                        
+                        // Parse date/time from Date or Start column
                         let apptDate = '';
                         let apptTime = '';
                         
-                        // Try date column first, then start column
-                        const dateVal = colIdx.date >= 0 ? row[colIdx.date] : null;
-                        const startVal = colIdx.start >= 0 ? row[colIdx.start] : null;
+                        let dateVal = colIdx.date >= 0 ? row[colIdx.date] : null;
+                        if (!dateVal) dateVal = colIdx.start >= 0 ? row[colIdx.start] : null;
                         
-                        function parseDateTime(val) {
-                            if (!val) return { date: '', time: '' };
-                            
-                            // If it's already a Date object
-                            if (val instanceof Date) {
-                                return {
-                                    date: val.toISOString().split('T')[0],
-                                    time: val.getHours().toString().padStart(2, '0') + ':' + val.getMinutes().toString().padStart(2, '0')
-                                };
+                        if (dateVal) {
+                            let d = null;
+                            if (dateVal instanceof Date) {
+                                d = dateVal;
+                            } else if (typeof dateVal === 'number') {
+                                // Excel serial date - add small offset to fix rounding
+                                d = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
+                            } else {
+                                d = new Date(String(dateVal));
                             }
                             
-                            // If it's a string like "2026-01-02" or "1/2/2026 2:00 PM"
-                            const str = String(val);
-                            const d = new Date(str);
-                            if (!isNaN(d.getTime())) {
-                                return {
-                                    date: d.toISOString().split('T')[0],
-                                    time: d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0')
-                                };
+                            if (d && !isNaN(d.getTime())) {
+                                apptDate = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                                // Round seconds to nearest minute
+                                var hours = d.getHours();
+                                var mins = d.getMinutes();
+                                var secs = d.getSeconds();
+                                if (secs >= 30) mins++;
+                                if (mins >= 60) { mins = 0; hours++; }
+                                apptTime = String(hours).padStart(2, '0') + ':' + String(mins).padStart(2, '0');
                             }
-                            
-                            return { date: '', time: '' };
                         }
-                        
-                        let parsed = parseDateTime(dateVal);
-                        if (!parsed.date && startVal) {
-                            parsed = parseDateTime(startVal);
-                        }
-                        apptDate = parsed.date;
-                        apptTime = parsed.time;
                         
                         // Skip cancelled
                         if (status === 'cancelled') continue;
@@ -6682,17 +6787,26 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         const firstName = nameParts[0] || '';
                         const lastName = nameParts.slice(1).join(' ') || '';
                         
-                        // Check if client exists (use global data variable)
-                        const existingClient = email ? window.data.clients.find(c => c.Email && c.Email.toLowerCase() === email.toLowerCase()) : null;
+                        // Check existing client by email
+                        let existingClient = null;
+                        if (email && window.data && window.data.clients) {
+                            for (let c of window.data.clients) {
+                                if (c.Email && c.Email.toLowerCase() === email.toLowerCase()) {
+                                    existingClient = c;
+                                    break;
+                                }
+                            }
+                        }
                         
-                        // Check if appointment exists
+                        // Check existing appointment
                         let existingAppt = null;
-                        if (existingClient && apptDate && apptTime) {
-                            existingAppt = window.data.appointments.find(a => 
-                                a.ClientID === existingClient.ID && 
-                                getDateStr(a.Date) === apptDate && 
-                                a.Time === apptTime
-                            );
+                        if (existingClient && apptDate && apptTime && window.data && window.data.appointments) {
+                            for (let a of window.data.appointments) {
+                                if (a.ClientID === existingClient.ID && getDateStr(a.Date) === apptDate && a.Time === apptTime) {
+                                    existingAppt = a;
+                                    break;
+                                }
+                            }
                         }
                         
                         // Determine action
@@ -6704,27 +6818,33 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         }
                         
                         timelyImportData.push({
-                            action,
-                            firstName,
-                            lastName,
-                            email,
-                            phone,
+                            action: action,
+                            firstName: firstName,
+                            lastName: lastName,
+                            email: email,
+                            phone: phone,
                             date: apptDate,
                             time: apptTime,
                             type: mapServiceType(service),
                             consultant: staff,
-                            status,
-                            existingClientId: existingClient?.ID,
-                            existingApptId: existingAppt?.ID
+                            status: status,
+                            existingClientId: existingClient ? existingClient.ID : null,
+                            existingApptId: existingAppt ? existingAppt.ID : null
                         });
                     }
                     
                     console.log('Parsed records:', timelyImportData.length);
+                    
+                    if (timelyImportData.length === 0) {
+                        toast('No appointments found in file', 'error');
+                        return;
+                    }
+                    
                     renderImportPreview();
                     
                 } catch (err) {
                     console.error('Parse error:', err);
-                    toast('Error parsing file', 'error');
+                    toast('Error: ' + err.message, 'error');
                 }
             };
             reader.readAsArrayBuffer(file);
@@ -6747,47 +6867,49 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 'mark_noshow': '<span style="color:var(--rose)">No-Show</span>'
             };
             
-            $('importPreviewTable').innerHTML = timelyImportData.map(item => `
-                <tr>
-                    <td>${actionLabels[item.action] || item.action}</td>
-                    <td>${item.firstName} ${item.lastName}${item.email ? `<br><span style="font-size:9px;color:var(--taupe)">${item.email}</span>` : ''}</td>
-                    <td>${item.date ? fmtDate(item.date) : '—'}</td>
-                    <td>${item.time || '—'}</td>
-                    <td>${item.type}</td>
-                    <td>${item.status}</td>
-                </tr>
-            `).join('');
+            $('importPreviewTable').innerHTML = timelyImportData.map(function(item) {
+                return '<tr>' +
+                    '<td>' + (actionLabels[item.action] || item.action) + '</td>' +
+                    '<td>' + item.firstName + ' ' + item.lastName + (item.email ? '<br><span style="font-size:9px;color:var(--taupe)">' + item.email + '</span>' : '') + '</td>' +
+                    '<td>' + (item.date ? fmtDate(item.date) : '<span style="color:var(--rose)">No date</span>') + '</td>' +
+                    '<td>' + (item.time || '—') + '</td>' +
+                    '<td>' + item.type + '</td>' +
+                    '<td>' + item.status + '</td>' +
+                '</tr>';
+            }).join('');
             
             // Stats
-            const newClients = timelyImportData.filter(i => i.action === 'new_client').length;
-            const addAppts = timelyImportData.filter(i => i.action === 'add_appt').length;
-            const updates = timelyImportData.filter(i => i.action === 'update').length;
-            const noShows = timelyImportData.filter(i => i.action === 'mark_noshow').length;
+            const newClients = timelyImportData.filter(function(i) { return i.action === 'new_client'; }).length;
+            const addAppts = timelyImportData.filter(function(i) { return i.action === 'add_appt'; }).length;
+            const updates = timelyImportData.filter(function(i) { return i.action === 'update'; }).length;
+            const noShows = timelyImportData.filter(function(i) { return i.action === 'mark_noshow'; }).length;
+            const withDates = timelyImportData.filter(function(i) { return i.date; }).length;
             
-            $('importSummary').textContent = `${timelyImportData.length} records`;
-            $('importStats').innerHTML = `
-                <strong>Summary:</strong> 
-                ${newClients} new clients, 
-                ${addAppts + newClients} new appointments, 
-                ${updates} updates, 
-                ${noShows} no-shows
-            `;
+            $('importSummary').textContent = timelyImportData.length + ' records';
+            $('importStats').innerHTML = 
+                '<strong>Summary:</strong> ' +
+                newClients + ' new clients, ' +
+                (addAppts + newClients) + ' new appointments, ' +
+                updates + ' updates, ' +
+                noShows + ' no-shows' +
+                (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '');
         }
         
         async function confirmTimelyImport() {
             $('btnConfirmImport').disabled = true;
             $('btnConfirmImport').textContent = 'Importing...';
             
-            let created = 0, updated = 0;
+            let clientsCreated = 0, apptsCreated = 0, updated = 0;
             
             try {
-                for (const item of timelyImportData) {
+                for (let idx = 0; idx < timelyImportData.length; idx++) {
+                    const item = timelyImportData[idx];
                     let clientId = item.existingClientId;
                     
                     // Create new client if needed
                     if (item.action === 'new_client') {
                         const newClient = {
-                            ID: 'c' + Date.now() + Math.random().toString(36).substr(2, 5),
+                            ID: 'c' + Date.now() + '_' + idx,
                             FirstName: item.firstName,
                             LastName: item.lastName,
                             Email: item.email,
@@ -6796,43 +6918,46 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             CreatedAt: today()
                         };
                         
+                        console.log('Creating client:', newClient);
                         await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
                         data.clients.push(newClient);
                         clientId = newClient.ID;
-                        created++;
+                        clientsCreated++;
                     }
                     
                     // Handle appointments
                     if (item.action === 'mark_noshow' && item.existingApptId) {
-                        // Mark existing appointment as no-show
                         await updateRecord('Appointments', item.existingApptId, { Status: 'no-show' });
-                        const appt = data.appointments.find(a => a.ID === item.existingApptId);
+                        const appt = data.appointments.find(function(a) { return a.ID === item.existingApptId; });
                         if (appt) appt.Status = 'no-show';
                         updated++;
                     } else if (item.action === 'update' && item.existingApptId) {
-                        // Just update status if changed
                         updated++;
-                    } else if (clientId && item.date && (item.action === 'new_client' || item.action === 'add_appt')) {
-                        // Create new appointment
+                    } else if (clientId && (item.action === 'new_client' || item.action === 'add_appt')) {
+                        // Create new appointment - even if date is missing
                         const newAppt = {
-                            ID: 'a' + Date.now() + Math.random().toString(36).substr(2, 5),
+                            ID: 'a' + Date.now() + '_' + idx,
                             ClientID: clientId,
-                            Date: item.date,
-                            Time: item.time,
-                            Type: item.type,
-                            Consultant: item.consultant,
+                            Date: item.date || today(),
+                            Time: item.time || '10:00',
+                            Type: item.type || 'consultation',
+                            Consultant: item.consultant || '',
                             Status: item.status === 'did-not-show' ? 'no-show' : '',
                             CreatedAt: today()
                         };
                         
+                        console.log('Creating appointment:', newAppt);
                         await api('POST', { action: 'add', sheet: 'Appointments', record: newAppt });
                         data.appointments.push(newAppt);
-                        created++;
+                        apptsCreated++;
                     }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(function(r) { setTimeout(r, 50); });
                 }
                 
                 closeModal('importTimely');
-                toast(`Imported! ${created} created, ${updated} updated`, 'success');
+                toast('Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments', 'success');
                 
                 // Reset for next import
                 timelyImportData = [];
