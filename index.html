@@ -396,6 +396,7 @@
             background: var(--red);
         }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="app">
@@ -478,7 +479,10 @@
             <section class="section" id="page-appointments">
                 <div class="header">
                     <div><h1 class="title">All Appointments</h1><p class="subtitle" id="apptCount"></p></div>
-                    <button class="btn btn-secondary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-secondary" onclick="openModal('importTimely')">📥 Import from Timely</button>
+                        <button class="btn btn-secondary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
+                    </div>
                 </div>
                 <div class="card" style="margin-bottom:14px">
                     <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
@@ -1481,6 +1485,50 @@
         </div>
     </div>
     
+    <!-- QA Checklist Modal -->
+    
+    <!-- Import from Timely Modal -->
+    <div class="modal-overlay" id="modal-importTimely">
+        <div class="modal" style="max-width:700px">
+            <div class="modal-header"><h2 class="modal-title">📥 Import from Timely</h2><button class="modal-close" onclick="closeModal('importTimely')">×</button></div>
+            <div class="modal-body">
+                <div id="importStep1">
+                    <p style="margin-bottom:12px;font-size:12px;color:var(--taupe)">Upload your Timely <strong>Schedule</strong> report (.xlsx). This will import clients and appointments automatically.</p>
+                    <div style="border:2px dashed var(--champagne);border-radius:8px;padding:30px;text-align:center;cursor:pointer" onclick="$('timelyFileInput').click()">
+                        <div style="font-size:24px;margin-bottom:8px">📄</div>
+                        <div style="font-size:12px;color:var(--taupe)">Click to select Schedule.xlsx</div>
+                        <input type="file" id="timelyFileInput" accept=".xlsx,.xls" style="display:none" onchange="parseTimelyFile(this)">
+                    </div>
+                    <div style="margin-top:16px">
+                        <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--rose);margin-bottom:8px">Service Type Mapping</div>
+                        <div id="serviceMappingList" style="font-size:11px;background:var(--cream);padding:10px;border-radius:5px">
+                            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--champagne)"><span>Signature Bridal Consultation</span><span>→ Consultation</span></div>
+                            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--champagne)"><span>Bridal Fitting Appointment</span><span>→ Fitting</span></div>
+                            <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Other services</span><span>→ Consultation</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="importStep2" style="display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                        <h3 style="margin:0;font-size:14px">Preview Import</h3>
+                        <span id="importSummary" style="font-size:11px;color:var(--taupe)"></span>
+                    </div>
+                    <div style="max-height:350px;overflow-y:auto;border:1px solid var(--champagne);border-radius:5px">
+                        <table class="table" style="font-size:11px">
+                            <thead style="position:sticky;top:0;background:white"><tr><th>Action</th><th>Client</th><th>Date</th><th>Time</th><th>Type</th><th>Status</th></tr></thead>
+                            <tbody id="importPreviewTable"></tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top:12px;padding:10px;background:var(--blush);border-radius:5px;font-size:11px" id="importStats"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importTimely')">Cancel</button>
+                <button class="btn btn-primary" id="btnConfirmImport" style="display:none" onclick="confirmTimelyImport()">✓ Import All</button>
+            </div>
+        </div>
+    </div>
+
     <!-- QA Checklist Modal -->
     <div class="modal-overlay" id="modal-qa">
         <div class="modal" style="max-width:600px">
@@ -6486,6 +6534,326 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             renderClientMeasurements();
             toast('Measurement deleted', 'success');
+        }
+
+        // ========== TIMELY IMPORT ==========
+        let timelyImportData = [];
+        
+        const SERVICE_TYPE_MAP = {
+            'signature bridal consultation': 'consultation',
+            'bridal fitting appointment': 'fitting',
+            'final fitting': 'final fitting',
+            'pickup': 'pickup'
+        };
+        
+        function mapServiceType(timelyService) {
+            const lower = (timelyService || '').toLowerCase();
+            for (const [key, value] of Object.entries(SERVICE_TYPE_MAP)) {
+                if (lower.includes(key)) return value;
+            }
+            // Default to consultation
+            return 'consultation';
+        }
+        
+        function parseTimelyFile(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const fileData = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(fileData, { type: 'array', cellDates: true });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, dateNF: 'yyyy-mm-dd' });
+                    
+                    console.log('Rows found:', rows.length);
+                    console.log('First 10 rows:', rows.slice(0, 10));
+                    
+                    // Find header row (contains "Customer", "Email", etc.)
+                    let headerIdx = -1;
+                    for (let i = 0; i < Math.min(rows.length, 15); i++) {
+                        const row = rows[i] || [];
+                        if (row.some(cell => String(cell || '').toLowerCase() === 'customer')) {
+                            headerIdx = i;
+                            break;
+                        }
+                    }
+                    
+                    if (headerIdx === -1) {
+                        toast('Invalid file format - no header found', 'error');
+                        return;
+                    }
+                    
+                    console.log('Header row index:', headerIdx);
+                    console.log('Header row:', rows[headerIdx]);
+                    
+                    const headers = rows[headerIdx].map(h => String(h || '').toLowerCase().trim().replace(/\n/g, ' '));
+                    console.log('Parsed headers:', headers);
+                    
+                    const colIdx = {
+                        date: headers.findIndex(h => h === 'date'),
+                        customer: headers.findIndex(h => h === 'customer'),
+                        email: headers.findIndex(h => h === 'email'),
+                        phone: headers.findIndex(h => h.includes('telephone') || h.includes('tel')),
+                        sms: headers.findIndex(h => h.includes('sms')),
+                        status: headers.findIndex(h => h === 'status'),
+                        start: headers.findIndex(h => h === 'start'),
+                        staff: headers.findIndex(h => h.includes('staff')),
+                        service: headers.findIndex(h => h.includes('service'))
+                    };
+                    
+                    console.log('Column indexes:', colIdx);
+                    
+                    timelyImportData = [];
+                    
+                    for (let i = headerIdx + 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (!row || row.length < 3) continue;
+                        
+                        const customerVal = row[colIdx.customer];
+                        if (!customerVal) continue;
+                        
+                        // Skip total/summary rows
+                        const firstCell = String(row[0] || row[1] || '').toLowerCase();
+                        if (firstCell.includes('total')) continue;
+                        
+                        const customer = String(customerVal || '').trim();
+                        if (!customer) continue;
+                        
+                        const email = colIdx.email >= 0 ? String(row[colIdx.email] || '').trim() : '';
+                        // Try both phone and sms columns
+                        let phone = '';
+                        if (colIdx.phone >= 0 && row[colIdx.phone]) {
+                            phone = String(row[colIdx.phone]).trim();
+                        }
+                        if (!phone && colIdx.sms >= 0 && row[colIdx.sms]) {
+                            phone = String(row[colIdx.sms]).trim();
+                        }
+                        
+                        const status = colIdx.status >= 0 ? String(row[colIdx.status] || '').toLowerCase().trim() : '';
+                        const service = colIdx.service >= 0 ? String(row[colIdx.service] || '').trim() : '';
+                        const staff = colIdx.staff >= 0 ? String(row[colIdx.staff] || '').trim() : '';
+                        
+                        // Parse date and time
+                        let apptDate = '';
+                        let apptTime = '';
+                        
+                        // Try date column first, then start column
+                        const dateVal = colIdx.date >= 0 ? row[colIdx.date] : null;
+                        const startVal = colIdx.start >= 0 ? row[colIdx.start] : null;
+                        
+                        function parseDateTime(val) {
+                            if (!val) return { date: '', time: '' };
+                            
+                            // If it's already a Date object
+                            if (val instanceof Date) {
+                                return {
+                                    date: val.toISOString().split('T')[0],
+                                    time: val.getHours().toString().padStart(2, '0') + ':' + val.getMinutes().toString().padStart(2, '0')
+                                };
+                            }
+                            
+                            // If it's a string like "2026-01-02" or "1/2/2026 2:00 PM"
+                            const str = String(val);
+                            const d = new Date(str);
+                            if (!isNaN(d.getTime())) {
+                                return {
+                                    date: d.toISOString().split('T')[0],
+                                    time: d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0')
+                                };
+                            }
+                            
+                            return { date: '', time: '' };
+                        }
+                        
+                        let parsed = parseDateTime(dateVal);
+                        if (!parsed.date && startVal) {
+                            parsed = parseDateTime(startVal);
+                        }
+                        apptDate = parsed.date;
+                        apptTime = parsed.time;
+                        
+                        // Skip cancelled
+                        if (status === 'cancelled') continue;
+                        
+                        // Parse name
+                        const nameParts = customer.split(' ');
+                        const firstName = nameParts[0] || '';
+                        const lastName = nameParts.slice(1).join(' ') || '';
+                        
+                        // Check if client exists (use global data variable)
+                        const existingClient = email ? window.data.clients.find(c => c.Email && c.Email.toLowerCase() === email.toLowerCase()) : null;
+                        
+                        // Check if appointment exists
+                        let existingAppt = null;
+                        if (existingClient && apptDate && apptTime) {
+                            existingAppt = window.data.appointments.find(a => 
+                                a.ClientID === existingClient.ID && 
+                                getDateStr(a.Date) === apptDate && 
+                                a.Time === apptTime
+                            );
+                        }
+                        
+                        // Determine action
+                        let action = 'new_client';
+                        if (existingClient && existingAppt) {
+                            action = status === 'did-not-show' ? 'mark_noshow' : 'update';
+                        } else if (existingClient) {
+                            action = 'add_appt';
+                        }
+                        
+                        timelyImportData.push({
+                            action,
+                            firstName,
+                            lastName,
+                            email,
+                            phone,
+                            date: apptDate,
+                            time: apptTime,
+                            type: mapServiceType(service),
+                            consultant: staff,
+                            status,
+                            existingClientId: existingClient?.ID,
+                            existingApptId: existingAppt?.ID
+                        });
+                    }
+                    
+                    console.log('Parsed records:', timelyImportData.length);
+                    renderImportPreview();
+                    
+                } catch (err) {
+                    console.error('Parse error:', err);
+                    toast('Error parsing file', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function renderImportPreview() {
+            if (timelyImportData.length === 0) {
+                toast('No appointments found in file', 'error');
+                return;
+            }
+            
+            $('importStep1').style.display = 'none';
+            $('importStep2').style.display = 'block';
+            $('btnConfirmImport').style.display = 'inline-block';
+            
+            const actionLabels = {
+                'new_client': '<span style="color:var(--sage)">+ New Client</span>',
+                'add_appt': '<span style="color:var(--dusty)">+ Add Appt</span>',
+                'update': '<span style="color:var(--taupe)">Update</span>',
+                'mark_noshow': '<span style="color:var(--rose)">No-Show</span>'
+            };
+            
+            $('importPreviewTable').innerHTML = timelyImportData.map(item => `
+                <tr>
+                    <td>${actionLabels[item.action] || item.action}</td>
+                    <td>${item.firstName} ${item.lastName}${item.email ? `<br><span style="font-size:9px;color:var(--taupe)">${item.email}</span>` : ''}</td>
+                    <td>${item.date ? fmtDate(item.date) : '—'}</td>
+                    <td>${item.time || '—'}</td>
+                    <td>${item.type}</td>
+                    <td>${item.status}</td>
+                </tr>
+            `).join('');
+            
+            // Stats
+            const newClients = timelyImportData.filter(i => i.action === 'new_client').length;
+            const addAppts = timelyImportData.filter(i => i.action === 'add_appt').length;
+            const updates = timelyImportData.filter(i => i.action === 'update').length;
+            const noShows = timelyImportData.filter(i => i.action === 'mark_noshow').length;
+            
+            $('importSummary').textContent = `${timelyImportData.length} records`;
+            $('importStats').innerHTML = `
+                <strong>Summary:</strong> 
+                ${newClients} new clients, 
+                ${addAppts + newClients} new appointments, 
+                ${updates} updates, 
+                ${noShows} no-shows
+            `;
+        }
+        
+        async function confirmTimelyImport() {
+            $('btnConfirmImport').disabled = true;
+            $('btnConfirmImport').textContent = 'Importing...';
+            
+            let created = 0, updated = 0;
+            
+            try {
+                for (const item of timelyImportData) {
+                    let clientId = item.existingClientId;
+                    
+                    // Create new client if needed
+                    if (item.action === 'new_client') {
+                        const newClient = {
+                            ID: 'c' + Date.now() + Math.random().toString(36).substr(2, 5),
+                            FirstName: item.firstName,
+                            LastName: item.lastName,
+                            Email: item.email,
+                            Phone: item.phone,
+                            Status: 'new',
+                            CreatedAt: today()
+                        };
+                        
+                        await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
+                        data.clients.push(newClient);
+                        clientId = newClient.ID;
+                        created++;
+                    }
+                    
+                    // Handle appointments
+                    if (item.action === 'mark_noshow' && item.existingApptId) {
+                        // Mark existing appointment as no-show
+                        await updateRecord('Appointments', item.existingApptId, { Status: 'no-show' });
+                        const appt = data.appointments.find(a => a.ID === item.existingApptId);
+                        if (appt) appt.Status = 'no-show';
+                        updated++;
+                    } else if (item.action === 'update' && item.existingApptId) {
+                        // Just update status if changed
+                        updated++;
+                    } else if (clientId && item.date && (item.action === 'new_client' || item.action === 'add_appt')) {
+                        // Create new appointment
+                        const newAppt = {
+                            ID: 'a' + Date.now() + Math.random().toString(36).substr(2, 5),
+                            ClientID: clientId,
+                            Date: item.date,
+                            Time: item.time,
+                            Type: item.type,
+                            Consultant: item.consultant,
+                            Status: item.status === 'did-not-show' ? 'no-show' : '',
+                            CreatedAt: today()
+                        };
+                        
+                        await api('POST', { action: 'add', sheet: 'Appointments', record: newAppt });
+                        data.appointments.push(newAppt);
+                        created++;
+                    }
+                }
+                
+                closeModal('importTimely');
+                toast(`Imported! ${created} created, ${updated} updated`, 'success');
+                
+                // Reset for next import
+                timelyImportData = [];
+                $('importStep1').style.display = 'block';
+                $('importStep2').style.display = 'none';
+                $('btnConfirmImport').style.display = 'none';
+                $('btnConfirmImport').disabled = false;
+                $('btnConfirmImport').textContent = '✓ Import All';
+                $('timelyFileInput').value = '';
+                
+                // Refresh views
+                renderAllAppointments();
+                renderClients();
+                renderDash();
+                
+            } catch (err) {
+                console.error('Import error:', err);
+                toast('Import failed: ' + err.message, 'error');
+                $('btnConfirmImport').disabled = false;
+                $('btnConfirmImport').textContent = '✓ Import All';
+            }
         }
 
         async function saveClientNotes() {
