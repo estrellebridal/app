@@ -1499,6 +1499,7 @@
             <div class="modal-body">
                 <div id="importStep1">
                     <p style="margin-bottom:12px;font-size:12px;color:var(--taupe)">Upload your Timely <strong>Schedule</strong> report (.xlsx). This will import clients and appointments automatically.</p>
+                    <p style="margin-bottom:12px;font-size:11px;color:var(--sage)">💡 <a href="#" onclick="event.preventDefault();clearCacheAndReload()">Click here to refresh data</a> before importing to avoid duplicates.</p>
                     <div style="border:2px dashed var(--champagne);border-radius:8px;padding:30px;text-align:center;cursor:pointer" onclick="$('timelyFileInput').click()">
                         <div style="font-size:24px;margin-bottom:8px">📄</div>
                         <div style="font-size:12px;color:var(--taupe)">Click to select Schedule.xlsx</div>
@@ -1867,7 +1868,9 @@
         const fmtDateLong = d => new Date(d+'T00:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
         const initials = (f,l) => (f?.[0]||'') + (l?.[0]||'');
         const money = n => '$' + Number(n||0).toLocaleString();
-        const getClient = id => data.clients.find(c => c.ID == id);
+        const getClient = function(id) {
+            return data.clients.find(function(c) { return String(c.ID) === String(id); });
+        };
         const toast = (msg, type='') => { const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + type; setTimeout(() => t.className = 'toast', 3000); };
         
         // Calculate time until wedding (accounts for weekends - designers don't work weekends)
@@ -1980,6 +1983,14 @@
             } catch (e) {
                 console.log('Cache write error:', e);
             }
+        }
+
+        async function clearCacheAndReload() {
+            localStorage.removeItem('estrelle_data');
+            toast('Refreshing from server...', '');
+            await loadData(true);
+            closeModal('importTimely');
+            setTimeout(function() { openModal('importTimely'); }, 500);
         }
 
         async function loadData(showToast = false) {
@@ -2169,7 +2180,7 @@
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isNoShow = a.Status === 'no-show';
-                return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient(${a.ClientID})">
+                return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}</div>
@@ -2177,8 +2188,8 @@
                     </div>
                     <div style="display:flex;gap:4px">
                         ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();markNoShow(${a.ID})" title="No-show">🚫</button>` : ''}
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
-                        ${!isNoShow ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})">Start</button>` : ''}
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
+                        ${!isNoShow ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>` : ''}
                     </div>
                 </div>`;
             }).join('') : '<div class="empty">No appointments today</div>';
@@ -2195,7 +2206,7 @@
                 const isOverdue = getDateStr(a.FollowUpDate) < todayStr;
                 const hasNotes = a.FollowUpNotes && a.FollowUpNotes.trim();
                 return `<div class="list-item" style="${isOverdue ? 'background:#fff5f5;' : ''}flex-direction:column;align-items:stretch;gap:8px">
-                    <div style="display:flex;align-items:center;gap:10px" onclick="openClient(${a.ClientID})">
+                    <div style="display:flex;align-items:center;gap:10px" onclick="openClient('${a.ClientID}')">
                         <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                         <div class="item-info" style="flex:1">
                             <div class="item-name">${c.FirstName} ${c.LastName}</div>
@@ -2224,7 +2235,7 @@
                 const dateStr = fmtDate(a.Date);
                 const isNoShow = a.Status === 'no-show';
                 const isUpcoming = getDateStr(a.Date) >= today();
-                return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient(${a.ClientID})">
+                return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}</div>
@@ -2232,16 +2243,16 @@
                     </div>
                     <div style="display:flex;gap:4px">
                         ${!isNoShow && isUpcoming ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
-                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
+                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
                     </div>
                 </div>`;
             }).join('') : '<div class="empty">No more appointments this week</div>';
 
             const recent = [...data.clients].sort((a,b) => (b.LastVisit||'').localeCompare(a.LastVisit||'')).slice(0, 5);
             $('dashRecent').innerHTML = recent.length ? recent.map(c => `
-                <div class="list-item" onclick="openClient(${c.ID})">
+                <div class="list-item" onclick="openClient('${c.ID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info"><div class="item-name">${c.FirstName} ${c.LastName}</div><div class="item-meta">${fmtDate(c.LastVisit)}</div></div>
                     <span class="status status-${c.Status||'new'}">${c.Status||'new'}</span>
@@ -2258,11 +2269,11 @@
             $('clientsTable').innerHTML = activeClients.length ? activeClients.map(c => `
                 <tr>
                     <td onclick="event.stopPropagation()"><input type="checkbox" class="client-checkbox" data-id="${c.ID}" onchange="updateClientSelection()"></td>
-                    <td onclick="openClient(${c.ID})" style="cursor:pointer"><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
-                    <td onclick="openClient(${c.ID})" style="cursor:pointer">${fmtDate(c.WeddingDate)}</td>
-                    <td onclick="openClient(${c.ID})" style="cursor:pointer"><span class="status status-${c.Status||'new'}">${c.Status||'new'}</span></td>
-                    <td onclick="openClient(${c.ID})" style="cursor:pointer">${fmtDate(c.LastVisit)}</td>
-                    <td><button class="action-btn" onclick="event.stopPropagation();editClient(${c.ID})">Edit</button></td>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer">${fmtDate(c.WeddingDate)}</td>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer"><span class="status status-${c.Status||'new'}">${c.Status||'new'}</span></td>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer">${fmtDate(c.LastVisit)}</td>
+                    <td><button class="action-btn" onclick="event.stopPropagation();editClient('${c.ID}')">Edit</button></td>
                 </tr>
             `).join('') : '<tr><td colspan="6" class="empty">No clients</td></tr>';
         }
@@ -2287,31 +2298,26 @@
             
             if (!confirm('Delete ' + count + ' client(s) and all their appointments/orders? This cannot be undone.')) return;
             
-            $('btnDeleteClients').disabled = true;
-            $('btnDeleteClients').textContent = 'Deleting...';
+            // Collect IDs first
+            const ids = [];
+            checkboxes.forEach(function(cb) { ids.push(cb.dataset.id); });
             
-            try {
-                for (const cb of checkboxes) {
-                    const id = cb.dataset.id;
-                    await api('POST', { action: 'delete', sheet: 'Clients', id: id });
-                    data.clients = data.clients.filter(function(c) { return c.ID != id; });
-                    // Also delete related appointments
-                    const relatedAppts = data.appointments.filter(function(a) { return a.ClientID == id; });
-                    for (const appt of relatedAppts) {
-                        await api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID });
-                    }
-                    data.appointments = data.appointments.filter(function(a) { return a.ClientID != id; });
-                }
-                
-                toast(count + ' client(s) deleted', 'success');
-                renderClients();
-                renderAllAppointments();
-                renderDash();
-            } catch (err) {
-                toast('Delete failed: ' + err.message, 'error');
-            }
+            // Optimistic UI update - remove immediately
+            ids.forEach(function(id) {
+                data.clients = data.clients.filter(function(c) { return c.ID != id; });
+                data.appointments = data.appointments.filter(function(a) { return a.ClientID != id; });
+            });
             
-            $('btnDeleteClients').disabled = false;
+            // Update UI immediately
+            renderClients();
+            renderAllAppointments();
+            renderDash();
+            toast(count + ' client(s) deleted', 'success');
+            
+            // Fire all deletes in background (don't await)
+            ids.forEach(function(id) {
+                api('POST', { action: 'delete', sheet: 'Clients', id: id }).catch(function() {});
+            });
         }
 
         function filterClients() {
@@ -2556,10 +2562,10 @@
                                     <div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}${a.ConfirmationSent ? ' · ✓ Confirmed' : ''}</div></div>
                                 </div>
                                 <div>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})" style="margin-right:4px">✕</button>
-                                    <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})" style="margin-right:4px" title="${a.ConfirmationSent ? 'Confirmation sent - click to resend' : 'Send confirmation email'}">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})" style="margin-right:4px">Edit</button>
-                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient(${a.ClientID})">Start</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')" style="margin-right:4px">✕</button>
+                                    <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')" style="margin-right:4px" title="${a.ConfirmationSent ? 'Confirmation sent - click to resend' : 'Send confirmation email'}">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')" style="margin-right:4px">Edit</button>
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>
                                 </div>
                             </div>`;
                         }).join('')}
@@ -2577,6 +2583,10 @@
             const search = $('apptSearch').value.toLowerCase();
             const todayStr = today();
             
+            console.log('=== RENDER ALL APPOINTMENTS ===');
+            console.log('Total appointments in data:', data.appointments.length);
+            console.log('Total clients in data:', data.clients.length);
+            
             // Populate type filter dropdown (preserve current selection)
             const serviceTypes = getServiceTypes();
             const currentFilterHtml = $('apptTypeFilter').innerHTML;
@@ -2586,7 +2596,15 @@
             }
             
             // Start with only appointments that have valid clients
-            let appts = data.appointments.filter(a => getClient(a.ClientID));
+            let appts = data.appointments.filter(function(a) {
+                const client = getClient(a.ClientID);
+                if (!client) {
+                    console.log('ORPHAN appointment - no client found for ID:', a.ClientID, 'Appointment:', a.ID, 'Date:', a.Date);
+                }
+                return client;
+            });
+            
+            console.log('Appointments with valid clients:', appts.length);
             
             // Filter by time
             if (filter === 'upcoming') {
@@ -2625,15 +2643,15 @@
                 const isPast = getDateStr(a.Date) < todayStr;
                 return `<tr style="${isPast ? 'opacity:0.6' : ''}">
                     <td onclick="event.stopPropagation()"><input type="checkbox" class="appt-checkbox" data-id="${a.ID}" onchange="updateApptSelection()"></td>
-                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${fmtDate(a.Date)}</td>
-                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${fmtTime(a.Time)}</td>
-                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
-                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
-                    <td onclick="openClient(${a.ClientID})" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
+                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtDate(a.Date)}</td>
+                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtTime(a.Time)}</td>
+                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
+                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
+                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
                     <td style="text-align:right">
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt(${a.ID})">✕</button>
-                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal(${a.ID})">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt(${a.ID})">Edit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
+                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
                     </td>
                 </tr>`;
             }).join('') : '<tr><td colspan="7" class="empty">No appointments found</td></tr>';
@@ -2659,25 +2677,25 @@
             
             if (!confirm('Delete ' + count + ' appointment(s)? This cannot be undone.')) return;
             
-            $('btnDeleteAppts').disabled = true;
-            $('btnDeleteAppts').textContent = 'Deleting...';
+            // Collect IDs first
+            const ids = [];
+            checkboxes.forEach(function(cb) { ids.push(cb.dataset.id); });
             
-            try {
-                for (const cb of checkboxes) {
-                    const id = cb.dataset.id;
-                    await api('POST', { action: 'delete', sheet: 'Appointments', id: id });
-                    data.appointments = data.appointments.filter(function(a) { return a.ID != id; });
-                }
-                
-                toast(count + ' appointment(s) deleted', 'success');
-                renderAllAppointments();
-                renderDash();
-                renderWeek();
-            } catch (err) {
-                toast('Delete failed: ' + err.message, 'error');
-            }
+            // Optimistic UI update - remove immediately
+            ids.forEach(function(id) {
+                data.appointments = data.appointments.filter(function(a) { return a.ID != id; });
+            });
             
-            $('btnDeleteAppts').disabled = false;
+            // Update UI immediately
+            renderAllAppointments();
+            renderDash();
+            renderWeek();
+            toast(count + ' appointment(s) deleted', 'success');
+            
+            // Fire all deletes in background (don't await)
+            ids.forEach(function(id) {
+                api('POST', { action: 'delete', sheet: 'Appointments', id: id }).catch(function() {});
+            });
         }
 
         async function deleteAppt(id) {
@@ -6253,7 +6271,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 return `
                 <div class="appt-item appt-type-${a.Type || 'consultation'}" style="cursor:pointer;${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                        <div onclick="viewAppt(${a.ID})" style="flex:1">
+                        <div onclick="viewAppt('${a.ID}')" style="flex:1">
                             <div class="appt-date">
                                 ${fmtDate(a.Date)} at ${fmtTime(a.Time)}
                                 ${photoCount > 0 ? ` <span style="font-size:10px;color:var(--sage)">📷${photoCount}</span>` : ''}
@@ -6263,14 +6281,14 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
                         <div class="appt-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px;flex-wrap:wrap">
-                            <button class="action-btn" onclick="viewAppt(${a.ID})" title="View">👁</button>
+                            <button class="action-btn" onclick="viewAppt('${a.ID}')" title="View">👁</button>
                             ${!isNoShow && isUpcoming ? `<button class="action-btn" onclick="rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
                             ${!isNoShow ? `<button class="action-btn" onclick="markNoShow(${a.ID})" title="Mark No-Show">🚫</button>` : ''}
-                            <button class="action-btn" onclick="editAppt(${a.ID})" title="Edit">✏️</button>
+                            <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
                             <button class="action-btn" onclick="deleteApptConfirm(${a.ID})" title="Delete">×</button>
                         </div>
                     </div>
-                    ${a.Notes ? `<div class="appt-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--champagne)" onclick="viewAppt(${a.ID})">${a.Notes}</div>` : '<div style="font-size:10px;color:var(--champagne);margin-top:4px;font-style:italic" onclick="editAppt(${a.ID})">Click to add notes</div>'}
+                    ${a.Notes ? `<div class="appt-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--champagne)" onclick="viewAppt('${a.ID}')">${a.Notes}</div>` : `<div style="font-size:10px;color:var(--champagne);margin-top:4px;font-style:italic" onclick="editAppt('${a.ID}')">Click to add notes</div>`}
                 </div>`;
             }).join('') : '<div class="empty">No appointments</div>';
         }
@@ -6654,9 +6672,28 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             return 'consultation';
         }
         
-        function parseTimelyFile(input) {
+        async function parseTimelyFile(input) {
             const file = input.files[0];
             if (!file) return;
+            
+            // Force fresh data reload before parsing
+            toast('Loading latest data...', '');
+            try {
+                const response = await fetch(API_URL);
+                const freshData = await response.json();
+                if (freshData && freshData.clients) {
+                    data.clients = freshData.clients || [];
+                    data.appointments = freshData.appointments || [];
+                    console.log('Refreshed data - Clients:', data.clients.length, 'Appointments:', data.appointments.length);
+                }
+            } catch (e) {
+                console.log('Could not refresh data, using cached:', e);
+            }
+            
+            // Log current state before parsing
+            console.log('=== STARTING IMPORT ===');
+            console.log('Clients in memory:', data.clients.length);
+            console.log('Client emails:', data.clients.map(function(c) { return (c.Email || '').toLowerCase().trim(); }));
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -6787,23 +6824,27 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         const firstName = nameParts[0] || '';
                         const lastName = nameParts.slice(1).join(' ') || '';
                         
-                        // Check existing client by email
+                        // Check existing client by email (trim and lowercase)
                         let existingClient = null;
-                        if (email && window.data && window.data.clients) {
+                        const emailClean = (email || '').trim().toLowerCase();
+                        if (emailClean && window.data && window.data.clients) {
                             for (let c of window.data.clients) {
-                                if (c.Email && c.Email.toLowerCase() === email.toLowerCase()) {
+                                const clientEmail = (c.Email || '').trim().toLowerCase();
+                                if (clientEmail && clientEmail === emailClean) {
                                     existingClient = c;
+                                    console.log('Found existing client by email:', emailClean, '-> ID:', c.ID);
                                     break;
                                 }
                             }
                         }
                         
-                        // Check existing appointment
+                        // Check existing appointment (use String comparison for IDs)
                         let existingAppt = null;
                         if (existingClient && apptDate && apptTime && window.data && window.data.appointments) {
                             for (let a of window.data.appointments) {
-                                if (a.ClientID === existingClient.ID && getDateStr(a.Date) === apptDate && a.Time === apptTime) {
+                                if (String(a.ClientID) === String(existingClient.ID) && getDateStr(a.Date) === apptDate && a.Time === apptTime) {
                                     existingAppt = a;
+                                    console.log('Found existing appointment:', a.ID);
                                     break;
                                 }
                             }
@@ -6899,17 +6940,19 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('btnConfirmImport').disabled = true;
             $('btnConfirmImport').textContent = 'Importing...';
             
-            let clientsCreated = 0, apptsCreated = 0, updated = 0;
+            let clientsCreated = 0, apptsCreated = 0;
             
             try {
+                // Process each item sequentially to get correct server IDs
                 for (let idx = 0; idx < timelyImportData.length; idx++) {
                     const item = timelyImportData[idx];
                     let clientId = item.existingClientId;
                     
-                    // Create new client if needed
+                    $('btnConfirmImport').textContent = 'Importing ' + (idx + 1) + '/' + timelyImportData.length + '...';
+                    
+                    // Create new client if needed - WAIT for server response
                     if (item.action === 'new_client') {
                         const newClient = {
-                            ID: 'c' + Date.now() + '_' + idx,
                             FirstName: item.firstName,
                             LastName: item.lastName,
                             Email: item.email,
@@ -6919,24 +6962,27 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         };
                         
                         console.log('Creating client:', newClient);
-                        await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
+                        const response = await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
+                        
+                        // Get the server-assigned ID
+                        if (response && response.id) {
+                            clientId = response.id;
+                            newClient.ID = response.id;
+                            console.log('Server assigned client ID:', clientId);
+                        } else {
+                            // Fallback - generate temp ID
+                            clientId = 'c' + Date.now() + idx;
+                            newClient.ID = clientId;
+                            console.log('Using temp client ID:', clientId);
+                        }
+                        
                         data.clients.push(newClient);
-                        clientId = newClient.ID;
                         clientsCreated++;
                     }
                     
-                    // Handle appointments
-                    if (item.action === 'mark_noshow' && item.existingApptId) {
-                        await updateRecord('Appointments', item.existingApptId, { Status: 'no-show' });
-                        const appt = data.appointments.find(function(a) { return a.ID === item.existingApptId; });
-                        if (appt) appt.Status = 'no-show';
-                        updated++;
-                    } else if (item.action === 'update' && item.existingApptId) {
-                        updated++;
-                    } else if (clientId && (item.action === 'new_client' || item.action === 'add_appt')) {
-                        // Create new appointment - even if date is missing
+                    // Create appointment with the correct client ID
+                    if (clientId && (item.action === 'new_client' || item.action === 'add_appt')) {
                         const newAppt = {
-                            ID: 'a' + Date.now() + '_' + idx,
                             ClientID: clientId,
                             Date: item.date || today(),
                             Time: item.time || '10:00',
@@ -6946,39 +6992,52 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             CreatedAt: today()
                         };
                         
-                        console.log('Creating appointment:', newAppt);
-                        await api('POST', { action: 'add', sheet: 'Appointments', record: newAppt });
+                        console.log('Creating appointment with ClientID:', clientId, newAppt);
+                        const apptResponse = await api('POST', { action: 'add', sheet: 'Appointments', record: newAppt });
+                        
+                        if (apptResponse && apptResponse.id) {
+                            newAppt.ID = apptResponse.id;
+                        } else {
+                            newAppt.ID = 'a' + Date.now() + idx;
+                        }
+                        
                         data.appointments.push(newAppt);
                         apptsCreated++;
                     }
                     
-                    // Small delay to avoid rate limiting
-                    await new Promise(function(r) { setTimeout(r, 50); });
+                    // Handle no-show updates
+                    if (item.action === 'mark_noshow' && item.existingApptId) {
+                        await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, updates: { Status: 'no-show' } });
+                        const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
+                        if (appt) appt.Status = 'no-show';
+                    }
                 }
                 
+                console.log('Import complete - Clients:', clientsCreated, 'Appointments:', apptsCreated);
+                
+                // Save to cache
+                saveCachedData();
+                
+                // Update UI
                 closeModal('importTimely');
-                toast('Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments', 'success');
-                
-                // Reset for next import
-                timelyImportData = [];
-                $('importStep1').style.display = 'block';
-                $('importStep2').style.display = 'none';
-                $('btnConfirmImport').style.display = 'none';
-                $('btnConfirmImport').disabled = false;
-                $('btnConfirmImport').textContent = '✓ Import All';
-                $('timelyFileInput').value = '';
-                
-                // Refresh views
-                renderAllAppointments();
                 renderClients();
+                renderAllAppointments();
                 renderDash();
+                toast('Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments', 'success');
                 
             } catch (err) {
                 console.error('Import error:', err);
-                toast('Import failed: ' + err.message, 'error');
-                $('btnConfirmImport').disabled = false;
-                $('btnConfirmImport').textContent = '✓ Import All';
+                toast('Import error: ' + err.message, 'error');
             }
+            
+            // Reset modal for next import
+            timelyImportData = [];
+            $('importStep1').style.display = 'block';
+            $('importStep2').style.display = 'none';
+            $('btnConfirmImport').style.display = 'none';
+            $('btnConfirmImport').disabled = false;
+            $('btnConfirmImport').textContent = '✓ Import All';
+            $('timelyFileInput').value = '';
         }
 
         async function saveClientNotes() {
@@ -7026,7 +7085,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 };
                 const color = typeColors[a.Type] || '#7f8c8d';
                 
-                return `<div style="border-left:3px solid ${color};padding:10px 12px;margin-bottom:10px;background:var(--cream);border-radius:0 5px 5px 0;cursor:pointer" onclick="editAppt(${a.ID})">
+                return `<div style="border-left:3px solid ${color};padding:10px 12px;margin-bottom:10px;background:var(--cream);border-radius:0 5px 5px 0;cursor:pointer" onclick="editAppt('${a.ID}')">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
                         <div>
                             <span style="font-weight:600;font-size:12px">${fmtDate(a.Date)}</span>
