@@ -259,6 +259,11 @@
         .empty { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 13px; }
 
         .action-btn { padding: 6px 10px; border: 1px solid var(--border); background: white; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 500; }
+        
+        /* Mobile/Desktop action toggle */
+        .appt-mobile-actions { display: none; }
+        .appt-desktop-actions { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+        .mobile-more-btn { display: none; }
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
         .action-btn:hover { background: var(--accent-light); border-color: var(--accent); }
 
@@ -282,27 +287,25 @@
             .sidebar .nav { 
                 display: flex; 
                 flex-direction: row; 
-                padding: 0 8px; 
+                padding: 0; 
                 width: 100%;
-                justify-content: flex-start;
+                justify-content: space-around;
                 align-items: center;
                 height: 100%;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
                 gap: 0;
             }
             .sidebar .nav-item { 
                 flex-direction: column; 
-                padding: 10px 12px; 
-                font-size: 10px;
-                min-width: 60px;
-                flex-shrink: 0;
+                padding: 8px 4px; 
+                font-size: 9px;
+                flex: 1;
                 text-align: center;
-                gap: 4px;
+                gap: 2px;
                 border-radius: 0;
+                min-width: 0;
             }
-            .sidebar .nav-item span { display: block; font-size: 10px; }
-            .sidebar .nav-item svg { width: 22px; height: 22px; }
+            .sidebar .nav-item span { display: block; font-size: 9px; }
+            .sidebar .nav-item svg { width: 20px; height: 20px; }
             .sidebar .nav-label { display: none; }
             .sidebar .sync-status { display: none; }
             .main { 
@@ -341,8 +344,37 @@
             .modal-body { padding: 16px; max-height: calc(100vh - 150px); overflow-y: auto; }
             
             .form-input { padding: 12px; font-size: 16px; }
-            .form-row { flex-direction: column; gap: 12px; }
+            .form-row { display: flex; flex-direction: column; gap: 12px; }
             .form-row > .form-group { width: 100%; }
+            
+            /* Fix modal content spacing */
+            #newClientFields, #newClientFields + div {
+                margin-bottom: 16px !important;
+            }
+            #newClientFields .form-row {
+                margin-bottom: 12px;
+            }
+            
+            /* Simplify appointment actions on mobile */
+            .appt-actions {
+                gap: 2px !important;
+            }
+            .appt-actions .action-btn {
+                padding: 6px 8px !important;
+                font-size: 11px !important;
+            }
+            .appt-actions .confirm-btns {
+                display: none !important;
+            }
+            .appt-actions .mobile-more-btn {
+                display: inline-flex !important;
+            }
+            .appt-mobile-actions {
+                display: flex !important;
+            }
+            .appt-desktop-actions {
+                display: none !important;
+            }
             
             .consult-header { padding: 16px; flex-direction: column; align-items: flex-start; }
             .consult-header.sticky { position: relative; margin: 0 0 16px 0; }
@@ -365,11 +397,65 @@
         }
         
         @media (max-width: 480px) {
-            .sidebar .nav-item { padding: 8px 10px; min-width: 50px; }
-            .sidebar .nav-item span { font-size: 9px; }
+            .sidebar .nav-item { padding: 6px 2px; }
+            .sidebar .nav-item span { font-size: 8px; }
+            .sidebar .nav-item svg { width: 18px; height: 18px; }
             .stats { grid-template-columns: 1fr 1fr; }
             .grid-3, .grid-4 { grid-template-columns: 1fr; }
             .meas-grid { grid-template-columns: 1fr 1fr; }
+        }
+        
+        /* Mobile: Schedule week view - compact buttons */
+        @media (max-width: 900px) {
+            .schedule-appt-row {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 8px !important;
+            }
+            .schedule-appt-row > div:last-child {
+                width: 100%;
+                justify-content: flex-start !important;
+                flex-wrap: wrap;
+            }
+            .schedule-appt-row .btn {
+                padding: 6px 10px !important;
+                font-size: 11px !important;
+            }
+            .schedule-appt-row .confirm-btns {
+                display: none !important;
+            }
+        }
+        
+        /* Mobile: Compact stat cards for Orders and Reporting */
+        @media (max-width: 900px) {
+            .orders-stats, .reporting-stats {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                gap: 8px !important;
+                margin-bottom: 16px !important;
+            }
+            .orders-stats .stat, .reporting-stats .stat {
+                padding: 12px !important;
+                min-height: auto !important;
+            }
+            .orders-stats .stat-value, .reporting-stats .stat-value {
+                font-size: 20px !important;
+            }
+            .orders-stats .stat-label, .reporting-stats .stat-label {
+                font-size: 10px !important;
+            }
+            .orders-stats .stat-icon, .reporting-stats .stat-icon {
+                display: none !important;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .orders-stats .stat, .reporting-stats .stat {
+                padding: 10px !important;
+            }
+            .orders-stats .stat-value, .reporting-stats .stat-value {
+                font-size: 18px !important;
+            }
         }
         
         /* Floating back button */
@@ -555,6 +641,72 @@
         .clickable:hover {
             transform: translateY(-1px);
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        /* Action Sheet (mobile) */
+        .action-sheet-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s;
+        }
+        .action-sheet-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .action-sheet {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 16px 16px 0 0;
+            padding: 8px;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .action-sheet-overlay.active .action-sheet {
+            transform: translateY(0);
+        }
+        .action-sheet-items {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .action-sheet-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--bg);
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+            text-align: left;
+            transition: background 0.15s;
+        }
+        .action-sheet-item:hover {
+            background: var(--cream);
+        }
+        .action-sheet-item.danger {
+            color: #dc3545;
+        }
+        .action-sheet-cancel {
+            width: 100%;
+            padding: 16px;
+            margin-top: 8px;
+            background: var(--bg);
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
         }
         
         /* Sticky header for client page */
@@ -798,27 +950,27 @@
                 <!-- Orders View -->
                 <div id="ordersViewContent">
                     <!-- Active Orders Summary -->
-                    <div class="grid-4" style="gap:12px;margin-bottom:16px">
+                    <div class="orders-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
                         <div class="card" style="border-left:3px solid #f39c12">
-                            <div class="card-body">
+                            <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Pending QA</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersNeedQa">0</div>
                             </div>
                         </div>
                         <div class="card" style="border-left:3px solid #1abc9c">
-                            <div class="card-body">
+                            <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Alterations</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersInAlterations">0</div>
                             </div>
                         </div>
                         <div class="card" style="border-left:3px solid #27ae60">
-                            <div class="card-body">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Ready for Pickup</div>
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Ready</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersReady">0</div>
                             </div>
                         </div>
                         <div class="card" style="border-left:3px solid #3498db">
-                            <div class="card-body">
+                            <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Production</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersInProduction">0</div>
                             </div>
@@ -892,29 +1044,29 @@
                 <!-- Analytics View -->
                 <div id="analyticsViewContent">
                     <!-- Summary Cards -->
-                    <div class="grid-4" style="gap:12px;margin-bottom:16px">
+                    <div class="reporting-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
                         <div class="card">
-                            <div class="card-body" style="text-align:center">
-                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Total Sales (Pre-Tax)</div>
-                                <div style="font-size:28px;font-weight:600" id="analyticsTotalPreTax">$0</div>
+                            <div class="card-body" style="text-align:center;padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Pre-Tax</div>
+                                <div style="font-size:24px;font-weight:600" id="analyticsTotalPreTax">$0</div>
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-body" style="text-align:center">
-                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Total Sales (With Tax)</div>
-                                <div style="font-size:28px;font-weight:600" id="analyticsTotalWithTax">$0</div>
+                            <div class="card-body" style="text-align:center;padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">With Tax</div>
+                                <div style="font-size:24px;font-weight:600" id="analyticsTotalWithTax">$0</div>
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-body" style="text-align:center">
-                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Total Orders</div>
-                                <div style="font-size:28px;font-weight:600" id="analyticsTotalOrders">0</div>
+                            <div class="card-body" style="text-align:center;padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Orders</div>
+                                <div style="font-size:24px;font-weight:600" id="analyticsTotalOrders">0</div>
                             </div>
                         </div>
                         <div class="card">
-                            <div class="card-body" style="text-align:center">
-                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Avg Order Value</div>
-                                <div style="font-size:28px;font-weight:600" id="analyticsAvgOrder">$0</div>
+                            <div class="card-body" style="text-align:center;padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Avg Order</div>
+                                <div style="font-size:24px;font-weight:600" id="analyticsAvgOrder">$0</div>
                             </div>
                         </div>
                     </div>
@@ -1361,16 +1513,17 @@
                 </div>
                 
                 <!-- New Client Fields (shown when "Create New" selected) -->
-                <div id="newClientFields" style="display:none;background:var(--blush);padding:12px;border-radius:5px;margin-bottom:12px">
-                    <div style="font-size:10px;font-weight:600;margin-bottom:8px;color:var(--taupe)">New Client Details</div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">First Name *</label><input type="text" class="form-input" id="aNewFirstName"></div><div class="form-group"><label class="form-label">Last Name *</label><input type="text" class="form-input" id="aNewLastName"></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="aNewEmail"></div><div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" id="aNewPhone"></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Wedding Date</label><input type="date" class="form-input" id="aNewWedding"></div><div class="form-group"><label class="form-label">Venue</label><input type="text" class="form-input" id="aNewVenue"></div></div>
+                <div id="newClientFields" style="display:none;background:var(--blush);padding:16px;border-radius:8px;margin-bottom:16px">
+                    <div style="font-size:11px;font-weight:600;margin-bottom:12px;color:var(--taupe);text-transform:uppercase;letter-spacing:0.5px">New Client Details</div>
+                    <div class="form-row" style="margin-bottom:12px"><div class="form-group" style="margin-bottom:0"><label class="form-label">First Name *</label><input type="text" class="form-input" id="aNewFirstName"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Last Name *</label><input type="text" class="form-input" id="aNewLastName"></div></div>
+                    <div class="form-row" style="margin-bottom:12px"><div class="form-group" style="margin-bottom:0"><label class="form-label">Email</label><input type="email" class="form-input" id="aNewEmail"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Phone</label><input type="tel" class="form-input" id="aNewPhone"></div></div>
+                    <div class="form-row"><div class="form-group" style="margin-bottom:0"><label class="form-label">Wedding Date</label><input type="date" class="form-input" id="aNewWedding"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Venue</label><input type="text" class="form-input" id="aNewVenue"></div></div>
                 </div>
                 
                 <!-- Appointment Details -->
-                <div style="background:var(--cream);padding:12px;border-radius:5px;margin-bottom:12px">
-                    <div class="form-row"><div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate" onchange="updateFollowUpDate()"></div><div class="form-group"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
+                <div style="background:var(--cream);padding:16px;border-radius:8px;margin-bottom:12px">
+                    <div style="font-size:11px;font-weight:600;margin-bottom:12px;color:var(--taupe);text-transform:uppercase;letter-spacing:0.5px">Appointment Details</div>
+                    <div class="form-row" style="margin-bottom:12px"><div class="form-group" style="margin-bottom:0"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate" onchange="updateFollowUpDate()"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
                     <div class="form-row">
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input" id="aType" onchange="toggleConsultationReason()"></select></div>
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input" id="aConsultant"><option value="">Select...</option></select></div>
@@ -1607,7 +1760,15 @@
             <div class="modal-header"><h2 class="modal-title">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
-                    <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()"></select></div>
+                    <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()">
+                        <option value="">Select designer...</option>
+                        <option value="Vivienne Westwood">Vivienne Westwood</option>
+                        <option value="Netta BenShabu">Netta BenShabu</option>
+                        <option value="Stephane Rolland">Stephane Rolland</option>
+                        <option value="Enaura Bridal">Enaura Bridal</option>
+                        <option value="Galia Lahav">Galia Lahav</option>
+                        <option value="custom">+ Custom Designer</option>
+                    </select></div>
                     <div class="form-group"><label class="form-label">Style</label><input type="text" class="form-input" id="oStyle"></div>
                 </div>
                 <div class="form-group" id="customDesignerGroup" style="display:none">
@@ -3805,13 +3966,13 @@
                         ${appts.map(a => {
                             const c = getClient(a.ClientID);
                             const typeClass = `appt-type-${a.Type || 'consultation'}`;
-                            return `<div class="${typeClass}" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush)">
-                                <div style="display:flex;align-items:center;gap:12px">
-                                    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px">${fmtTime(a.Time)}</div>
-                                    <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
-                                    <div><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
+                            return `<div class="${typeClass} schedule-appt-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush)">
+                                <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+                                    <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px;flex-shrink:0">${fmtTime(a.Time)}</div>
+                                    <div class="avatar" style="flex-shrink:0">${initials(c.FirstName, c.LastName)}</div>
+                                    <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
                                 </div>
-                                <div style="display:flex;gap:4px;align-items:center">
+                                <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
                                     ${confirmButtons(a.ID, a.ConfirmationSent)}
                                     <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
                                     <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
@@ -6439,6 +6600,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
             const dropdown = $('newAltItemType');
             
+            if (!dropdown) {
+                console.log('Alteration dropdown not found');
+                return;
+            }
+            
+            console.log('populateAltItemDropdown called, savedItems:', savedItems.length);
+            
             // Rebuild dropdown
             let html = `
                 <option value="hem">Hem (shorten/lengthen)</option>
@@ -6764,7 +6932,15 @@ www.estrellebridal.com`;
 
         // ========== DESIGNERS ==========
         function renderDesigners() {
-            $('designersTable').innerHTML = designerData.map((d, idx) => {
+            // Ensure designer data is loaded
+            if (!designerData || designerData.length === 0) {
+                loadDesignerData();
+            }
+            
+            const tableEl = $('settingsDesignersTable');
+            if (!tableEl) return;
+            
+            tableEl.innerHTML = designerData.map((d, idx) => {
                 // Format rush tiers
                 let tiersHtml = '';
                 if (d.rushTiers && d.rushTiers.length > 0) {
@@ -6793,6 +6969,20 @@ www.estrellebridal.com`;
                     <td><button class="action-btn" onclick="editDesignerByIdx(${idx})">Edit</button></td>
                 </tr>`;
             }).join('') || '<tr><td colspan="5" class="empty">No designers</td></tr>';
+            
+            // Update count
+            const countEl = $('designerCount');
+            if (countEl) countEl.textContent = `(${designerData.length})`;
+        }
+        
+        // Alias for backward compatibility
+        function openEditDesignerModal(idx) { editDesignerByIdx(idx); }
+        function deleteDesignerFromList(idx) {
+            if (!confirm('Delete this designer?')) return;
+            designerData.splice(idx, 1);
+            saveDesignerData();
+            renderDesigners();
+            toast('Designer deleted', 'success');
         }
         
         let editingDesignerTiers = [];
@@ -6923,6 +7113,7 @@ www.estrellebridal.com`;
             renderSavedAltItems();
         }
         
+        // ========== ALTERATION ITEMS ==========
         function renderSavedAltItems() {
             const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
             if (savedItems.length === 0) {
@@ -7016,9 +7207,14 @@ www.estrellebridal.com`;
             // Load service types
             renderServiceTypes();
             
+            // Ensure designer data is loaded
+            if (!designerData || designerData.length === 0) {
+                loadDesignerData();
+            }
+            
             // Update counts
             $('consultantCount').textContent = `(${data.consultants.length})`;
-            $('designerCount').textContent = `(${data.designers.length})`;
+            $('designerCount').textContent = `(${designerData.length})`;
             
             // Render consultants in settings
             $('settingsConsultantsList').innerHTML = data.consultants.length ? data.consultants.map(c => `
@@ -7033,19 +7229,19 @@ www.estrellebridal.com`;
                 </div>
             `).join('') : '<p style="color:var(--text-secondary);font-size:13px">No consultants added yet</p>';
             
-            // Render designers in settings
-            $('settingsDesignersTable').innerHTML = data.designers.map(d => `
+            // Render designers in settings (using localStorage designerData)
+            $('settingsDesignersTable').innerHTML = designerData.length ? designerData.map((d, idx) => `
                 <tr>
-                    <td style="font-weight:500">${d.Designer}</td>
-                    <td>${d.StandardMonths || '?'} months</td>
-                    <td style="font-size:11px">${formatRushTiers(d)}</td>
-                    <td style="font-size:11px;color:var(--red)">${d.BelowMinFee || 'Call'}</td>
+                    <td style="font-weight:500">${d.name}</td>
+                    <td>${d.standard || '?'} months</td>
+                    <td style="font-size:11px">${d.rushTiers && d.rushTiers.length > 0 ? d.rushTiers.map(t => `${t.months}mo: ${t.fee}`).join('<br>') : '—'}</td>
+                    <td style="font-size:11px;color:var(--red)">${d.belowMin ? (d.belowMin.fee || d.belowMin.note || 'Call') : 'Call'}</td>
                     <td>
-                        <button class="action-btn" onclick="editDesigner('${d.ID}')">Edit</button>
-                        <button class="action-btn" onclick="deleteDesigner('${d.ID}')" style="color:var(--red)">Delete</button>
+                        <button class="action-btn" onclick="openEditDesignerModal(${idx})">Edit</button>
+                        <button class="action-btn" onclick="deleteDesignerFromList(${idx})" style="color:var(--red)">Delete</button>
                     </td>
                 </tr>
-            `).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">No designers added</td></tr>';
+            `).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--text-secondary)">No designers added</td></tr>';
             
             // Render anniversaries preview
             renderSettingsAnniversaries();
@@ -7148,7 +7344,9 @@ www.estrellebridal.com`;
                 if (!isOpen) {
                     if (section === 'anniversaries') renderSettingsAnniversaries();
                     if (section === 'consultants') renderSettings();
-                    if (section === 'designers') renderSettings();
+                    if (section === 'designers') renderDesigners();
+                    if (section === 'altItems') renderSavedAltItems();
+                    if (section === 'services') renderServiceTypes();
                 }
             }
         }
@@ -8271,13 +8469,20 @@ The {storeName} Team`
             const saved = localStorage.getItem('estrelle_designers');
             if (saved) {
                 try {
-                    designerData = JSON.parse(saved);
+                    const parsed = JSON.parse(saved);
+                    // Make sure we have valid data with items
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        designerData = parsed;
+                    } else {
+                        designerData = [...DEFAULT_DESIGNER_DATA];
+                    }
                 } catch (e) {
                     designerData = [...DEFAULT_DESIGNER_DATA];
                 }
             } else {
                 designerData = [...DEFAULT_DESIGNER_DATA];
             }
+            console.log('Loaded designerData:', designerData.length, 'designers');
         }
         function saveDesignerData() {
             localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
@@ -8410,7 +8615,7 @@ The {storeName} Team`
                 return `
                 <div class="appt-item appt-type-${a.Type || 'consultation'}" style="cursor:pointer;${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                        <div onclick="viewAppt('${a.ID}')" style="flex:1">
+                        <div onclick="viewAppt('${a.ID}')" style="flex:1;min-width:0">
                             <div class="appt-date">
                                 ${fmtDate(a.Date)} at ${fmtTime(a.Time)}
                                 ${photoCount > 0 ? ` <span style="font-size:10px;color:var(--sage)">📷${photoCount}</span>` : ''}
@@ -8420,18 +8625,74 @@ The {storeName} Team`
                             <div class="appt-meta">${a.Type||''} · ${a.Consultant||''}</div>
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
-                        <div class="appt-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
-                            ${!isNoShow && isUpcoming ? confirmButtons(a.ID, a.ConfirmationSent) : ''}
-                            <button class="action-btn" onclick="viewAppt('${a.ID}')" title="View">👁</button>
-                            ${!isNoShow && isUpcoming ? `<button class="action-btn" onclick="rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
-                            ${!isNoShow ? `<button class="action-btn" onclick="markNoShow(${a.ID})" title="Mark No-Show">🚫</button>` : ''}
-                            <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
-                            <button class="action-btn" onclick="deleteApptConfirm(${a.ID})" title="Delete">×</button>
+                        <div class="appt-actions" onclick="event.stopPropagation()">
+                            <!-- Desktop: Full buttons -->
+                            <div class="appt-desktop-actions">
+                                ${!isNoShow && isUpcoming ? confirmButtons(a.ID, a.ConfirmationSent) : ''}
+                                <button class="action-btn" onclick="viewAppt('${a.ID}')" title="View">👁</button>
+                                ${!isNoShow && isUpcoming ? `<button class="action-btn" onclick="rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
+                                ${!isNoShow ? `<button class="action-btn" onclick="markNoShow(${a.ID})" title="Mark No-Show">🚫</button>` : ''}
+                                <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
+                                <button class="action-btn" onclick="deleteApptConfirm(${a.ID})" title="Delete">×</button>
+                            </div>
+                            <!-- Mobile: Simplified buttons -->
+                            <div class="appt-mobile-actions">
+                                <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
+                                <button class="action-btn" onclick="showApptActions(${a.ID}, ${isNoShow}, ${isUpcoming}, ${a.ConfirmationSent || false})" title="More">⋯</button>
+                            </div>
                         </div>
                     </div>
                     ${a.Notes ? `<div class="appt-notes" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--champagne)" onclick="viewAppt('${a.ID}')">${a.Notes}</div>` : `<div style="font-size:10px;color:var(--champagne);margin-top:4px;font-style:italic" onclick="editAppt('${a.ID}')">Click to add notes</div>`}
                 </div>`;
             }).join('') : '<div class="empty">No appointments</div>';
+        }
+        
+        // Mobile action sheet for appointments
+        function showApptActions(apptId, isNoShow, isUpcoming, isConfirmed) {
+            const actions = [];
+            
+            actions.push({ label: '👁 View Details', action: () => viewAppt(apptId) });
+            
+            if (!isNoShow && isUpcoming) {
+                if (!isConfirmed) {
+                    actions.push({ label: '✓ Mark Confirmed', action: () => { markConfirmed(apptId); closeActionSheet(); } });
+                    actions.push({ label: '📧 Send Confirmation', action: () => { openConfirmEmailModal(apptId); closeActionSheet(); } });
+                }
+                actions.push({ label: '📅 Reschedule', action: () => { rescheduleAppt(apptId); closeActionSheet(); } });
+            }
+            
+            if (!isNoShow) {
+                actions.push({ label: '🚫 Mark No-Show', action: () => { markNoShow(apptId); closeActionSheet(); } });
+            }
+            
+            actions.push({ label: '🗑 Delete', action: () => { deleteApptConfirm(apptId); closeActionSheet(); }, danger: true });
+            
+            showActionSheet(actions);
+        }
+        
+        function showActionSheet(actions) {
+            let sheet = $('actionSheet');
+            if (!sheet) {
+                const div = document.createElement('div');
+                div.id = 'actionSheet';
+                div.className = 'action-sheet-overlay';
+                div.innerHTML = '<div class="action-sheet"><div class="action-sheet-items"></div><button class="action-sheet-cancel" onclick="closeActionSheet()">Cancel</button></div>';
+                div.onclick = (e) => { if (e.target === div) closeActionSheet(); };
+                document.body.appendChild(div);
+                sheet = div;
+            }
+            
+            const itemsContainer = sheet.querySelector('.action-sheet-items');
+            itemsContainer.innerHTML = actions.map(a => 
+                `<button class="action-sheet-item ${a.danger ? 'danger' : ''}" onclick="(${a.action.toString()})()">${a.label}</button>`
+            ).join('');
+            
+            sheet.classList.add('active');
+        }
+        
+        function closeActionSheet() {
+            const sheet = $('actionSheet');
+            if (sheet) sheet.classList.remove('active');
         }
         
         async function markNoShow(id) {
@@ -8475,11 +8736,28 @@ The {storeName} Team`
         }
 
         function populateOptionModal() {
-            $('oDesigner').innerHTML = '<option value="">Select...</option>' + 
-                designerData.map(d => `<option value="${d.name}">${d.name}</option>`).join('') +
+            const dropdown = $('oDesigner');
+            if (!dropdown) {
+                console.error('Designer dropdown not found!');
+                return;
+            }
+            
+            // Ensure designer data is loaded
+            if (!designerData || designerData.length === 0) {
+                loadDesignerData();
+            }
+            
+            // Final fallback - use DESIGNER_RUSH_DATA directly
+            const designers = (designerData && designerData.length > 0) ? designerData : DESIGNER_RUSH_DATA;
+            
+            console.log('populateOptionModal - using', designers.length, 'designers');
+            
+            dropdown.innerHTML = '<option value="">Select designer...</option>' + 
+                designers.map(d => `<option value="${d.name}">${d.name}</option>`).join('') +
                 '<option value="custom">+ Custom Designer</option>';
+            
             $('customDesignerGroup').style.display = 'none';
-            $('oCustomDesigner').value = '';
+            if ($('oCustomDesigner')) $('oCustomDesigner').value = '';
         }
 
         function toggleCustomDesigner() {
