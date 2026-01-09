@@ -548,6 +548,14 @@
             font-size: 10px;
             font-weight: 500;
         }
+        .clickable {
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .clickable:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
         
         /* Sticky header for client page */
         .consult-header.sticky {
@@ -660,14 +668,64 @@
                 <div class="header">
                     <div><h1 class="title">Clients</h1><p class="subtitle" id="clientCount">-</p></div>
                     <div style="display:flex;gap:8px;align-items:center">
-                        <button class="btn btn-secondary" id="btnDeleteClients" style="display:none;background:var(--rose);color:white" onclick="bulkDeleteClients()">🗑 Delete Selected</button>
+                        <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+                            <button class="btn btn-sm" id="viewAllClients" onclick="setClientsView('all')" style="border:none;border-radius:0;background:var(--accent);color:white">All Clients</button>
+                            <button class="btn btn-sm" id="viewAnniversaries" onclick="setClientsView('anniversaries')" style="border:none;border-radius:0;background:white;color:var(--text)">💕 Anniversaries</button>
+                        </div>
+                        <button class="btn btn-secondary" id="btnDeleteClients" style="display:none;background:var(--rose);color:white" onclick="bulkDeleteClients()">🗑 Delete</button>
                         <button class="btn btn-primary" onclick="openModal('newClient')">+ New Client</button>
                     </div>
                 </div>
-                <div class="card"><div class="card-body">
-                    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search..." id="clientSearch" oninput="filterClients()"></div>
-                    <div class="table-wrap"><table class="table"><thead><tr><th style="width:30px"><input type="checkbox" id="selectAllClients" onchange="toggleAllClients(this.checked)"></th><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
-                </div></div>
+                
+                <!-- All Clients View -->
+                <div id="allClientsView">
+                    <div class="card"><div class="card-body">
+                        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search..." id="clientSearch" oninput="filterClients()"></div>
+                        <div class="table-wrap"><table class="table"><thead><tr><th style="width:30px"><input type="checkbox" id="selectAllClients" onchange="toggleAllClients(this.checked)"></th><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+                    </div></div>
+                </div>
+                
+                <!-- Anniversaries View -->
+                <div id="anniversariesView" style="display:none">
+                    <div class="card" style="margin-bottom:16px">
+                        <div class="card-body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label">Show</label>
+                                <select class="form-input" id="annFilterRange" onchange="renderAnniversariesView()" style="width:auto">
+                                    <option value="30">Next 30 days</option>
+                                    <option value="90">Next 90 days</option>
+                                    <option value="365" selected>All this year</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label">Status</label>
+                                <select class="form-input" id="annFilterStatus" onchange="renderAnniversariesView()" style="width:auto">
+                                    <option value="">All</option>
+                                    <option value="pending">Needs email</option>
+                                    <option value="scheduled">Scheduled</option>
+                                    <option value="sent">Sent</option>
+                                </select>
+                            </div>
+                            <div style="margin-left:auto;display:flex;gap:8px">
+                                <button class="btn btn-secondary" onclick="openAnniversaryTemplateModal()">✏️ Edit Template</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body" style="padding:0">
+                            <div class="table-wrap"><table class="table">
+                                <thead><tr>
+                                    <th>Client</th>
+                                    <th>Anniversary</th>
+                                    <th>Years</th>
+                                    <th>Email Status</th>
+                                    <th style="text-align:right">Actions</th>
+                                </tr></thead>
+                                <tbody id="anniversariesTable"></tbody>
+                            </table></div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Schedule -->
@@ -1150,18 +1208,6 @@
                         </div>
                     </div>
                     
-                    <!-- Anniversaries -->
-                    <div class="card settings-card">
-                        <div class="card-header" onclick="toggleSettingsSection('anniversaries')" style="cursor:pointer">
-                            <h2 class="card-title">💕 Wedding Anniversaries</h2>
-                            <span class="settings-toggle" id="toggleAnniversaries">▼</span>
-                        </div>
-                        <div class="card-body settings-content" id="sectionAnniversaries" style="display:none">
-                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">View and manage anniversary reminders</p>
-                            <div id="settingsAnniversariesList"></div>
-                        </div>
-                    </div>
-                    
                 </div>
             </section>
 
@@ -1617,6 +1663,38 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('confirmEmail')">Cancel</button>
                 <button class="btn btn-primary" onclick="sendConfirmationEmail()">Send Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Anniversary Email Modal -->
+    <div class="modal-overlay" id="modal-sendAnnEmail">
+        <div class="modal wide">
+            <div class="modal-header">
+                <h2 class="modal-title">💕 Send Anniversary Email</h2>
+                <button class="modal-close" onclick="closeModal('sendAnnEmail')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="annEmailClientId">
+                <div class="form-row" style="margin-bottom:12px">
+                    <div class="form-group">
+                        <label class="form-label">To</label>
+                        <input type="email" class="form-input" id="annEmailTo" readonly style="background:#f5f5f5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-input" id="annEmailSubject">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Body</label>
+                    <textarea class="form-input" id="annEmailBody" style="min-height:300px;font-size:12px;line-height:1.5"></textarea>
+                </div>
+                <p style="font-size:11px;color:var(--text-secondary);margin-top:8px">💡 Edit the anniversary template in Settings → Email Templates</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('sendAnnEmail')">Cancel</button>
+                <button class="btn btn-primary" onclick="sendAnniversaryEmail()">Send Email</button>
             </div>
         </div>
     </div>
@@ -2686,7 +2764,7 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
-            if (name === 'clients') renderClients();
+            if (name === 'clients') setClientsView(clientsView || 'all');
             if (name === 'schedule') setScheduleView(scheduleView || 'week');
             if (name === 'orders') { setOrdersView(ordersView || 'orders'); }
             if (name === 'reporting') renderReporting();
@@ -3034,6 +3112,315 @@
                     <span class="status status-${c.Status||'new'}">${c.Status||'new'}</span>
                 </div>
             `).join('') : '<div class="empty">No clients yet</div>';
+        }
+
+        // ========== CLIENTS VIEW TOGGLE ==========
+        let clientsView = 'all';
+        const ANNIVERSARY_EMAILS_KEY = 'estrelle_anniversary_emails';
+        
+        function getAnniversaryEmails() {
+            try {
+                return JSON.parse(localStorage.getItem(ANNIVERSARY_EMAILS_KEY) || '{}');
+            } catch {
+                return {};
+            }
+        }
+        
+        function saveAnniversaryEmail(clientId, status, date = null) {
+            const emails = getAnniversaryEmails();
+            const year = new Date().getFullYear();
+            const key = `${clientId}_${year}`;
+            emails[key] = { status, date, updatedAt: new Date().toISOString() };
+            localStorage.setItem(ANNIVERSARY_EMAILS_KEY, JSON.stringify(emails));
+        }
+        
+        function getAnniversaryEmailStatus(clientId) {
+            const emails = getAnniversaryEmails();
+            const year = new Date().getFullYear();
+            const key = `${clientId}_${year}`;
+            return emails[key] || null;
+        }
+        
+        function setClientsView(view) {
+            clientsView = view;
+            $('viewAllClients').style.background = view === 'all' ? 'var(--accent)' : 'white';
+            $('viewAllClients').style.color = view === 'all' ? 'white' : 'var(--text)';
+            $('viewAnniversaries').style.background = view === 'anniversaries' ? 'var(--accent)' : 'white';
+            $('viewAnniversaries').style.color = view === 'anniversaries' ? 'white' : 'var(--text)';
+            
+            $('allClientsView').style.display = view === 'all' ? 'block' : 'none';
+            $('anniversariesView').style.display = view === 'anniversaries' ? 'block' : 'none';
+            
+            if (view === 'all') {
+                $('clientCount').textContent = data.clients.filter(c => c.Status !== 'archived').length + ' clients';
+                renderClients();
+            } else {
+                renderAnniversariesView();
+            }
+        }
+        
+        function renderAnniversariesView() {
+            const rangeFilter = parseInt($('annFilterRange').value) || 365;
+            const statusFilter = $('annFilterStatus').value;
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            
+            // Get all clients with wedding dates
+            let anniversaries = data.clients
+                .filter(c => c.WeddingDate && c.Status !== 'archived')
+                .map(c => {
+                    const wdStr = getDateStr(c.WeddingDate);
+                    if (!wdStr || wdStr.includes('1899')) return null;
+                    
+                    const wd = new Date(wdStr + 'T00:00:00');
+                    if (isNaN(wd.getTime())) return null;
+                    
+                    // Calculate this year's anniversary
+                    let thisYearAnn = new Date(currentYear, wd.getMonth(), wd.getDate());
+                    if (thisYearAnn < now) {
+                        thisYearAnn.setFullYear(currentYear + 1);
+                    }
+                    
+                    const daysUntil = Math.ceil((thisYearAnn - now) / (1000 * 60 * 60 * 24));
+                    const yearsMarried = thisYearAnn.getFullYear() - wd.getFullYear();
+                    const emailStatus = getAnniversaryEmailStatus(c.ID);
+                    
+                    return { 
+                        ...c, 
+                        daysUntil, 
+                        anniversary: thisYearAnn, 
+                        weddingYear: wd.getFullYear(), 
+                        yearsMarried,
+                        emailStatus 
+                    };
+                })
+                .filter(c => c !== null && c.daysUntil <= rangeFilter);
+            
+            // Filter by email status
+            if (statusFilter === 'pending') {
+                anniversaries = anniversaries.filter(c => !c.emailStatus || c.emailStatus.status === 'pending');
+            } else if (statusFilter === 'scheduled') {
+                anniversaries = anniversaries.filter(c => c.emailStatus?.status === 'scheduled');
+            } else if (statusFilter === 'sent') {
+                anniversaries = anniversaries.filter(c => c.emailStatus?.status === 'sent');
+            }
+            
+            // Sort by days until
+            anniversaries.sort((a, b) => a.daysUntil - b.daysUntil);
+            
+            $('clientCount').textContent = anniversaries.length + ' anniversaries';
+            
+            $('anniversariesTable').innerHTML = anniversaries.length ? anniversaries.map(c => {
+                const urgentClass = c.daysUntil <= 7 ? 'style="background:#fff5f5"' : c.daysUntil <= 30 ? 'style="background:#fffbeb"' : '';
+                const status = c.emailStatus;
+                let statusBadge, actionBtn;
+                
+                if (status?.status === 'sent') {
+                    statusBadge = `<span class="confirmed-badge">✓ Sent ${fmtDate(status.date)}</span>`;
+                    actionBtn = `<button class="btn btn-sm btn-secondary" onclick="sendAnniversaryEmailNow('${c.ID}')">Resend</button>`;
+                } else if (status?.status === 'scheduled') {
+                    statusBadge = `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#e0f2fe;color:#0369a1;border-radius:4px;font-size:10px">📅 ${fmtDate(status.date)}</span>`;
+                    actionBtn = `
+                        <button class="btn btn-sm btn-secondary" onclick="sendAnniversaryEmailNow('${c.ID}')">Send Now</button>
+                        <button class="btn btn-sm btn-secondary" onclick="cancelScheduledEmail('${c.ID}')" style="color:var(--red)">Cancel</button>
+                    `;
+                } else {
+                    statusBadge = `<span style="color:var(--text-secondary);font-size:11px">Not scheduled</span>`;
+                    actionBtn = `
+                        <button class="btn btn-sm btn-done" onclick="openScheduleEmailModal('${c.ID}', '${c.FirstName}', '${c.LastName}', '${c.anniversary.toISOString()}')">📅 Schedule</button>
+                        <button class="btn btn-sm btn-email" onclick="sendAnniversaryEmailNow('${c.ID}')">📧 Send</button>
+                    `;
+                }
+                
+                return `<tr ${urgentClass}>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer">
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="avatar" style="width:32px;height:32px;font-size:11px">${initials(c.FirstName, c.LastName)}</div>
+                            <div>
+                                <div style="font-weight:500">${c.FirstName} ${c.LastName}</div>
+                                <div style="font-size:10px;color:var(--text-secondary)">${c.Email || 'No email'}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-weight:500">${c.anniversary.toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div>
+                        <div style="font-size:10px;color:${c.daysUntil <= 7 ? 'var(--red)' : c.daysUntil <= 30 ? 'var(--accent)' : 'var(--text-secondary)'}">${c.daysUntil === 0 ? 'Today!' : c.daysUntil === 1 ? 'Tomorrow' : 'In ' + c.daysUntil + ' days'}</div>
+                    </td>
+                    <td style="text-align:center">
+                        <div style="font-size:18px;font-weight:600">${c.yearsMarried}</div>
+                        <div style="font-size:9px;color:var(--text-secondary)">year${c.yearsMarried !== 1 ? 's' : ''}</div>
+                    </td>
+                    <td>${statusBadge}</td>
+                    <td style="text-align:right">
+                        <div style="display:flex;gap:4px;justify-content:flex-end">${actionBtn}</div>
+                    </td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="5" class="empty">No anniversaries found</td></tr>';
+        }
+        
+        function openScheduleEmailModal(clientId, firstName, lastName, anniversaryDate) {
+            const annDate = new Date(anniversaryDate);
+            const defaultDate = new Date(annDate);
+            defaultDate.setDate(defaultDate.getDate() - 3); // Default: 3 days before
+            
+            const modalHtml = `
+                <div class="modal-header">
+                    <h3 class="modal-title">📅 Schedule Anniversary Email</h3>
+                    <button class="modal-close" onclick="closeModal('scheduleAnnEmail')">×</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom:16px">Schedule congratulations email for <strong>${firstName} ${lastName}</strong></p>
+                    <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">Anniversary: ${annDate.toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric', year:'numeric'})}</p>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Send email on</label>
+                        <input type="date" class="form-input" id="scheduleEmailDate" value="${defaultDate.toISOString().split('T')[0]}">
+                    </div>
+                    
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+                        <button class="btn btn-sm btn-secondary" onclick="setScheduleDate(${-7}, '${anniversaryDate}')">1 week before</button>
+                        <button class="btn btn-sm btn-secondary" onclick="setScheduleDate(${-3}, '${anniversaryDate}')">3 days before</button>
+                        <button class="btn btn-sm btn-secondary" onclick="setScheduleDate(${0}, '${anniversaryDate}')">On the day</button>
+                    </div>
+                    
+                    <input type="hidden" id="scheduleEmailClientId" value="${clientId}">
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('scheduleAnnEmail')">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmScheduleEmail()">Schedule Email</button>
+                </div>
+            `;
+            
+            let modal = $('modal-scheduleAnnEmail');
+            if (!modal) {
+                const overlay = document.createElement('div');
+                overlay.className = 'modal-overlay';
+                overlay.id = 'modal-scheduleAnnEmail';
+                overlay.innerHTML = '<div class="modal">' + modalHtml + '</div>';
+                overlay.onclick = (e) => { if (e.target === overlay) closeModal('scheduleAnnEmail'); };
+                document.body.appendChild(overlay);
+                modal = overlay;
+            } else {
+                modal.querySelector('.modal').innerHTML = modalHtml;
+            }
+            
+            modal.classList.add('active');
+        }
+        
+        function setScheduleDate(daysOffset, anniversaryDate) {
+            const annDate = new Date(anniversaryDate);
+            annDate.setDate(annDate.getDate() + daysOffset);
+            $('scheduleEmailDate').value = annDate.toISOString().split('T')[0];
+        }
+        
+        function confirmScheduleEmail() {
+            const clientId = $('scheduleEmailClientId').value;
+            const date = $('scheduleEmailDate').value;
+            
+            if (!date) {
+                toast('Please select a date', 'error');
+                return;
+            }
+            
+            saveAnniversaryEmail(clientId, 'scheduled', date);
+            closeModal('scheduleAnnEmail');
+            renderAnniversariesView();
+            toast('Anniversary email scheduled!', 'success');
+        }
+        
+        function cancelScheduledEmail(clientId) {
+            if (!confirm('Cancel scheduled email?')) return;
+            saveAnniversaryEmail(clientId, 'pending', null);
+            renderAnniversariesView();
+            toast('Scheduled email cancelled', '');
+        }
+        
+        function sendAnniversaryEmailNow(clientId) {
+            const client = getClient(clientId);
+            if (!client) {
+                toast('Client not found', 'error');
+                return;
+            }
+            
+            if (!client.Email) {
+                toast('No email address for this client', 'error');
+                return;
+            }
+            
+            // Open the anniversary email modal
+            openAnniversaryEmailModal(clientId);
+        }
+        
+        function openAnniversaryEmailModal(clientId) {
+            const client = getClient(clientId);
+            if (!client) return;
+            
+            const template = getAnniversaryTemplate();
+            const storeInfo = getStoreInfo();
+            
+            // Calculate years married
+            const wdStr = getDateStr(client.WeddingDate);
+            const wd = new Date(wdStr + 'T00:00:00');
+            const yearsMarried = new Date().getFullYear() - wd.getFullYear();
+            
+            // Replace placeholders
+            let subject = template.subject
+                .replace(/\{FirstName\}/g, client.FirstName)
+                .replace(/\{LastName\}/g, client.LastName)
+                .replace(/\{Years\}/g, yearsMarried);
+            
+            let body = template.body
+                .replace(/\{FirstName\}/g, client.FirstName)
+                .replace(/\{LastName\}/g, client.LastName)
+                .replace(/\{Years\}/g, yearsMarried)
+                .replace(/\{StoreName\}/g, storeInfo.name || 'Estrelle Bridal')
+                .replace(/\{StorePhone\}/g, storeInfo.phone || '')
+                .replace(/\{StoreEmail\}/g, storeInfo.email || '');
+            
+            $('annEmailTo').value = client.Email;
+            $('annEmailSubject').value = subject;
+            $('annEmailBody').value = body;
+            $('annEmailClientId').value = clientId;
+            
+            openModal('sendAnnEmail');
+        }
+        
+        async function sendAnniversaryEmail() {
+            const clientId = $('annEmailClientId').value;
+            const to = $('annEmailTo').value;
+            const subject = $('annEmailSubject').value;
+            const body = $('annEmailBody').value;
+            
+            if (!to || !subject || !body) {
+                toast('Please fill in all fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'sendEmail',
+                        to: to,
+                        subject: subject,
+                        body: body
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    saveAnniversaryEmail(clientId, 'sent', new Date().toISOString().split('T')[0]);
+                    closeModal('sendAnnEmail');
+                    renderAnniversariesView();
+                    toast('Anniversary email sent!', 'success');
+                } else {
+                    toast('Failed to send: ' + (result.error || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                toast('Error sending email: ' + err.message, 'error');
+            }
         }
 
         // ========== CLIENTS ==========
@@ -6665,30 +7052,88 @@ www.estrellebridal.com`;
         }
         
         function renderSettingsAnniversaries() {
-            const today = new Date();
-            const upcoming = data.clients
-                .filter(c => c.WeddingDate)
-                .map(c => {
-                    const wd = new Date(getDateStr(c.WeddingDate) + 'T00:00:00');
-                    const thisYearAnn = new Date(today.getFullYear(), wd.getMonth(), wd.getDate());
-                    if (thisYearAnn < today) thisYearAnn.setFullYear(thisYearAnn.getFullYear() + 1);
-                    const daysUntil = Math.ceil((thisYearAnn - today) / (1000 * 60 * 60 * 24));
-                    return { ...c, daysUntil, anniversary: thisYearAnn };
-                })
-                .filter(c => c.daysUntil <= 90)
-                .sort((a, b) => a.daysUntil - b.daysUntil)
-                .slice(0, 10);
+            const now = new Date();
+            const currentYear = now.getFullYear();
             
-            $('settingsAnniversariesList').innerHTML = upcoming.length ? upcoming.map(c => `
-                <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px">
+            console.log('=== RENDER ANNIVERSARIES ===');
+            console.log('Total clients:', data.clients.length);
+            
+            // Get all clients with wedding dates
+            const clientsWithWedding = data.clients.filter(c => c.WeddingDate);
+            console.log('Clients with WeddingDate:', clientsWithWedding.length);
+            
+            if (clientsWithWedding.length === 0) {
+                $('settingsAnniversariesList').innerHTML = '<p style="color:var(--text-secondary);font-size:13px">No clients have wedding dates set</p>';
+                return;
+            }
+            
+            const upcoming = clientsWithWedding
+                .map(c => {
+                    const wdStr = getDateStr(c.WeddingDate);
+                    if (!wdStr || wdStr.includes('1899')) return null; // Invalid date
+                    
+                    const wd = new Date(wdStr + 'T00:00:00');
+                    if (isNaN(wd.getTime())) return null; // Invalid date
+                    
+                    // Calculate this year's anniversary
+                    let thisYearAnn = new Date(currentYear, wd.getMonth(), wd.getDate());
+                    
+                    // If anniversary already passed this year, use next year
+                    if (thisYearAnn < now) {
+                        thisYearAnn.setFullYear(currentYear + 1);
+                    }
+                    
+                    const daysUntil = Math.ceil((thisYearAnn - now) / (1000 * 60 * 60 * 24));
+                    const yearsMarried = thisYearAnn.getFullYear() - wd.getFullYear();
+                    
+                    return { ...c, daysUntil, anniversary: thisYearAnn, weddingYear: wd.getFullYear(), yearsMarried };
+                })
+                .filter(c => c !== null)
+                .sort((a, b) => a.daysUntil - b.daysUntil);
+            
+            console.log('Valid anniversaries:', upcoming.length);
+            
+            // Show all, grouped by timeframe
+            const soon = upcoming.filter(c => c.daysUntil <= 30);
+            const later = upcoming.filter(c => c.daysUntil > 30 && c.daysUntil <= 90);
+            const rest = upcoming.filter(c => c.daysUntil > 90).slice(0, 10);
+            
+            let html = '';
+            
+            if (soon.length > 0) {
+                html += '<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;margin-top:4px">📅 NEXT 30 DAYS</div>';
+                html += soon.map(c => renderAnniversaryItem(c)).join('');
+            }
+            
+            if (later.length > 0) {
+                html += '<div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;margin-top:12px">NEXT 90 DAYS</div>';
+                html += later.map(c => renderAnniversaryItem(c)).join('');
+            }
+            
+            if (rest.length > 0) {
+                html += '<div style="font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:8px;margin-top:12px">LATER THIS YEAR</div>';
+                html += rest.map(c => renderAnniversaryItem(c)).join('');
+            }
+            
+            if (html === '') {
+                html = '<p style="color:var(--text-secondary);font-size:13px">No valid anniversary dates found</p>';
+            }
+            
+            $('settingsAnniversariesList').innerHTML = html;
+        }
+        
+        function renderAnniversaryItem(c) {
+            const urgentStyle = c.daysUntil <= 7 ? 'border-left:3px solid var(--red);' : '';
+            return `
+                <div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg);border-radius:8px;margin-bottom:6px;${urgentStyle}" onclick="openClient('${c.ID}')" class="clickable">
                     <div class="avatar" style="width:36px;height:36px;font-size:12px">${initials(c.FirstName, c.LastName)}</div>
                     <div style="flex:1">
                         <div style="font-weight:500;font-size:13px">${c.FirstName} ${c.LastName}</div>
-                        <div style="font-size:11px;color:var(--text-secondary)">${c.anniversary.toLocaleDateString('en-US', {month:'short', day:'numeric'})}</div>
+                        <div style="font-size:11px;color:var(--text-secondary)">${c.anniversary.toLocaleDateString('en-US', {month:'short', day:'numeric'})} · ${c.yearsMarried} year${c.yearsMarried !== 1 ? 's' : ''}</div>
                     </div>
-                    <span style="font-size:12px;color:${c.daysUntil <= 7 ? 'var(--red)' : 'var(--text-secondary)'}">${c.daysUntil === 0 ? 'Today!' : c.daysUntil + ' days'}</span>
+                    <span style="font-size:12px;font-weight:500;color:${c.daysUntil <= 7 ? 'var(--red)' : c.daysUntil <= 30 ? 'var(--accent)' : 'var(--text-secondary)'}">${c.daysUntil === 0 ? 'Today!' : c.daysUntil + 'd'}</span>
                 </div>
-            `).join('') : '<p style="color:var(--text-secondary);font-size:13px">No upcoming anniversaries in the next 90 days</p>';
+            `;
         }
         
         function toggleSettingsSection(section) {
@@ -6698,6 +7143,13 @@ www.estrellebridal.com`;
                 const isOpen = content.style.display !== 'none';
                 content.style.display = isOpen ? 'none' : 'block';
                 toggle.textContent = isOpen ? '▼' : '▲';
+                
+                // Render content when opening specific sections
+                if (!isOpen) {
+                    if (section === 'anniversaries') renderSettingsAnniversaries();
+                    if (section === 'consultants') renderSettings();
+                    if (section === 'designers') renderSettings();
+                }
             }
         }
         
