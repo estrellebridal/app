@@ -509,6 +509,46 @@
             background: var(--accent-light);
         }
         
+        /* Confirmation button group - consistent styling */
+        .confirm-btns {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+        }
+        .confirm-btns .btn-done {
+            background: var(--sage);
+            color: white;
+            border: none;
+        }
+        .confirm-btns .btn-done:hover {
+            background: #8aa382;
+        }
+        .confirm-btns .btn-email {
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+        .confirm-btns .btn-email:hover {
+            background: #96795a;
+        }
+        .confirm-btns .btn-confirmed {
+            background: #d4edda;
+            color: #155724;
+            border: none;
+            cursor: default;
+        }
+        .confirmed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            background: #d4edda;
+            color: #155724;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
         /* Sticky header for client page */
         .consult-header.sticky {
             position: sticky;
@@ -2338,9 +2378,22 @@
         };
         const getDateStr = (d) => {
             if (!d) return '';
-            if (typeof d === 'number') {
-                return new Date((d - 25569) * 86400 * 1000).toISOString().split('T')[0];
+            // Handle Date objects
+            if (d instanceof Date) {
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             }
+            // Handle Google Sheets date serial numbers
+            if (typeof d === 'number') {
+                const date = new Date((d - 25569) * 86400 * 1000);
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+            // Handle ISO strings
             return String(d).split('T')[0];
         };
         const fmtDate = d => {
@@ -2634,8 +2687,8 @@
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
             if (name === 'clients') renderClients();
-            if (name === 'schedule') { renderWeek(); renderAllAppointments(); }
-            if (name === 'orders') renderOrders();
+            if (name === 'schedule') setScheduleView(scheduleView || 'week');
+            if (name === 'orders') { setOrdersView(ordersView || 'orders'); }
             if (name === 'reporting') renderReporting();
             if (name === 'settings') renderSettings();
             
@@ -2858,10 +2911,11 @@
                 return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
-                        <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}</div>
+                        <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div>
                         <div class="item-meta">${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div>
                     </div>
-                    <div style="display:flex;gap:4px">
+                    <div style="display:flex;gap:4px;align-items:center">
+                        ${!isNoShow && !a.ConfirmationSent ? confirmButtons(a.ID, false) : ''}
                         ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();markNoShow(${a.ID})" title="No-show">🚫</button>` : ''}
                         <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
                         ${!isNoShow ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>` : ''}
@@ -2968,7 +3022,7 @@
                         <div class="item-name">${c.FirstName} ${c.LastName}</div>
                         <div class="item-meta">${urgencyLabel} · ${fmtTime(a.Time)} · ${a.Type||''}</div>
                     </div>
-                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')">📧 Send</button>
+                    ${confirmButtons(a.ID, false)}
                 </div>`;
             }).join('') : '<div class="empty">All upcoming appointments confirmed! ✓</div>';
 
@@ -3250,14 +3304,15 @@
             
             // Render appropriate view
             if (view === 'week') {
-                renderWeek();
                 $('weekTitle').textContent = 'Schedule';
+                $('weekSub').textContent = '';
+                renderWeek();
             } else if (view === 'month') {
                 renderMonth();
             } else if (view === 'list') {
-                renderAllAppointments();
                 $('weekTitle').textContent = 'All Appointments';
                 $('weekSub').textContent = `${data.appointments.length} total`;
+                renderAllAppointments();
             }
         }
         
@@ -3367,12 +3422,12 @@
                                 <div style="display:flex;align-items:center;gap:12px">
                                     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px">${fmtTime(a.Time)}</div>
                                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
-                                    <div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:10px;color:var(--rose)">${a.Type||''} · ${a.Consultant||''}${a.ConfirmationSent ? ' · ✓ Confirmed' : ''}</div></div>
+                                    <div><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
                                 </div>
-                                <div>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')" style="margin-right:4px">✕</button>
-                                    <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')" style="margin-right:4px" title="${a.ConfirmationSent ? 'Confirmation sent - click to resend' : 'Send confirmation email'}">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')" style="margin-right:4px">Edit</button>
+                                <div style="display:flex;gap:4px;align-items:center">
+                                    ${confirmButtons(a.ID, a.ConfirmationSent)}
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
                                     <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>
                                 </div>
                             </div>`;
@@ -3561,83 +3616,113 @@
 
         // ========== ALL APPOINTMENTS ==========
         function renderAllAppointments() {
-            const filter = $('apptFilter').value;
-            const typeFilter = $('apptTypeFilter').value;
-            const search = $('apptSearch').value.toLowerCase();
-            const todayStr = today();
-            
-            console.log('=== RENDER ALL APPOINTMENTS ===');
-            console.log('Total appointments in data:', data.appointments.length);
-            console.log('Total clients in data:', data.clients.length);
-            
-            // Populate type filter dropdown (preserve current selection)
-            const serviceTypes = getServiceTypes();
-            const currentFilterHtml = $('apptTypeFilter').innerHTML;
-            if (!currentFilterHtml.includes(serviceTypes[0] || 'Consultation')) {
-                $('apptTypeFilter').innerHTML = '<option value="">All Types</option>' + 
-                    serviceTypes.map(t => `<option value="${t.toLowerCase()}" ${t.toLowerCase() === typeFilter ? 'selected' : ''}>${t}</option>`).join('');
-            }
-            
-            // Start with only appointments that have valid clients
-            let appts = data.appointments.filter(function(a) {
-                const client = getClient(a.ClientID);
-                if (!client) {
-                    console.log('ORPHAN appointment - no client found for ID:', a.ClientID, 'Appointment:', a.ID, 'Date:', a.Date);
+            try {
+                const filterEl = $('apptFilter');
+                const typeFilterEl = $('apptTypeFilter');
+                const searchEl = $('apptSearch');
+                const tableEl = $('allApptTable');
+                
+                console.log('=== RENDER ALL APPOINTMENTS ===');
+                console.log('Elements found:', { filterEl: !!filterEl, typeFilterEl: !!typeFilterEl, searchEl: !!searchEl, tableEl: !!tableEl });
+                
+                if (!filterEl || !typeFilterEl || !searchEl || !tableEl) {
+                    console.log('List view elements not found - aborting');
+                    return;
                 }
-                return client;
-            });
-            
-            console.log('Appointments with valid clients:', appts.length);
-            
-            // Filter by time
-            if (filter === 'upcoming') {
-                appts = appts.filter(a => getDateStr(a.Date) >= todayStr);
-            } else if (filter === 'past') {
-                appts = appts.filter(a => getDateStr(a.Date) < todayStr);
-            }
-            
-            // Filter by type
-            if (typeFilter) {
-                appts = appts.filter(a => (a.Type || '').toLowerCase().includes(typeFilter.toLowerCase()));
-            }
-            
-            // Filter by search
-            if (search) {
-                appts = appts.filter(a => {
-                    const c = getClient(a.ClientID);
-                    const clientName = `${c.FirstName} ${c.LastName}`.toLowerCase();
-                    return clientName.includes(search);
+                
+                const filter = filterEl.value;
+                const typeFilter = typeFilterEl.value;
+                const search = searchEl.value.toLowerCase();
+                const todayStr = today();
+                
+                console.log('Filter values:', { filter, typeFilter, search, todayStr });
+                console.log('Total appointments in data:', data.appointments.length);
+                console.log('Total clients in data:', data.clients.length);
+                
+                // Populate type filter dropdown (preserve current selection)
+                const serviceTypes = getServiceTypes();
+                const currentFilterHtml = typeFilterEl.innerHTML;
+                if (!currentFilterHtml.includes(serviceTypes[0] || 'Consultation')) {
+                    typeFilterEl.innerHTML = '<option value="">All Types</option>' + 
+                        serviceTypes.map(t => `<option value="${t.toLowerCase()}" ${t.toLowerCase() === typeFilter ? 'selected' : ''}>${t}</option>`).join('');
+                }
+                
+                // Start with only appointments that have valid clients
+                let appts = data.appointments.filter(function(a) {
+                    const client = getClient(a.ClientID);
+                    return client;
                 });
+                
+                console.log('Appointments with valid clients:', appts.length);
+                
+                // Filter by time
+                if (filter === 'upcoming') {
+                    appts = appts.filter(a => getDateStr(a.Date) >= todayStr);
+                    console.log('After upcoming filter:', appts.length);
+                } else if (filter === 'past') {
+                    appts = appts.filter(a => getDateStr(a.Date) < todayStr);
+                    console.log('After past filter:', appts.length);
+                }
+                
+                // Filter by type
+                if (typeFilter) {
+                    appts = appts.filter(a => (a.Type || '').toLowerCase().includes(typeFilter.toLowerCase()));
+                    console.log('After type filter:', appts.length);
+                }
+                
+                // Filter by search
+                if (search) {
+                    appts = appts.filter(a => {
+                        const c = getClient(a.ClientID);
+                        const clientName = `${c.FirstName} ${c.LastName}`.toLowerCase();
+                        return clientName.includes(search);
+                    });
+                    console.log('After search filter:', appts.length);
+                }
+                
+                // Sort by date descending for past, ascending for upcoming/all
+                appts.sort((a, b) => {
+                    const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
+                    if (filter === 'past') return -dateCompare;
+                    return dateCompare;
+                });
+                
+                // Update subtitle with count
+                if ($('weekSub')) {
+                    $('weekSub').textContent = `${appts.length} appointment${appts.length !== 1 ? 's' : ''}`;
+                }
+                
+                const selectAllEl = $('selectAllAppts');
+                const deleteBtn = $('btnDeleteAppts');
+                if (selectAllEl) selectAllEl.checked = false;
+                if (deleteBtn) deleteBtn.style.display = 'none';
+                
+                console.log('About to render', appts.length, 'appointments to table');
+                
+                tableEl.innerHTML = appts.length ? appts.map(a => {
+                    const c = getClient(a.ClientID);
+                    const isPast = getDateStr(a.Date) < todayStr;
+                    return `<tr style="${isPast ? 'opacity:0.6' : ''}">
+                        <td onclick="event.stopPropagation()"><input type="checkbox" class="appt-checkbox" data-id="${a.ID}" onchange="updateApptSelection()"></td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtDate(a.Date)}</td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtTime(a.Time)}</td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</td>
+                        <td style="text-align:right">
+                            <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center">
+                                ${confirmButtons(a.ID, a.ConfirmationSent)}
+                                <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
+                                <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('') : '<tr><td colspan="7" class="empty">No appointments found</td></tr>';
+                
+                console.log('Table rendered successfully');
+            } catch (err) {
+                console.error('Error in renderAllAppointments:', err);
             }
-            
-            // Sort by date descending for past, ascending for upcoming/all
-            appts.sort((a, b) => {
-                const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
-                if (filter === 'past') return -dateCompare; // Most recent first for past
-                return dateCompare; // Soonest first for upcoming/all
-            });
-            
-            $('apptCount').textContent = `${appts.length} appointment${appts.length !== 1 ? 's' : ''}`;
-            $('selectAllAppts').checked = false;
-            $('btnDeleteAppts').style.display = 'none';
-            
-            $('allApptTable').innerHTML = appts.length ? appts.map(a => {
-                const c = getClient(a.ClientID);
-                const isPast = getDateStr(a.Date) < todayStr;
-                return `<tr style="${isPast ? 'opacity:0.6' : ''}">
-                    <td onclick="event.stopPropagation()"><input type="checkbox" class="appt-checkbox" data-id="${a.ID}" onchange="updateApptSelection()"></td>
-                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtDate(a.Date)}</td>
-                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtTime(a.Time)}</td>
-                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
-                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
-                    <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span style="color:green">✓</span>' : ''}</td>
-                    <td style="text-align:right">
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
-                        <button class="btn btn-sm ${a.ConfirmationSent ? 'btn-success' : 'btn-secondary'}" onclick="event.stopPropagation();openConfirmEmailModal('${a.ID}')">${a.ConfirmationSent ? '✓📧' : '📧'}</button>
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
-                    </td>
-                </tr>`;
-            }).join('') : '<tr><td colspan="7" class="empty">No appointments found</td></tr>';
         }
         
         function toggleAllAppts(checked) {
@@ -3809,6 +3894,37 @@ The Estrelle Bridal Team`;
             toast('Template reset to default', 'success');
         }
 
+        function markConfirmed(apptId) {
+            const appt = data.appointments.find(a => a.ID == apptId);
+            if (!appt) { toast('Appointment not found', 'error'); return; }
+            
+            const client = getClient(appt.ClientID);
+            const clientName = client ? `${client.FirstName} ${client.LastName}` : 'Unknown';
+            
+            // Mark as confirmed without sending email
+            updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
+            appt.ConfirmationSent = new Date().toISOString();
+            
+            toast(`Marked ${clientName}'s appointment as confirmed`, 'success');
+            renderDash();
+        }
+        
+        // Helper to generate consistent confirmation buttons
+        function confirmButtons(apptId, isConfirmed, compact = false) {
+            if (isConfirmed) {
+                return compact 
+                    ? `<span class="confirmed-badge">✓ Confirmed</span>`
+                    : `<div class="confirm-btns">
+                        <button class="btn btn-sm btn-confirmed" title="Already confirmed">✓</button>
+                        <button class="btn btn-sm btn-email" onclick="event.stopPropagation();openConfirmEmailModal('${apptId}')" title="Resend confirmation">📧</button>
+                    </div>`;
+            }
+            return `<div class="confirm-btns">
+                <button class="btn btn-sm btn-done" onclick="event.stopPropagation();markConfirmed('${apptId}')" title="Mark confirmed (no email)">✓</button>
+                <button class="btn btn-sm btn-email" onclick="event.stopPropagation();openConfirmEmailModal('${apptId}')" title="Send confirmation email">📧</button>
+            </div>`;
+        }
+        
         function openConfirmEmailModal(apptId) {
             const appt = data.appointments.find(a => a.ID == apptId);
             if (!appt) { toast('Appointment not found', 'error'); return; }
@@ -7847,11 +7963,13 @@ The {storeName} Team`
                                 ${fmtDate(a.Date)} at ${fmtTime(a.Time)}
                                 ${photoCount > 0 ? ` <span style="font-size:10px;color:var(--sage)">📷${photoCount}</span>` : ''}
                                 ${isNoShow ? ' <span style="font-size:10px;color:var(--red);font-weight:600">NO-SHOW</span>' : ''}
+                                ${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}
                             </div>
                             <div class="appt-meta">${a.Type||''} · ${a.Consultant||''}</div>
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
-                        <div class="appt-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px;flex-wrap:wrap">
+                        <div class="appt-actions" onclick="event.stopPropagation()" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
+                            ${!isNoShow && isUpcoming ? confirmButtons(a.ID, a.ConfirmationSent) : ''}
                             <button class="action-btn" onclick="viewAppt('${a.ID}')" title="View">👁</button>
                             ${!isNoShow && isUpcoming ? `<button class="action-btn" onclick="rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
                             ${!isNoShow ? `<button class="action-btn" onclick="markNoShow(${a.ID})" title="Mark No-Show">🚫</button>` : ''}
