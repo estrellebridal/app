@@ -2448,11 +2448,11 @@
 
     <script>
         // ========== CONFIG ==========
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxXUdFREGtFzs9WHo6hYlPjE6yrtOg0sTjiY20DmWE7ETAhDG5NZOuRALwbthIQYzCzyw/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycby8svO3iKRnvNKyLD9nIGCwCxgBxZ3tiZ-uQBWpUxL5pbJW7c3v1_FLa1Fa-MJosSTYtw/exec';
 
         // ========== DATA ==========
         const CACHE_KEY = 'estrelle_data_cache';
-        let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [], visitnotes: [] };
+        let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [], visitnotes: [], announcements: [] };
         let currentClient = null;
         let currentOrder = { items: [], measurements: {} };
         let editingDesigner = null;
@@ -2757,7 +2757,8 @@
                         alterations: parsed.alterations || [],
                         designers: parsed.designers || [],
                         consultants: parsed.consultants || [],
-                        visitnotes: parsed.visitnotes || []
+                        visitnotes: parsed.visitnotes || [],
+                        announcements: parsed.announcements || []
                     };
                     renderDash();
                     return true;
@@ -2795,7 +2796,8 @@
                     alterations: d.alterations || [], 
                     designers: d.designers || [],
                     consultants: d.consultants || [],
-                    visitnotes: d.visitnotes || []
+                    visitnotes: d.visitnotes || [],
+                    announcements: d.announcements || []
                 };
                 saveCachedData();
                 renderDash();
@@ -2951,18 +2953,8 @@
         }
 
         // ========== ANNOUNCEMENTS ==========
-        const ANNOUNCEMENTS_KEY = 'estrelle_announcements';
-        
         function getAnnouncements() {
-            try {
-                return JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY) || '[]');
-            } catch {
-                return [];
-            }
-        }
-        
-        function saveAnnouncements(announcements) {
-            localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+            return data.announcements || [];
         }
         
         function renderAnnouncements() {
@@ -2988,16 +2980,16 @@
             };
             
             container.innerHTML = announcements.map((a, i) => `
-                <div class="announcement ${a.type === 'urgent' ? 'urgent' : ''} ${a.pinned ? 'pinned' : ''}">
-                    <div class="announcement-icon">${icons[a.type] || '📌'}</div>
+                <div class="announcement ${a.Type === 'urgent' ? 'urgent' : ''} ${a.Pinned ? 'pinned' : ''}">
+                    <div class="announcement-icon">${icons[a.Type] || '📌'}</div>
                     <div class="announcement-content">
-                        <div class="announcement-title">${escapeHtml(a.title)}</div>
-                        ${a.text ? `<div class="announcement-text">${escapeHtml(a.text)}</div>` : ''}
-                        <div class="announcement-meta">Added ${formatTimeAgo(a.created)}</div>
+                        <div class="announcement-title">${escapeHtml(a.Title)}</div>
+                        ${a.Details ? `<div class="announcement-text">${escapeHtml(a.Details)}</div>` : ''}
+                        <div class="announcement-meta">Added ${formatTimeAgo(a.CreatedAt)}</div>
                     </div>
                     <div class="announcement-actions">
-                        <button class="announcement-btn" onclick="editAnnouncement(${i})" title="Edit">✏️</button>
-                        <button class="announcement-btn" onclick="dismissAnnouncement(${i})" title="Dismiss">✕</button>
+                        <button class="announcement-btn" onclick="editAnnouncement(${a.ID})" title="Edit">✏️</button>
+                        <button class="announcement-btn" onclick="dismissAnnouncement(${a.ID})" title="Dismiss">✕</button>
                     </div>
                 </div>
             `).join('') + `
@@ -3025,10 +3017,9 @@
             return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         }
         
-        function openAnnouncementModal(editIndex = null) {
-            const isEdit = editIndex !== null;
-            const announcements = getAnnouncements();
-            const existing = isEdit ? announcements[editIndex] : null;
+        function openAnnouncementModal(editId = null) {
+            const isEdit = editId !== null;
+            const existing = isEdit ? data.announcements.find(a => a.ID == editId) : null;
             
             // Create modal content
             const modalHtml = `
@@ -3037,28 +3028,29 @@
                     <button class="modal-close" onclick="closeModal('announcement')">×</button>
                 </div>
                 <div class="modal-body">
+                    <input type="hidden" id="annEditId" value="${editId || ''}">
                     <div class="form-group">
                         <label class="form-label">Type</label>
                         <select class="form-input" id="annType">
-                            <option value="info" ${existing?.type === 'info' ? 'selected' : ''}>📢 Info</option>
-                            <option value="reminder" ${existing?.type === 'reminder' ? 'selected' : ''}>⏰ Reminder</option>
-                            <option value="urgent" ${existing?.type === 'urgent' ? 'selected' : ''}>🚨 Urgent</option>
-                            <option value="celebration" ${existing?.type === 'celebration' ? 'selected' : ''}>🎉 Celebration</option>
-                            <option value="note" ${existing?.type === 'note' ? 'selected' : ''}>📝 Note</option>
+                            <option value="info" ${existing?.Type === 'info' ? 'selected' : ''}>📢 Info</option>
+                            <option value="reminder" ${existing?.Type === 'reminder' ? 'selected' : ''}>⏰ Reminder</option>
+                            <option value="urgent" ${existing?.Type === 'urgent' ? 'selected' : ''}>🚨 Urgent</option>
+                            <option value="celebration" ${existing?.Type === 'celebration' ? 'selected' : ''}>🎉 Celebration</option>
+                            <option value="note" ${existing?.Type === 'note' ? 'selected' : ''}>📝 Note</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Title *</label>
-                        <input type="text" class="form-input" id="annTitle" placeholder="e.g., Trunk show this weekend!" value="${existing?.title || ''}">
+                        <input type="text" class="form-input" id="annTitle" placeholder="e.g., Trunk show this weekend!" value="${existing?.Title || ''}">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Details (optional)</label>
-                        <textarea class="form-input" id="annText" placeholder="Add more details..." rows="3">${existing?.text || ''}</textarea>
+                        <textarea class="form-input" id="annText" placeholder="Add more details..." rows="3">${existing?.Details || ''}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" onclick="closeModal('announcement')">Cancel</button>
-                    <button class="btn btn-primary" onclick="saveAnnouncement(${editIndex})">${isEdit ? 'Update' : 'Add'}</button>
+                    <button class="btn btn-primary" onclick="saveAnnouncement()">${isEdit ? 'Update' : 'Add'}</button>
                 </div>
             `;
             
@@ -3080,13 +3072,14 @@
             $('annTitle').focus();
         }
         
-        function editAnnouncement(index) {
-            openAnnouncementModal(index);
+        function editAnnouncement(id) {
+            openAnnouncementModal(id);
         }
         
-        function saveAnnouncement(editIndex) {
+        async function saveAnnouncement() {
+            const editId = $('annEditId').value;
             const title = $('annTitle').value.trim();
-            const text = $('annText').value.trim();
+            const details = $('annText').value.trim();
             const type = $('annType').value;
             
             if (!title) {
@@ -3094,32 +3087,45 @@
                 return;
             }
             
-            const announcements = getAnnouncements();
-            const announcement = {
-                title,
-                text,
-                type,
-                created: editIndex !== null ? announcements[editIndex].created : new Date().toISOString(),
-                updated: new Date().toISOString()
+            const record = {
+                Title: title,
+                Details: details,
+                Type: type,
+                CreatedAt: new Date().toISOString(),
+                Pinned: false
             };
             
-            if (editIndex !== null) {
-                announcements[editIndex] = announcement;
-            } else {
-                announcements.unshift(announcement); // Add to beginning
+            try {
+                if (editId) {
+                    await updateRecord('Announcements', editId, record);
+                    const idx = data.announcements.findIndex(a => a.ID == editId);
+                    if (idx !== -1) {
+                        data.announcements[idx] = { ...data.announcements[idx], ...record };
+                    }
+                    saveCachedData();
+                } else {
+                    // saveRecord handles optimistic update
+                    await saveRecord('Announcements', record);
+                }
+                
+                closeModal('announcement');
+                renderAnnouncements();
+                toast(editId ? 'Announcement updated!' : 'Announcement added!', 'success');
+            } catch (e) {
+                toast('Error saving: ' + e.message, 'error');
             }
-            
-            saveAnnouncements(announcements);
-            closeModal('announcement');
-            renderAnnouncements();
-            toast(editIndex !== null ? 'Announcement updated!' : 'Announcement added!', 'success');
         }
         
-        function dismissAnnouncement(index) {
-            const announcements = getAnnouncements();
-            announcements.splice(index, 1);
-            saveAnnouncements(announcements);
-            renderAnnouncements();
+        async function dismissAnnouncement(id) {
+            try {
+                await deleteRecord('Announcements', id);
+                data.announcements = data.announcements.filter(a => a.ID != id);
+                saveCachedData();
+                renderAnnouncements();
+                toast('Announcement dismissed', 'success');
+            } catch (e) {
+                toast('Error deleting: ' + e.message, 'error');
+            }
         }
 
         // ========== DASHBOARD ==========
