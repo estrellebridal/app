@@ -2725,7 +2725,10 @@
             $('syncStatus').textContent = '● Syncing...';
             $('syncStatus').className = 'sync-status syncing';
             try {
-                const opts = { method };
+                const opts = { 
+                    method,
+                    redirect: 'follow'
+                };
                 if (body) {
                     opts.method = 'POST';
                     opts.body = JSON.stringify(body);
