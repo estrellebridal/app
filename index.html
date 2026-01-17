@@ -1426,7 +1426,7 @@
                     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
                         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
                             <div style="text-align:center;min-width:100px">
-                                <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.05em;color:var(--taupe);margin-bottom:4px">Wedding In</div>
+                                <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.05em;color:var(--taupe);margin-bottom:4px" id="tlLabel">Wedding In</div>
                                 <div style="font-size:32px;font-weight:600;color:var(--charcoal);line-height:1" id="tlMonths">—</div>
                             </div>
                             
@@ -8631,7 +8631,12 @@ The {storeName} Team`
         
         function updateTimeline() {
             const c = currentClient;
-            const timeInfo = timeUntilWedding(c.WeddingDate);
+            
+            // Use LeavingDate for destination weddings, otherwise WeddingDate
+            const targetDate = c.LeavingDate || c.WeddingDate;
+            const isDestination = !!c.LeavingDate;
+            
+            const timeInfo = timeUntilWedding(targetDate);
             const totalMonths = timeInfo ? timeInfo.months : null;
             const altMonths = parseInt($('tlAltMonths').value) || 4;
             
@@ -8640,6 +8645,9 @@ The {storeName} Team`
             
             // Calculate production months (total - alterations)
             const prodMonths = totalMonths !== null ? Math.max(0, totalMonths - altMonths) : null;
+            
+            // Update label based on destination wedding
+            $('tlLabel').textContent = isDestination ? 'Departs In' : 'Wedding In';
             
             // Display months and weeks
             if (timeInfo) {
@@ -8964,12 +8972,39 @@ The {storeName} Team`
             if (!record.Designer) { toast('Select designer'); return; }
             
             closeModal('addOption');
-            saveRecord('TopOptions', record);
+            
+            // Add to local data immediately with temp ID
+            const tempId = Date.now();
+            const newRecord = { ...record, ID: tempId };
+            data.topoptions.push(newRecord);
+            saveCachedData();
+            
+            // Render immediately with new data
+            renderClientOptions();
+            toast('Added!', 'success');
+            
+            // Clear form
             ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner'].forEach(i => $(i).value = '');
             $('oFavorite').checked = false;
             $('customDesignerGroup').style.display = 'none';
-            renderClientOptions();
-            toast('Added!', 'success');
+            
+            // Send to server in background
+            api('POST', { action: 'add', sheet: 'TopOptions', record })
+                .then(res => {
+                    if (res && res.id) {
+                        const idx = data.topoptions.findIndex(r => r.ID === tempId);
+                        if (idx >= 0) data.topoptions[idx].ID = res.id;
+                        saveCachedData();
+                    }
+                })
+                .catch(e => {
+                    // Remove on error
+                    const idx = data.topoptions.findIndex(r => r.ID === tempId);
+                    if (idx >= 0) data.topoptions.splice(idx, 1);
+                    saveCachedData();
+                    renderClientOptions();
+                    toast('Save failed', 'error');
+                });
         }
 
         async function toggleFavorite(id) {
