@@ -709,6 +709,44 @@
             cursor: pointer;
         }
         
+        /* Dropdown menu (appears near button) */
+        .dropdown-menu {
+            position: fixed;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            min-width: 160px;
+            z-index: 2000;
+            overflow: hidden;
+            animation: dropdownFade 0.15s ease-out;
+        }
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            background: none;
+            text-align: left;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .dropdown-item:hover {
+            background: var(--accent-light);
+        }
+        .dropdown-item.danger {
+            color: var(--red);
+        }
+        .dropdown-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1999;
+        }
+        
         /* Sticky header for client page */
         .consult-header.sticky {
             position: sticky;
@@ -1426,6 +1464,14 @@
                 <div class="grid-2">
                     <div>
                         <div class="card" style="margin-bottom:12px">
+                            <div class="card-header"><h2 class="card-title">Quick Notes</h2><span id="autoSaveStatus" style="font-size:10px;color:var(--sage);display:none">✓ Saved</span></div>
+                            <div class="card-body">
+                                <div class="form-group"><label class="form-label">Style Preferences</label><textarea class="form-input" id="cStyle" style="min-height:50px" oninput="scheduleAutoSave()"></textarea></div>
+                                <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="cBudget" placeholder="e.g. $5,000" oninput="formatBudget(this); scheduleAutoSave()"></div>
+                                <div class="form-group"><label class="form-label">General Notes</label><textarea class="form-input" id="cNotes" style="min-height:50px" oninput="scheduleAutoSave()"></textarea></div>
+                            </div>
+                        </div>
+                        <div class="card" style="margin-bottom:12px">
                             <div class="card-header"><h2 class="card-title">Appointments</h2><button class="btn btn-sm btn-secondary" onclick="addApptForClient()">+ Add</button></div>
                             <div class="card-body" id="cAppts"></div>
                         </div>
@@ -1433,24 +1479,15 @@
                             <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
                             <div class="card-body" id="cOptions"></div>
                         </div>
-                        <div class="card">
-                            <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
-                            <div class="card-body" id="cPhotos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
-                        </div>
-                        <div class="card" style="margin-top:12px">
-                            <div class="card-header"><h2 class="card-title">📏 Measurements</h2><button class="btn btn-sm btn-secondary" onclick="openAddMeasurementModal()">+ Add</button></div>
-                            <div class="card-body" id="cMeasurements"></div>
-                        </div>
                     </div>
                     <div>
                         <div class="card" style="margin-bottom:12px">
-                            <div class="card-header"><h2 class="card-title">Quick Notes</h2></div>
-                            <div class="card-body">
-                                <div class="form-group"><label class="form-label">Style Preferences</label><textarea class="form-input" id="cStyle" style="min-height:50px"></textarea></div>
-                                <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="cBudget" placeholder="e.g. 4,000-5,500" oninput="formatBudget(this)" onblur="formatBudget(this)"></div>
-                                <div class="form-group"><label class="form-label">General Notes</label><textarea class="form-input" id="cNotes" style="min-height:50px"></textarea></div>
-                                <button class="btn btn-primary" onclick="saveClientNotes()" style="width:100%">Save Notes</button>
-                            </div>
+                            <div class="card-header"><h2 class="card-title">📏 Measurements</h2><button class="btn btn-sm btn-secondary" onclick="openAddMeasurementModal()">+ Add</button></div>
+                            <div class="card-body" id="cMeasurements"></div>
+                        </div>
+                        <div class="card" style="margin-bottom:12px">
+                            <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
+                            <div class="card-body" id="cPhotos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
                         </div>
                         <div class="card">
                             <div class="card-header"><h2 class="card-title">Visit History</h2><span style="font-size:9px;color:var(--taupe)">from appointment notes</span></div>
@@ -1575,29 +1612,19 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Dresses Tried On</label>
-                        <textarea class="form-input" id="aLogDresses" style="min-height:50px" placeholder="e.g. Netta BenShabu Aria (size 8), Enaura Bridal ES920, Rosa Clara Soft"></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">What She Loved / Didn't Love</label>
-                        <textarea class="form-input" id="aLogFeedback" style="min-height:60px" placeholder="e.g. Loved the fitted silhouette of Aria, didn't like the high neckline on ES920. Wants more sparkle."></textarea>
+                        <label class="form-label">Style Feedback</label>
+                        <textarea class="form-input" id="aLogFeedback" style="min-height:60px" placeholder="e.g. Loved lace and fitted silhouette, didn't like high necklines. Wants more sparkle."></textarea>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label class="form-label">Style Preference Update</label>
-                            <input type="text" class="form-input" id="aLogStyle" placeholder="e.g. Prefers mermaid, no ball gowns">
+                            <label class="form-label">Budget Update</label>
+                            <input type="text" class="form-input" id="aLogBudget" placeholder="e.g. $6,000" oninput="formatBudget(this)">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Budget Update</label>
-                            <input type="text" class="form-input" id="aLogBudget" placeholder="e.g. Increased to $6,000">
+                            <label class="form-label">Next Steps</label>
+                            <input type="text" class="form-input" id="aLogNextSteps" placeholder="e.g. Bring mom Saturday">
                         </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">Next Steps / Follow-up</label>
-                        <input type="text" class="form-input" id="aLogNextSteps" placeholder="e.g. Coming back Saturday with mom, order Aria sample size 6">
                     </div>
                     
                     <div class="form-row">
@@ -1775,7 +1802,7 @@
                     <label class="form-label">Custom Designer Name</label>
                     <input type="text" class="form-input" id="oCustomDesigner" placeholder="Enter designer name">
                 </div>
-                <div class="form-row"><div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oPrice"></div><div class="form-group"><label class="form-label">Size</label><input type="text" class="form-input" id="oSize"></div></div>
+                <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom" placeholder="e.g. Add sleeves, lower back"></textarea></div>
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom"></textarea></div>
                 <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="oOptionNotes"></textarea></div>
                 <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> Mark as top choice</label>
@@ -3211,11 +3238,10 @@
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div>
                         <div class="item-meta">${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div>
                     </div>
-                    <div style="display:flex;gap:4px;align-items:center">
-                        ${!isNoShow && !a.ConfirmationSent ? confirmButtons(a.ID, false) : ''}
-                        ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();markNoShow(${a.ID})" title="No-show">🚫</button>` : ''}
-                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
-                        ${!isNoShow ? `<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>` : ''}
+                    <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
+                        ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="openConfirmEmailModal('${a.ID}')" title="Send email">📧</button>` : ''}
+                        <button class="btn btn-sm btn-secondary" onclick="deleteApptConfirm('${a.ID}')" title="Delete">✕</button>
+                        ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="showDashApptActions(${a.ID}, event)" title="More">⋯</button>` : ''}
                     </div>
                 </div>`;
             }).join('') : '<div class="empty">No appointments today</div>';
@@ -3798,17 +3824,12 @@
         }
         
         function formatBudget(input) {
-            let val = input.value.replace(/[^0-9,\-\s]/g, '').trim();
-            if (val && !val.startsWith('$')) {
-                // Add $ to start if there's content
-                val = '$' + val;
+            // Remove everything except numbers
+            let val = input.value.replace(/[^0-9]/g, '');
+            if (val) {
+                // Format with commas and add $
+                val = '$' + parseInt(val).toLocaleString();
             }
-            // Handle ranges like "4000-5000" -> "$4,000-$5,000"
-            val = val.replace(/(\d+)/g, (match) => {
-                return parseInt(match).toLocaleString();
-            });
-            // Add $ after hyphen for ranges
-            val = val.replace(/-\s*(\d)/g, '-$$$1');
             input.value = val;
         }
 
@@ -4754,7 +4775,7 @@ The Estrelle Bridal Team`;
             $('newClientFields').style.display = 'none';
             
             // Reset structured visit log fields
-            ['aLogDresses','aLogFeedback','aLogStyle','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => $(id).value = '');
+            ['aLogFeedback','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => $(id).value = '');
             
             // Reset follow-up
             $('aFollowUp').value = '';
@@ -4885,20 +4906,78 @@ The Estrelle Bridal Team`;
             currentViewApptId = id;
             const c = getClient(a.ClientID);
             
+            // Parse notes to extract structured fields
+            const notes = a.Notes || '';
+            const parseField = (emoji, label) => {
+                const regex = new RegExp(emoji + '\\s*' + label + ':\\s*([^\\n]+)', 'i');
+                const match = notes.match(regex);
+                return match ? match[1].trim() : '';
+            };
+            
+            const feedback = parseField('💭', 'Feedback') || parseField('💭', 'Style');
+            const budget = parseField('💰', 'Budget');
+            const nextSteps = parseField('➡️', 'Next');
+            const reason = parseField('🎯', 'Reason');
+            
+            // Get remaining notes (without parsed fields)
+            let otherNotes = notes
+                .replace(/💭\s*(Feedback|Style):[^\n]+\n?/gi, '')
+                .replace(/💰\s*Budget:[^\n]+\n?/gi, '')
+                .replace(/➡️\s*Next:[^\n]+\n?/gi, '')
+                .replace(/🎯\s*Reason:[^\n]+\n?/gi, '')
+                .replace(/👗\s*Tried:[^\n]+\n?/gi, '')
+                .replace(/✨\s*Style:[^\n]+\n?/gi, '')
+                .trim();
+            
             // Build details HTML
             let detailsHtml = `
                 <div style="background:var(--cream);padding:12px;border-radius:6px;margin-bottom:12px">
                     <div style="font-size:16px;font-weight:600;margin-bottom:4px">${c ? c.FirstName + ' ' + c.LastName : 'Unknown Client'}</div>
                     <div style="font-size:12px;color:var(--rose)">${fmtDate(a.Date)} at ${fmtTime(a.Time)}</div>
                     <div style="font-size:11px;color:var(--taupe);margin-top:4px">${a.Type || 'Appointment'} · ${a.Consultant || 'No consultant'}</div>
+                    ${reason ? `<div style="font-size:11px;color:var(--accent);margin-top:4px">🎯 ${reason}</div>` : ''}
                 </div>
             `;
             
-            if (a.Notes) {
+            // Display structured fields if present
+            if (feedback || budget || nextSteps) {
+                detailsHtml += `<div style="margin-bottom:12px">`;
+                
+                if (feedback) {
+                    detailsHtml += `
+                        <div style="margin-bottom:10px">
+                            <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px">💭 STYLE FEEDBACK</div>
+                            <div style="font-size:13px;line-height:1.5">${feedback}</div>
+                        </div>
+                    `;
+                }
+                
+                if (budget) {
+                    detailsHtml += `
+                        <div style="margin-bottom:10px">
+                            <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px">💰 BUDGET</div>
+                            <div style="font-size:13px">${budget}</div>
+                        </div>
+                    `;
+                }
+                
+                if (nextSteps) {
+                    detailsHtml += `
+                        <div style="margin-bottom:10px">
+                            <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px">➡️ NEXT STEPS</div>
+                            <div style="font-size:13px">${nextSteps}</div>
+                        </div>
+                    `;
+                }
+                
+                detailsHtml += `</div>`;
+            }
+            
+            if (otherNotes) {
                 detailsHtml += `
                     <div style="margin-bottom:12px">
-                        <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:6px">📝 Notes</div>
-                        <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${a.Notes}</div>
+                        <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:3px">📝 NOTES</div>
+                        <div style="font-size:12px;line-height:1.6;white-space:pre-wrap">${otherNotes}</div>
                     </div>
                 `;
             }
@@ -5078,16 +5157,14 @@ The Estrelle Bridal Team`;
             const reason = parseField('🎯', 'Reason');
             if (reason) setSelectedReason(reason);
             
-            $('aLogDresses').value = parseField('👗', 'Tried');
-            $('aLogFeedback').value = parseField('💭', 'Feedback');
-            $('aLogStyle').value = parseField('✨', 'Style');
+            $('aLogFeedback').value = parseField('💭', 'Feedback') || parseField('💭', 'Style');
             $('aLogBudget').value = parseField('💰', 'Budget');
-            $('aLogNextSteps').value = parseField('📋', 'Next');
+            $('aLogNextSteps').value = parseField('➡️', 'Next') || parseField('📋', 'Next');
             $('aLogOther').value = parseField('📝', 'Notes');
             
             // If notes don't match structured format, put everything in "other"
-            if (!$('aLogDresses').value && !$('aLogFeedback').value && !$('aLogStyle').value && 
-                !$('aLogBudget').value && !$('aLogNextSteps').value && !$('aLogOther').value && !reason && notes) {
+            if (!$('aLogFeedback').value && !$('aLogBudget').value && 
+                !$('aLogNextSteps').value && !$('aLogOther').value && !reason && notes) {
                 $('aLogOther').value = notes;
             }
             
@@ -5185,19 +5262,15 @@ The Estrelle Bridal Team`;
                 if (reason) noteParts.push(`🎯 Reason: ${reason}`);
             }
             
-            const dresses = $('aLogDresses').value.trim();
             const feedback = $('aLogFeedback').value.trim();
-            const style = $('aLogStyle').value.trim();
             const budget = $('aLogBudget').value.trim();
             const nextSteps = $('aLogNextSteps').value.trim();
             const other = $('aLogOther').value.trim();
             
-            if (dresses) noteParts.push(`👗 Tried: ${dresses}`);
             if (feedback) noteParts.push(`💭 Feedback: ${feedback}`);
-            if (style) noteParts.push(`✨ Style: ${style}`);
             if (budget) noteParts.push(`💰 Budget: ${budget}`);
-            if (nextSteps) noteParts.push(`📋 Next: ${nextSteps}`);
-            if (other) noteParts.push(`📝 Notes: ${other}`);
+            if (nextSteps) noteParts.push(`➡️ Next: ${nextSteps}`);
+            if (other) noteParts.push(other);
             
             // Calculate follow-up date
             let followUpDate = '';
@@ -5700,7 +5773,7 @@ The Estrelle Bridal Team`;
             $('fittingFieldsGroup').style.display = 'block';
             
             // Clear visit log fields
-            ['aLogDresses','aLogFeedback','aLogStyle','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
+            ['aLogFeedback','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
                 if ($(id)) $(id).value = '';
             });
             
@@ -6377,7 +6450,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('fittingFieldsGroup').style.display = 'block';
             
             // Clear visit log fields
-            ['aLogDresses','aLogFeedback','aLogStyle','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
+            ['aLogFeedback','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
                 if ($(id)) $(id).value = '';
             });
             
@@ -6600,7 +6673,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             
             // Clear visit log fields
-            ['aLogDresses','aLogFeedback','aLogStyle','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
+            ['aLogFeedback','aLogBudget','aLogNextSteps','aLogOther'].forEach(id => {
                 if ($(id)) $(id).value = '';
             });
             
@@ -8718,6 +8791,53 @@ The {storeName} Team`
             showActionSheet(actions);
         }
         
+        // Dashboard action sheet for Today's Appointments (no delete - it's already visible)
+        function showDashApptActions(apptId, event) {
+            closeDropdown(); // Close any existing dropdown
+            
+            const btn = event.target;
+            const rect = btn.getBoundingClientRect();
+            
+            // Create overlay to catch outside clicks
+            const overlay = document.createElement('div');
+            overlay.className = 'dropdown-overlay';
+            overlay.id = 'dropdownOverlay';
+            overlay.onclick = closeDropdown;
+            document.body.appendChild(overlay);
+            
+            // Create dropdown menu
+            const menu = document.createElement('div');
+            menu.className = 'dropdown-menu';
+            menu.id = 'dropdownMenu';
+            menu.innerHTML = `
+                <button class="dropdown-item" onclick="rescheduleAppt(${apptId}); closeDropdown();">📅 Reschedule</button>
+                <button class="dropdown-item" onclick="markNoShow(${apptId}); closeDropdown();">🚫 Mark No-Show</button>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            // Position near button
+            const menuRect = menu.getBoundingClientRect();
+            let top = rect.bottom + 4;
+            let left = rect.right - menuRect.width;
+            
+            // Keep within viewport
+            if (top + menuRect.height > window.innerHeight) {
+                top = rect.top - menuRect.height - 4;
+            }
+            if (left < 8) left = 8;
+            
+            menu.style.top = top + 'px';
+            menu.style.left = left + 'px';
+        }
+        
+        function closeDropdown() {
+            const menu = $('dropdownMenu');
+            const overlay = $('dropdownOverlay');
+            if (menu) menu.remove();
+            if (overlay) overlay.remove();
+        }
+        
         function showActionSheet(actions) {
             let sheet = $('actionSheet');
             if (!sheet) {
@@ -8840,12 +8960,12 @@ The {storeName} Team`
             }
             
             const clientName = `${currentClient.FirstName} ${currentClient.LastName}`;
-            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Price: +$('oPrice').value || 0, Size: $('oSize').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
+            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
             if (!record.Designer) { toast('Select designer'); return; }
             
             closeModal('addOption');
             saveRecord('TopOptions', record);
-            ['oDesigner','oStyle','oPrice','oSize','oCustom','oOptionNotes','oCustomDesigner'].forEach(i => $(i).value = '');
+            ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner'].forEach(i => $(i).value = '');
             $('oFavorite').checked = false;
             $('customDesignerGroup').style.display = 'none';
             renderClientOptions();
@@ -9541,7 +9661,24 @@ The {storeName} Team`
             $('timelyFileInput').value = '';
         }
 
-        async function saveClientNotes() {
+        let autoSaveTimer = null;
+        
+        function scheduleAutoSave() {
+            // Clear existing timer
+            if (autoSaveTimer) clearTimeout(autoSaveTimer);
+            
+            // Hide saved status while typing
+            $('autoSaveStatus').style.display = 'none';
+            
+            // Schedule save after 1 second of no typing
+            autoSaveTimer = setTimeout(() => {
+                saveClientNotes(true); // silent save
+            }, 1000);
+        }
+        
+        async function saveClientNotes(silent = false) {
+            if (!currentClient) return;
+            
             updateRecord('Clients', currentClient.ID, {
                 StylePreferences: $('cStyle').value,
                 Notes: $('cNotes').value,
@@ -9561,7 +9698,15 @@ The {storeName} Team`
                 budget: $('cBudget').value
             };
             
-            toast('Saved!', 'success');
+            if (silent) {
+                // Show subtle saved indicator
+                $('autoSaveStatus').style.display = 'inline';
+                setTimeout(() => {
+                    $('autoSaveStatus').style.display = 'none';
+                }, 2000);
+            } else {
+                toast('Saved!', 'success');
+            }
         }
 
         // ========== VISIT NOTES ==========
