@@ -8684,16 +8684,12 @@ The {storeName} Team`
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
                         <div class="appt-actions" onclick="event.stopPropagation()">
-                            <!-- Desktop: Full buttons -->
+                            <!-- Desktop: Simplified buttons -->
                             <div class="appt-desktop-actions">
-                                ${!isNoShow && isUpcoming ? confirmButtons(a.ID, a.ConfirmationSent) : ''}
-                                <button class="action-btn" onclick="viewAppt('${a.ID}')" title="View">👁</button>
-                                ${!isNoShow && isUpcoming ? `<button class="action-btn" onclick="rescheduleAppt(${a.ID})" title="Reschedule">📅</button>` : ''}
-                                ${!isNoShow ? `<button class="action-btn" onclick="markNoShow(${a.ID})" title="Mark No-Show">🚫</button>` : ''}
                                 <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
-                                <button class="action-btn" onclick="deleteApptConfirm(${a.ID})" title="Delete">×</button>
+                                <button class="action-btn" onclick="showApptActions(${a.ID}, ${isNoShow}, ${isUpcoming}, ${a.ConfirmationSent || false})" title="More">⋯</button>
                             </div>
-                            <!-- Mobile: Simplified buttons -->
+                            <!-- Mobile: Same as desktop now -->
                             <div class="appt-mobile-actions">
                                 <button class="action-btn" onclick="editAppt('${a.ID}')" title="Edit">✏️</button>
                                 <button class="action-btn" onclick="showApptActions(${a.ID}, ${isNoShow}, ${isUpcoming}, ${a.ConfirmationSent || false})" title="More">⋯</button>
@@ -8709,13 +8705,7 @@ The {storeName} Team`
         function showApptActions(apptId, isNoShow, isUpcoming, isConfirmed) {
             const actions = [];
             
-            actions.push({ label: '👁 View Details', action: () => viewAppt(apptId) });
-            
             if (!isNoShow && isUpcoming) {
-                if (!isConfirmed) {
-                    actions.push({ label: '✓ Mark Confirmed', action: () => { markConfirmed(apptId); closeActionSheet(); } });
-                    actions.push({ label: '📧 Send Confirmation', action: () => { openConfirmEmailModal(apptId); closeActionSheet(); } });
-                }
                 actions.push({ label: '📅 Reschedule', action: () => { rescheduleAppt(apptId); closeActionSheet(); } });
             }
             
