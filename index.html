@@ -4,6 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Estrelle Bridal</title>
+    
+    <!-- PWA / Add to Home Screen -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Estrelle">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="theme-color" content="#9B8B7D">
+    
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -4525,15 +4534,20 @@ The Estrelle Bridal Team`;
         }
 
         function markConfirmed(apptId) {
-            const appt = data.appointments.find(a => a.ID == apptId);
-            if (!appt) { toast('Appointment not found', 'error'); return; }
+            const appt = data.appointments.find(a => String(a.ID) === String(apptId));
+            if (!appt) { 
+                console.error('Appointment not found:', apptId);
+                toast('Appointment not found', 'error'); 
+                return; 
+            }
             
             const client = getClient(appt.ClientID);
             const clientName = client ? `${client.FirstName} ${client.LastName}` : 'Unknown';
             
             // Mark as confirmed without sending email
-            updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
             appt.ConfirmationSent = new Date().toISOString();
+            updateRecord('Appointments', apptId, { ConfirmationSent: appt.ConfirmationSent });
+            saveCachedData();
             
             toast(`Marked ${clientName}'s appointment as confirmed`, 'success');
             renderDash();
