@@ -921,7 +921,13 @@
             <!-- Schedule -->
             <section class="section" id="page-schedule">
                 <div class="header">
-                    <div><h1 class="title" id="weekTitle">Schedule</h1><p class="subtitle" id="weekSub"></p></div>
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <h1 class="title" id="weekTitle">Schedule</h1>
+                            <button onclick="openModal('importTimely')" title="Import from Timely" style="background:none;border:none;cursor:pointer;font-size:16px;opacity:0.6;padding:4px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📥</button>
+                        </div>
+                        <p class="subtitle" id="weekSub"></p>
+                    </div>
                     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                         <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
                             <button class="btn btn-sm" id="viewWeek" onclick="setScheduleView('week')" style="border:none;border-radius:0;background:var(--accent);color:white">Week</button>
@@ -931,7 +937,6 @@
                         <button class="btn btn-secondary" onclick="changePeriod(-1)">← Prev</button>
                         <button class="btn btn-secondary" onclick="changePeriod(0)">Today</button>
                         <button class="btn btn-secondary" onclick="changePeriod(1)">Next →</button>
-                        <button class="btn btn-secondary" onclick="openModal('importTimely')">📥 Import</button>
                         <button class="btn btn-primary" onclick="populateApptModal();openModal('newAppt')">+ Appointment</button>
                     </div>
                 </div>
@@ -4045,17 +4050,15 @@
                         ${appts.map(a => {
                             const c = getClient(a.ClientID);
                             const typeClass = `appt-type-${a.Type || 'consultation'}`;
-                            return `<div class="${typeClass} schedule-appt-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush)">
+                            return `<div class="${typeClass} schedule-appt-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush);cursor:pointer" onclick="openClient('${a.ClientID}')">
                                 <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
                                     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px;flex-shrink:0">${fmtTime(a.Time)}</div>
                                     <div class="avatar" style="flex-shrink:0">${initials(c.FirstName, c.LastName)}</div>
                                     <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
                                 </div>
-                                <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
-                                    ${confirmButtons(a.ID, a.ConfirmationSent)}
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')">Edit</button>
-                                    <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAppt('${a.ID}')">✕</button>
-                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openClient('${a.ClientID}')">Start</button>
+                                <div style="display:flex;gap:4px;align-items:center;flex-shrink:0" onclick="event.stopPropagation()">
+                                    <button class="btn btn-sm btn-secondary" onclick="editAppt('${a.ID}')">Edit</button>
+                                    <button class="btn btn-sm btn-secondary" onclick="deleteApptConfirm('${a.ID}')">✕</button>
                                 </div>
                             </div>`;
                         }).join('')}
@@ -9453,17 +9456,43 @@ The {storeName} Team`
                         let existingClient = null;
                         let batchClientIdx = null;
                         const emailClean = (email || '').trim().toLowerCase();
+                        const firstNameClean = (firstName || '').trim().toLowerCase();
+                        const lastNameClean = (lastName || '').trim().toLowerCase();
+                        
+                        console.log('Checking client:', firstName, lastName, '| email:', emailClean);
                         
                         // First check if we already have this client in the database
-                        if (emailClean && window.data && window.data.clients) {
-                            for (let c of window.data.clients) {
-                                const clientEmail = (c.Email || '').trim().toLowerCase();
-                                if (clientEmail && clientEmail === emailClean) {
-                                    existingClient = c;
-                                    console.log('Found existing client in DB by email:', emailClean, '-> ID:', c.ID);
-                                    break;
+                        if (data && data.clients && data.clients.length > 0) {
+                            // Try matching by email first
+                            if (emailClean) {
+                                for (let c of data.clients) {
+                                    const clientEmail = (c.Email || '').trim().toLowerCase();
+                                    if (clientEmail && clientEmail === emailClean) {
+                                        existingClient = c;
+                                        console.log('Found existing client by email:', emailClean, '-> ID:', c.ID);
+                                        break;
+                                    }
                                 }
                             }
+                            
+                            // If not found by email, try matching by name
+                            if (!existingClient && firstNameClean && lastNameClean) {
+                                for (let c of data.clients) {
+                                    const cFirst = (c.FirstName || '').trim().toLowerCase();
+                                    const cLast = (c.LastName || '').trim().toLowerCase();
+                                    if (cFirst === firstNameClean && cLast === lastNameClean) {
+                                        existingClient = c;
+                                        console.log('Found existing client by name:', firstName, lastName, '-> ID:', c.ID);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (!existingClient) {
+                                console.log('No match found for:', firstName, lastName, emailClean);
+                            }
+                        } else {
+                            console.log('WARNING: No clients in data!');
                         }
                         
                         // Also check if we're creating this client in this same batch
@@ -9474,8 +9503,8 @@ The {storeName} Team`
                         
                         // Check existing appointment (use String comparison for IDs)
                         let existingAppt = null;
-                        if (existingClient && apptDate && apptTime && window.data && window.data.appointments) {
-                            for (let a of window.data.appointments) {
+                        if (existingClient && apptDate && apptTime && data && data.appointments) {
+                            for (let a of data.appointments) {
                                 if (String(a.ClientID) === String(existingClient.ID) && getDateStr(a.Date) === apptDate && a.Time === apptTime) {
                                     existingAppt = a;
                                     console.log('Found existing appointment:', a.ID);
@@ -9487,12 +9516,23 @@ The {storeName} Team`
                         // Determine action
                         let action = 'new_client';
                         if (existingClient && existingAppt) {
-                            action = status === 'did-not-show' ? 'mark_noshow' : 'update';
+                            // Only mark_noshow if it was a no-show, otherwise skip (already exists)
+                            if (status === 'did-not-show' && existingAppt.Status !== 'no-show') {
+                                action = 'mark_noshow';
+                            } else {
+                                action = 'skip'; // Already exists, no changes needed
+                            }
                         } else if (existingClient) {
                             action = 'add_appt';
                         } else if (batchClientIdx !== null) {
                             // Client is being created in this batch - just add appointment
                             action = 'add_appt_to_batch';
+                        }
+                        
+                        // Don't add skipped items to the import list
+                        if (action === 'skip') {
+                            console.log('Skipping (already exists):', firstName, lastName, apptDate, apptTime);
+                            continue;
                         }
                         
                         // Track this client for future rows in the batch
@@ -9566,7 +9606,6 @@ The {storeName} Team`
             // Stats
             const newClients = timelyImportData.filter(function(i) { return i.action === 'new_client'; }).length;
             const addAppts = timelyImportData.filter(function(i) { return i.action === 'add_appt' || i.action === 'add_appt_to_batch'; }).length;
-            const updates = timelyImportData.filter(function(i) { return i.action === 'update'; }).length;
             const noShows = timelyImportData.filter(function(i) { return i.action === 'mark_noshow'; }).length;
             const withDates = timelyImportData.filter(function(i) { return i.date; }).length;
             
@@ -9575,7 +9614,6 @@ The {storeName} Team`
                 '<strong>Summary:</strong> ' +
                 newClients + ' new clients, ' +
                 (addAppts + newClients) + ' new appointments, ' +
-                updates + ' updates, ' +
                 noShows + ' no-shows' +
                 (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '');
         }
