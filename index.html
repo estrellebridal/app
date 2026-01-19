@@ -2869,7 +2869,17 @@
             setTimeout(function() { openModal('importTimely'); }, 500);
         }
 
+        // Track pending updates that haven't been confirmed by server
+        let pendingUpdates = {};
+        let lastUpdateTime = 0;
+        
         async function loadData(showToast = false) {
+            // Don't auto-refresh if we just made an update (wait 5 seconds)
+            if (!showToast && Date.now() - lastUpdateTime < 5000) {
+                console.log('Skipping auto-refresh, recent update pending');
+                return;
+            }
+            
             try {
                 const d = await api('GET');
                 // Handle undefined/null API response
@@ -2878,9 +2888,24 @@
                     if (showToast) toast('Server returned empty data', 'error');
                     return;
                 }
+                
+                // Merge server data with pending local updates
+                let appointments = d.appointments || [];
+                
+                // Apply any pending appointment updates
+                if (pendingUpdates.appointments) {
+                    for (const [apptId, updates] of Object.entries(pendingUpdates.appointments)) {
+                        const appt = appointments.find(a => String(a.ID) === String(apptId));
+                        if (appt) {
+                            Object.assign(appt, updates);
+                            console.log('Preserved pending update for appointment:', apptId, updates);
+                        }
+                    }
+                }
+                
                 data = { 
                     clients: d.clients || [], 
-                    appointments: d.appointments || [], 
+                    appointments: appointments, 
                     topoptions: d.topoptions || [], 
                     orders: d.orders || [], 
                     alterations: d.alterations || [], 
@@ -2932,18 +2957,34 @@
         }
 
         async function updateRecord(sheet, id, record) {
+            // Mark that we just made an update
+            lastUpdateTime = Date.now();
+            
             // Optimistic update - update local data immediately
             const sheetKey = sheet.toLowerCase();
             if (data[sheetKey]) {
-                const idx = data[sheetKey].findIndex(r => r.ID == id);
+                const idx = data[sheetKey].findIndex(r => String(r.ID) === String(id));
                 if (idx >= 0) {
                     data[sheetKey][idx] = { ...data[sheetKey][idx], ...record };
                     saveCachedData();
                 }
             }
             
+            // Track as pending update so loadData doesn't overwrite it
+            if (sheetKey === 'appointments') {
+                if (!pendingUpdates.appointments) pendingUpdates.appointments = {};
+                pendingUpdates.appointments[id] = { ...pendingUpdates.appointments[id], ...record };
+            }
+            
             // Send to server in background
             api('POST', { action: 'update', sheet, id, record })
+                .then(() => {
+                    // Clear pending update once server confirms
+                    if (pendingUpdates.appointments && pendingUpdates.appointments[id]) {
+                        delete pendingUpdates.appointments[id];
+                        console.log('Cleared pending update for:', id);
+                    }
+                })
                 .catch(e => {
                     toast('Update failed - please refresh', 'error');
                 });
@@ -3321,7 +3362,10 @@
             const confirmsDue = data.appointments
                 .filter(a => {
                     if (!getClient(a.ClientID)) return false;
-                    if (a.ConfirmationSent) return false; // Already confirmed
+                    if (a.ConfirmationSent) {
+                        console.log('Filtering out confirmed appointment:', a.ID, a.ConfirmationSent);
+                        return false; // Already confirmed
+                    }
                     // Only consultations need confirmation
                     const apptType = (a.Type || '').toLowerCase();
                     if (!apptType.includes('consultation')) return false;
@@ -3330,6 +3374,8 @@
                     return apptDateStr >= todayStr && apptDateStr <= next7DaysStr;
                 })
                 .sort((a, b) => getDateStr(a.Date).localeCompare(getDateStr(b.Date)));
+            
+            console.log('Confirmations due after filter:', confirmsDue.length, confirmsDue.map(a => a.ID));
             
             $('dashConfirmDue').innerHTML = confirmsDue.length ? confirmsDue.map(a => {
                 const c = getClient(a.ClientID);
@@ -4533,10 +4579,16 @@ The Estrelle Bridal Team`;
             toast('Template reset to default', 'success');
         }
 
+        let lastAction = null; // Store last action for undo
+        
         function markConfirmed(apptId) {
+            console.log('markConfirmed called with ID:', apptId, 'type:', typeof apptId);
+            
             const appt = data.appointments.find(a => String(a.ID) === String(apptId));
+            console.log('Found appointment:', appt);
+            
             if (!appt) { 
-                console.error('Appointment not found:', apptId);
+                console.error('Appointment not found. All IDs:', data.appointments.map(a => a.ID));
                 toast('Appointment not found', 'error'); 
                 return; 
             }
@@ -4544,13 +4596,58 @@ The Estrelle Bridal Team`;
             const client = getClient(appt.ClientID);
             const clientName = client ? `${client.FirstName} ${client.LastName}` : 'Unknown';
             
+            // Store for undo
+            const previousValue = appt.ConfirmationSent;
+            lastAction = {
+                type: 'confirm',
+                apptId: apptId,
+                previousValue: previousValue,
+                clientName: clientName
+            };
+            
             // Mark as confirmed without sending email
-            appt.ConfirmationSent = new Date().toISOString();
-            updateRecord('Appointments', apptId, { ConfirmationSent: appt.ConfirmationSent });
+            const timestamp = new Date().toISOString();
+            appt.ConfirmationSent = timestamp;
+            console.log('Set ConfirmationSent to:', timestamp);
+            
+            updateRecord('Appointments', apptId, { ConfirmationSent: timestamp });
             saveCachedData();
             
-            toast(`Marked ${clientName}'s appointment as confirmed`, 'success');
+            // Show toast with undo option
+            toastWithUndo(`Marked ${clientName}'s appointment as confirmed`);
             renderDash();
+        }
+        
+        function undoLastAction() {
+            if (!lastAction) return;
+            
+            if (lastAction.type === 'confirm') {
+                const appt = data.appointments.find(a => String(a.ID) === String(lastAction.apptId));
+                if (appt) {
+                    appt.ConfirmationSent = lastAction.previousValue || '';
+                    updateRecord('Appointments', lastAction.apptId, { ConfirmationSent: appt.ConfirmationSent || '' });
+                    saveCachedData();
+                    toast('Undone!', 'success');
+                    renderDash();
+                }
+            }
+            
+            lastAction = null;
+        }
+        
+        function toastWithUndo(message) {
+            // Remove existing toast
+            const existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            
+            const div = document.createElement('div');
+            div.className = 'toast show';
+            div.innerHTML = `
+                <span>${message}</span>
+                <button onclick="undoLastAction();this.parentElement.remove()" style="margin-left:12px;background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Undo</button>
+            `;
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 5000);
         }
         
         // Helper to generate consistent confirmation buttons
@@ -9690,8 +9787,12 @@ The {storeName} Team`
                     
                     // Create appointment with the correct client ID
                     if (clientId && (item.action === 'new_client' || item.action === 'add_appt' || item.action === 'add_appt_to_batch')) {
+                        // Get client name
+                        const clientName = `${item.firstName} ${item.lastName}`.trim();
+                        
                         const newAppt = {
                             ClientID: clientId,
+                            ClientName: clientName,
                             Date: item.date || today(),
                             Time: item.time || '10:00',
                             Type: item.type || 'consultation',
