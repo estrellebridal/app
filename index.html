@@ -1001,47 +1001,112 @@
                 
                 <!-- Orders View -->
                 <div id="ordersViewContent">
-                    <!-- Active Orders Summary -->
-                    <div class="orders-stats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-                        <div class="card" style="border-left:3px solid #f39c12">
-                            <div class="card-body" style="padding:14px">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Pending QA</div>
-                                <div style="font-size:24px;font-weight:600" id="ordersNeedQa">0</div>
-                            </div>
+                    <!-- Bulk Action Bar (hidden by default) -->
+                    <div id="ordersBulkBar" style="display:none;background:var(--charcoal);color:white;padding:12px 16px;border-radius:8px;margin-bottom:16px;align-items:center;justify-content:space-between">
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <span id="ordersSelectedCount">0 selected</span>
+                            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white" onclick="selectAllOrders()">Select All</button>
+                            <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:white" onclick="deselectAllOrders()">Deselect All</button>
                         </div>
-                        <div class="card" style="border-left:3px solid #1abc9c">
-                            <div class="card-body" style="padding:14px">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Alterations</div>
-                                <div style="font-size:24px;font-weight:600" id="ordersInAlterations">0</div>
-                            </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <select class="form-input" id="bulkStatusSelect" style="width:auto;padding:6px 10px;font-size:12px">
+                                <option value="">Change Status...</option>
+                                <option value="ordered">Ordered (In Production)</option>
+                                <option value="shipped">Shipped</option>
+                                <option value="arrived">Arrived (In Store)</option>
+                                <option value="arrived - pending QA">Arrived - Pending QA</option>
+                                <option value="QA complete">QA Complete</option>
+                                <option value="in alterations">In Alterations</option>
+                                <option value="ready for pickup">Ready for Pickup</option>
+                                <option value="picked up">Picked Up</option>
+                            </select>
+                            <button class="btn btn-sm btn-primary" onclick="applyBulkStatus()">Apply</button>
+                            <button class="btn btn-sm" style="background:#e74c3c;color:white" onclick="bulkDeleteOrders()">✕ Delete</button>
                         </div>
-                        <div class="card" style="border-left:3px solid #27ae60">
-                            <div class="card-body" style="padding:14px">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Ready</div>
-                                <div style="font-size:24px;font-weight:600" id="ordersReady">0</div>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left:3px solid #3498db">
+                    </div>
+                    
+                    <!-- Orders Stats -->
+                    <div class="orders-stats" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
+                        <div class="card" style="border-left:3px solid #3498db;cursor:pointer" onclick="filterOrders('ordered')">
                             <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Production</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersInProduction">0</div>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Active Orders -->
-                    <div class="card" style="margin-bottom:16px">
-                        <div class="card-header"><h2 class="card-title">Active Orders</h2></div>
-                        <div class="card-body" id="activeOrdersList"></div>
-                    </div>
-                    
-                    <!-- Past Orders (Picked Up) -->
-                    <div class="card">
-                        <div class="card-header" onclick="togglePastOrders()" style="cursor:pointer">
-                            <h2 class="card-title">📦 Past Orders (Picked Up)</h2>
-                            <span id="pastOrdersToggle" style="font-size:12px;color:var(--text-secondary)">▼ Show</span>
+                        <div class="card" style="border-left:3px solid #e67e22;cursor:pointer" onclick="filterOrders('arrived')">
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Arrived</div>
+                                <div style="font-size:24px;font-weight:600" id="ordersArrived">0</div>
+                            </div>
                         </div>
-                        <div class="card-body" id="pastOrdersList" style="display:none"></div>
+                        <div class="card" style="border-left:3px solid #1abc9c;cursor:pointer" onclick="filterOrders('in alterations')">
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Alterations</div>
+                                <div style="font-size:24px;font-weight:600" id="ordersInAlterations">0</div>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left:3px solid #27ae60;cursor:pointer" onclick="filterOrders('ready for pickup')">
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Ready</div>
+                                <div style="font-size:24px;font-weight:600" id="ordersReady">0</div>
+                            </div>
+                        </div>
+                        <div class="card" style="border-left:3px solid #95a5a6;cursor:pointer" onclick="filterOrders('picked up')">
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Picked Up</div>
+                                <div style="font-size:24px;font-weight:600" id="ordersPickedUp">0</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Search & Filter -->
+                    <div class="card" style="margin-bottom:16px">
+                        <div class="card-body" style="padding:12px">
+                            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+                                <input type="text" class="form-input" id="orderSearch" placeholder="Search orders..." style="flex:1;min-width:200px" oninput="renderOrders()">
+                                <select class="form-input" id="orderStatusFilter" style="width:auto" onchange="renderOrders()">
+                                    <option value="">All Statuses</option>
+                                    <option value="ordered">Ordered (In Production)</option>
+                                    <option value="shipped">Shipped</option>
+                                    <option value="arrived">Arrived</option>
+                                    <option value="in alterations">In Alterations</option>
+                                    <option value="ready for pickup">Ready for Pickup</option>
+                                    <option value="picked up">Picked Up</option>
+                                </select>
+                                <select class="form-input" id="orderSortBy" style="width:auto" onchange="renderOrders()">
+                                    <option value="status">Sort by: Status</option>
+                                    <option value="weddingDate">Sort by: Wedding Date</option>
+                                    <option value="arrivalDate">Sort by: Arrival Date</option>
+                                    <option value="orderDate">Sort by: Order Date</option>
+                                    <option value="clientName">Sort by: Client Name</option>
+                                </select>
+                                <button class="btn btn-secondary btn-sm" onclick="clearOrderFilters()">Clear</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Orders Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">Orders <span id="ordersCount" style="font-weight:normal;color:var(--text-secondary)"></span></h2>
+                        </div>
+                        <div class="card-body" style="padding:0;overflow-x:auto">
+                            <table class="table" id="ordersTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width:40px"><input type="checkbox" id="selectAllOrdersCheckbox" onchange="toggleAllOrderCheckboxes(this.checked)"></th>
+                                        <th>Client</th>
+                                        <th>PO</th>
+                                        <th>Dress</th>
+                                        <th>Designer</th>
+                                        <th>Wedding</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ordersTableBody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
                 
@@ -1069,8 +1134,14 @@
                         </div>
                     </div>
                     
-                    <!-- Alterations List -->
-                    <div id="alterationsList"></div>
+                    <!-- Alterations List with sync button in header -->
+                    <div class="card">
+                        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+                            <h2 class="card-title">Alterations</h2>
+                            <button class="btn btn-sm btn-secondary" onclick="syncFittingsToAlterations()" title="Sync scheduled fittings to alterations">🔄</button>
+                        </div>
+                        <div class="card-body" id="alterationsList"></div>
+                    </div>
                 </div>
             </section>
 
@@ -1342,40 +1413,72 @@
                     <!-- Email Templates -->
                     <div class="card settings-card">
                         <div class="card-header" onclick="toggleSettingsSection('templates')" style="cursor:pointer">
-                            <h2 class="card-title">📧 Email Templates</h2>
+                            <h2 class="card-title">📧 Email Templates <span id="templateCount" style="font-weight:normal;color:var(--text-secondary)"></span></h2>
                             <span class="settings-toggle" id="toggleTemplates">▼</span>
                         </div>
                         <div class="card-body settings-content" id="sectionTemplates" style="display:none">
-                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">Customize email communications</p>
-                            <div style="display:flex;flex-direction:column;gap:8px">
-                                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
-                                    <div>
-                                        <div style="font-weight:600">📅 Appointment Confirmation</div>
-                                        <div style="font-size:12px;color:var(--text-secondary)">Sent when confirming appointments</div>
+                            <p style="font-size:12px;color:var(--text-secondary);margin-bottom:16px">Manage email templates for client communications</p>
+                            
+                            <!-- Preset System Templates -->
+                            <div style="margin-bottom:20px">
+                                <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">System Templates</div>
+                                <div style="display:flex;flex-direction:column;gap:8px">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
+                                        <div>
+                                            <div style="font-weight:600">📅 Appointment Confirmation</div>
+                                            <div style="font-size:12px;color:var(--text-secondary)">Sent when confirming appointments</div>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('confirmation')">Edit</button>
                                     </div>
-                                    <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('confirmation')">Edit</button>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
-                                    <div>
-                                        <div style="font-weight:600">💍 Anniversary Email</div>
-                                        <div style="font-size:12px;color:var(--text-secondary)">Sent on wedding anniversaries</div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
+                                        <div>
+                                            <div style="font-weight:600">💍 Anniversary Email</div>
+                                            <div style="font-size:12px;color:var(--text-secondary)">Sent on wedding anniversaries</div>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('anniversary')">Edit</button>
                                     </div>
-                                    <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('anniversary')">Edit</button>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
-                                    <div>
-                                        <div style="font-weight:600">📞 Follow-up Email</div>
-                                        <div style="font-size:12px;color:var(--text-secondary)">Sent after appointments</div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
+                                        <div>
+                                            <div style="font-weight:600">📞 Follow-up Email</div>
+                                            <div style="font-size:12px;color:var(--text-secondary)">Sent after appointments</div>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('followup')">Edit</button>
                                     </div>
-                                    <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('followup')">Edit</button>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
-                                    <div>
-                                        <div style="font-weight:600">📦 Order Status Emails</div>
-                                        <div style="font-size:12px;color:var(--text-secondary)">Templates for order updates</div>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px">
+                                        <div>
+                                            <div style="font-weight:600">📦 Order Status Emails</div>
+                                            <div style="font-size:12px;color:var(--text-secondary)">Templates for order updates</div>
+                                        </div>
+                                        <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('order')">Manage</button>
                                     </div>
-                                    <button class="btn btn-secondary btn-sm" onclick="openTemplateEditor('order')">Manage</button>
                                 </div>
+                            </div>
+                            
+                            <!-- Custom Templates -->
+                            <div>
+                                <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Custom Templates</div>
+                                
+                                <!-- Available Placeholders Guide -->
+                                <div style="background:var(--blush);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+                                    <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:8px">📝 AVAILABLE PLACEHOLDERS</div>
+                                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{FirstName}')">{FirstName}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{LastName}')">{LastName}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{WeddingDate}')">{WeddingDate}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{Venue}')">{Venue}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{AppointmentDate}')">{AppointmentDate}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{AppointmentTime}')">{AppointmentTime}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{Consultant}')">{Consultant}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{StoreName}')">{StoreName}</code>
+                                        <code style="background:white;padding:2px 8px;border-radius:4px;font-size:11px;cursor:pointer" onclick="copyPlaceholder('{StorePhone}')">{StorePhone}</code>
+                                    </div>
+                                    <div style="font-size:10px;color:var(--taupe);margin-top:6px">💡 Click to copy a placeholder</div>
+                                </div>
+                                
+                                <!-- Templates List -->
+                                <div id="emailTemplatesList" style="margin-bottom:16px"></div>
+                                
+                                <button class="btn btn-secondary" onclick="openAddTemplateModal()">+ Add Custom Template</button>
                             </div>
                         </div>
                     </div>
@@ -1425,9 +1528,10 @@
                             <div class="consult-meta" id="cMeta">-</div>
                         </div>
                         <div style="margin-left:12px;display:flex;gap:4px">
+                            <button class="btn btn-sm btn-secondary" onclick="openClientEmailModal()" title="Send Email">📧</button>
                             <button class="btn btn-sm btn-secondary" onclick="editCurrentClient()">✏️ Edit</button>
                             <button class="btn btn-sm btn-secondary" onclick="archiveCurrentClient()">📁 Archive</button>
-                            <button class="btn btn-sm" onclick="deleteCurrentClient()" style="background:#fee;color:#c00">🗑️ Delete</button>
+                            <button class="btn btn-sm" onclick="deleteCurrentClient()" style="background:#fee;color:#c00">✕ Delete</button>
                         </div>
                     </div>
                     <div>
@@ -1953,6 +2057,113 @@
         </div>
     </div>
 
+    <!-- Add/Edit Email Template Modal -->
+    <div class="modal-overlay" id="modal-emailTemplate">
+        <div class="modal" style="max-width:650px">
+            <div class="modal-header"><h2 class="modal-title" id="emailTemplateModalTitle">Add Email Template</h2><button class="modal-close" onclick="closeModal('emailTemplate')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editTemplateId">
+                
+                <div class="form-group">
+                    <label class="form-label">Template Name *</label>
+                    <input type="text" class="form-input" id="tplName" placeholder="e.g., Appointment Confirmation">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email Subject *</label>
+                    <input type="text" class="form-input" id="tplSubject" placeholder="e.g., Your appointment at {StoreName} is confirmed!">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email Body *</label>
+                    <textarea class="form-input" id="tplBody" style="min-height:200px;font-family:inherit" placeholder="Hi {FirstName},
+
+We're excited to confirm your appointment at {StoreName}!
+
+📅 Date: {AppointmentDate}
+🕐 Time: {AppointmentTime}
+👗 Consultant: {Consultant}
+
+Please arrive 5-10 minutes early. If you need to reschedule, please let us know at least 24 hours in advance.
+
+We can't wait to help you find your dream dress!
+
+Warmly,
+The {StoreName} Team
+{StorePhone}"></textarea>
+                </div>
+                
+                <!-- Placeholders Helper -->
+                <div style="background:var(--blush);padding:12px;border-radius:8px">
+                    <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:8px">💡 CLICK TO INSERT PLACEHOLDER</div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px">
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{FirstName}')">{FirstName}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{LastName}')">{LastName}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{WeddingDate}')">{WeddingDate}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{Venue}')">{Venue}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{AppointmentDate}')">{AppointmentDate}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{AppointmentTime}')">{AppointmentTime}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{Consultant}')">{Consultant}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StoreName}')">{StoreName}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StorePhone}')">{StorePhone}</button>
+                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StoreAddress}')">{StoreAddress}</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('emailTemplate')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEmailTemplate()">Save Template</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Send Email to Client Modal -->
+    <div class="modal-overlay" id="modal-clientEmail">
+        <div class="modal" style="max-width:650px">
+            <div class="modal-header"><h2 class="modal-title">📧 Send Email</h2><button class="modal-close" onclick="closeModal('clientEmail')">×</button></div>
+            <div class="modal-body">
+                <div style="background:var(--blush);padding:12px;border-radius:8px;margin-bottom:16px">
+                    <div style="font-size:12px"><strong>To:</strong> <span id="clientEmailTo">-</span></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Choose Template</label>
+                    <select class="form-input" id="clientEmailTemplate" onchange="loadClientEmailTemplate()">
+                        <option value="">-- Select a template --</option>
+                        <option value="custom">✏️ Write Custom Email</option>
+                    </select>
+                </div>
+                
+                <!-- Appointment Selector (for templates with appointment placeholders) -->
+                <div class="form-group" id="clientEmailApptGroup" style="display:none">
+                    <label class="form-label">Select Appointment (for date/time placeholders)</label>
+                    <select class="form-input" id="clientEmailAppt" onchange="updateClientEmailPreview()">
+                        <option value="">-- No appointment --</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Subject</label>
+                    <input type="text" class="form-input" id="clientEmailSubject" placeholder="Email subject...">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <textarea class="form-input" id="clientEmailBody" style="min-height:200px;font-family:inherit" placeholder="Write your message..."></textarea>
+                </div>
+                
+                <div style="background:var(--cream);padding:12px;border-radius:8px">
+                    <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:4px">📤 HOW IT WORKS</div>
+                    <div style="font-size:11px;color:var(--text-secondary)">Clicking "Open in Email App" will open your default email app (Gmail, Outlook, etc.) with this message pre-filled. You can review and edit before sending.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('clientEmail')">Cancel</button>
+                <button class="btn btn-primary" onclick="openInEmailApp()">📤 Open in Email App</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Order Email Modal -->
     <div class="modal-overlay" id="modal-orderEmail">
         <div class="modal">
@@ -2310,6 +2521,23 @@
                     <div class="form-group" style="margin-top:12px"><label class="form-label">Measurement Notes</label><textarea class="form-input" id="mNotes"></textarea></div>
                 </div>
                 <div id="yStep2" style="display:none">
+                    <!-- Order Details (PO, ETA) -->
+                    <div style="background:var(--blush);padding:14px;border-radius:8px;margin-bottom:16px">
+                        <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">📋 Order Details</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">PO Number</label>
+                                <input type="text" class="form-input" id="oiPO" placeholder="Auto-generated" style="background:#fff">
+                                <div style="font-size:10px;color:var(--taupe);margin-top:4px">Leave blank to auto-generate</div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Est. Arrival Date</label>
+                                <input type="date" class="form-input" id="oiArrivalDate" style="background:#fff">
+                                <div style="font-size:10px;color:var(--taupe);margin-top:4px" id="arrivalDateHint">Will auto-calculate when dress is added</div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="grid-2">
                         <div>
                             <div class="form-group">
@@ -2912,7 +3140,8 @@
                     designers: d.designers || [],
                     consultants: d.consultants || [],
                     visitnotes: d.visitnotes || [],
-                    announcements: d.announcements || []
+                    announcements: d.announcements || [],
+                    emailtemplates: d.emailtemplates || []
                 };
                 saveCachedData();
                 renderDash();
@@ -3884,13 +4113,22 @@
         }
         
         function formatBudget(input) {
-            // Remove everything except numbers
-            let val = input.value.replace(/[^0-9]/g, '');
-            if (val) {
-                // Format with commas and add $
-                val = '$' + parseInt(val).toLocaleString();
+            let val = input.value;
+            
+            // Check if it's a range (contains - or "to")
+            if (val.includes('-') || val.toLowerCase().includes('to')) {
+                // Split by - or "to"
+                const parts = val.split(/[-]|to/i).map(p => p.trim());
+                const formatted = parts.map(p => {
+                    const num = p.replace(/[^0-9]/g, '');
+                    return num ? '$' + parseInt(num).toLocaleString() : '';
+                }).filter(p => p).join(' - ');
+                input.value = formatted;
+            } else {
+                // Single value
+                const num = val.replace(/[^0-9]/g, '');
+                input.value = num ? '$' + parseInt(num).toLocaleString() : '';
             }
-            input.value = val;
         }
 
         function editCurrentClient() {
@@ -5447,6 +5685,12 @@ The Estrelle Bridal Team`;
             } else { 
                 saveRecord('Appointments', record);
                 toast('Saved!', 'success');
+                
+                // Auto-create alteration record if this is a fitting appointment
+                const apptType = record.Type.toLowerCase();
+                if (apptType.includes('fitting')) {
+                    await autoCreateAlteration(clientId, record);
+                }
             }
             
             if (currentClient) {
@@ -5456,6 +5700,151 @@ The Estrelle Bridal Team`;
             renderWeek();
             renderAllAppointments();
             renderDash();
+        }
+        
+        async function autoCreateAlteration(clientId, apptRecord) {
+            // Check if alteration already exists for this client
+            const existingAlt = data.alterations.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
+            if (existingAlt) {
+                console.log('Alteration already exists for client', clientId);
+                return; // Don't create duplicate
+            }
+            
+            const client = getClient(clientId);
+            if (!client) return;
+            
+            const clientName = `${client.FirstName} ${client.LastName}`;
+            
+            // Get order info if exists
+            const order = data.orders.find(o => String(o.ClientID) === String(clientId) && o.Status !== 'picked up');
+            
+            const altRecord = {
+                ClientID: clientId,
+                ClientName: clientName,
+                OrderID: order ? order.ID : '',
+                Items: order ? (order.Dress || 'Dress') : 'Dress',
+                Notes: `Auto-created from ${apptRecord.Type} appointment on ${apptRecord.Date}`,
+                Status: 'in progress',
+                StartDate: today(),
+                DueDate: client.WeddingDate || '',
+                Seamstress: ''
+            };
+            
+            try {
+                const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
+                if (result && result.id) {
+                    altRecord.ID = result.id;
+                } else {
+                    altRecord.ID = 'alt_' + Date.now();
+                }
+                data.alterations.push(altRecord);
+                saveCachedData();
+                
+                // Also update order status to "in alterations" if exists
+                if (order && order.Status !== 'in alterations' && order.Status !== 'ready for pickup' && order.Status !== 'picked up') {
+                    await updateRecord('Orders', order.ID, { Status: 'in alterations' });
+                    order.Status = 'in alterations';
+                    saveCachedData();
+                }
+                
+                console.log('Auto-created alteration for', clientName);
+                return true;
+            } catch (e) {
+                console.error('Failed to auto-create alteration:', e);
+                return false;
+            }
+        }
+        
+        async function syncFittingsToAlterations() {
+            // Find all scheduled fitting appointments (today or future)
+            const todayStr = today();
+            const fittingAppts = data.appointments.filter(a => {
+                const apptType = (a.Type || '').toLowerCase();
+                const isFitting = apptType.includes('fitting');
+                const isFuture = a.Date >= todayStr;
+                return isFitting && isFuture;
+            });
+            
+            console.log('Found fitting appointments:', fittingAppts.length);
+            
+            if (fittingAppts.length === 0) {
+                toast('No scheduled fittings found', 'info');
+                return;
+            }
+            
+            // Get unique client IDs
+            const clientIds = [...new Set(fittingAppts.map(a => String(a.ClientID)))];
+            console.log('Unique clients with fittings:', clientIds);
+            
+            let created = 0;
+            let skipped = 0;
+            
+            for (const clientId of clientIds) {
+                // Check if alteration already exists
+                const existingAlt = data.alterations.find(a => String(a.ClientID) === clientId && a.Status !== 'complete');
+                if (existingAlt) {
+                    console.log('Skipping client', clientId, '- alteration exists');
+                    skipped++;
+                    continue;
+                }
+                
+                // Find the fitting appointment
+                const appt = fittingAppts.find(a => String(a.ClientID) === clientId);
+                const client = getClient(clientId);
+                
+                if (!client) {
+                    console.log('Client not found:', clientId);
+                    continue;
+                }
+                
+                const clientName = `${client.FirstName} ${client.LastName}`;
+                console.log('Creating alteration for:', clientName);
+                
+                // Get order info if exists
+                const order = data.orders.find(o => String(o.ClientID) === clientId && o.Status !== 'picked up');
+                
+                const altRecord = {
+                    ClientID: clientId,
+                    ClientName: clientName,
+                    OrderID: order ? order.ID : '',
+                    Items: order ? (order.Dress || 'Dress') : 'Dress',
+                    Notes: `Synced from ${appt.Type} on ${appt.Date}`,
+                    Status: 'in progress',
+                    StartDate: today(),
+                    DueDate: client.WeddingDate || '',
+                    Seamstress: ''
+                };
+                
+                try {
+                    const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
+                    if (result && result.id) {
+                        altRecord.ID = result.id;
+                    } else {
+                        altRecord.ID = 'alt_' + Date.now() + '_' + created;
+                    }
+                    data.alterations.push(altRecord);
+                    
+                    // Also update order status to "in alterations" if exists
+                    if (order && order.Status !== 'in alterations' && order.Status !== 'ready for pickup' && order.Status !== 'picked up') {
+                        await updateRecord('Orders', order.ID, { Status: 'in alterations' });
+                        order.Status = 'in alterations';
+                    }
+                    
+                    created++;
+                    console.log('Created alteration for:', clientName);
+                } catch (e) {
+                    console.error('Failed to create alteration for', clientName, e);
+                }
+            }
+            
+            saveCachedData();
+            renderAlts();
+            
+            if (created > 0 || skipped > 0) {
+                toast(`Created ${created} alterations (${skipped} already existed)`, 'success');
+            } else {
+                toast('No new alterations to create', 'info');
+            }
         }
 
         // ========== ORDERS ==========
@@ -5482,53 +5871,134 @@ The Estrelle Bridal Team`;
         }
         
         function renderOrders() {
-            const activeOrders = data.orders.filter(o => o.Status !== 'picked up');
-            const pastOrders = data.orders.filter(o => o.Status === 'picked up');
+            const searchTerm = ($('orderSearch')?.value || '').toLowerCase();
+            const statusFilter = $('orderStatusFilter')?.value || '';
+            const sortBy = $('orderSortBy')?.value || 'status';
             
-            // Count stats
-            const needsQa = activeOrders.filter(o => o.Status === 'arrived - pending QA').length;
-            const inAlterations = activeOrders.filter(o => o.Status === 'in alterations').length;
-            const ready = activeOrders.filter(o => o.Status === 'ready for pickup').length;
-            const inProduction = activeOrders.filter(o => o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped').length;
-            
-            $('ordersNeedQa').textContent = needsQa;
-            $('ordersInAlterations').textContent = inAlterations;
-            $('ordersReady').textContent = ready;
-            $('ordersInProduction').textContent = inProduction;
-            
-            // Sort active orders by status priority
-            const statusOrder = ['arrived - pending QA', 'QA complete', 'in alterations', 'ready for pickup', 'shipped', 'in production', 'ordered'];
-            activeOrders.sort((a, b) => {
-                const aIdx = statusOrder.indexOf(a.Status || 'ordered');
-                const bIdx = statusOrder.indexOf(b.Status || 'ordered');
-                return aIdx - bIdx;
+            // Filter orders
+            let orders = data.orders.filter(o => {
+                // Search filter
+                if (searchTerm) {
+                    const clientName = (o.ClientName || '').toLowerCase();
+                    const dress = (o.Dress || '').toLowerCase();
+                    const designer = (o.Designer || '').toLowerCase();
+                    const po = (o.PO || '').toLowerCase();
+                    if (!clientName.includes(searchTerm) && !dress.includes(searchTerm) && 
+                        !designer.includes(searchTerm) && !po.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+                // Status filter
+                if (statusFilter && o.Status !== statusFilter) {
+                    return false;
+                }
+                return true;
             });
             
-            // Render active orders
-            if (activeOrders.length === 0) {
-                $('activeOrdersList').innerHTML = '<div class="empty">No active orders</div>';
-            } else {
-                $('activeOrdersList').innerHTML = activeOrders.map(o => renderOrderCard(o)).join('');
+            // Count stats (from all orders, not filtered)
+            const allOrders = data.orders;
+            const inProduction = allOrders.filter(o => o.Status === 'ordered' || o.Status === 'shipped').length;
+            const arrived = allOrders.filter(o => o.Status === 'arrived' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete').length;
+            const inAlterations = allOrders.filter(o => o.Status === 'in alterations').length;
+            const ready = allOrders.filter(o => o.Status === 'ready for pickup').length;
+            const pickedUp = allOrders.filter(o => o.Status === 'picked up').length;
+            
+            $('ordersInProduction').textContent = inProduction;
+            $('ordersArrived').textContent = arrived;
+            $('ordersInAlterations').textContent = inAlterations;
+            $('ordersReady').textContent = ready;
+            $('ordersPickedUp').textContent = pickedUp;
+            $('ordersCount').textContent = `(${orders.length})`;
+            
+            // Sort orders based on selected option
+            if (sortBy === 'status') {
+                const statusOrder = ['arrived - pending QA', 'QA complete', 'arrived', 'in alterations', 'ready for pickup', 'shipped', 'ordered', 'picked up'];
+                orders.sort((a, b) => {
+                    const aIdx = statusOrder.indexOf(a.Status || 'ordered');
+                    const bIdx = statusOrder.indexOf(b.Status || 'ordered');
+                    if (aIdx !== bIdx) return aIdx - bIdx;
+                    return (a.WeddingDate || '').localeCompare(b.WeddingDate || '');
+                });
+            } else if (sortBy === 'weddingDate') {
+                orders.sort((a, b) => (a.WeddingDate || '9999').localeCompare(b.WeddingDate || '9999'));
+            } else if (sortBy === 'arrivalDate') {
+                orders.sort((a, b) => (a.ArrivalDate || '9999').localeCompare(b.ArrivalDate || '9999'));
+            } else if (sortBy === 'orderDate') {
+                orders.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || '')); // Most recent first
+            } else if (sortBy === 'clientName') {
+                orders.sort((a, b) => (a.ClientName || '').localeCompare(b.ClientName || ''));
             }
             
-            // Render past orders
-            if (pastOrders.length === 0) {
-                $('pastOrdersList').innerHTML = '<div class="empty">No completed orders</div>';
+            // Render table
+            if (orders.length === 0) {
+                $('ordersTableBody').innerHTML = '<tr><td colspan="8" class="empty">No orders found</td></tr>';
             } else {
-                $('pastOrdersList').innerHTML = pastOrders.map(o => renderOrderCard(o, true)).join('');
+                $('ordersTableBody').innerHTML = orders.map(o => {
+                    const statusColor = getStatusColor(o.Status);
+                    return `<tr>
+                        <td><input type="checkbox" class="order-checkbox" data-order-id="${o.ID}" onchange="updateOrderSelection()"></td>
+                        <td>
+                            <div style="font-weight:500">${o.ClientName || '—'}</div>
+                            <div style="font-size:11px;color:var(--text-secondary)">${o.Phone || o.Email || ''}</div>
+                        </td>
+                        <td>${o.PO || '—'}</td>
+                        <td>
+                            <div>${o.Dress || '—'}</div>
+                            ${o.Size ? `<div style="font-size:11px;color:var(--text-secondary)">Size ${o.Size}</div>` : ''}
+                        </td>
+                        <td>${o.Designer || '—'}</td>
+                        <td>
+                            <div>${fmtDate(o.WeddingDate) || '—'}</div>
+                            ${o.ArrivalDate ? `<div style="font-size:10px;color:var(--text-secondary)">ETA: ${fmtDate(o.ArrivalDate)}</div>` : ''}
+                        </td>
+                        <td>
+                            <select class="form-input" style="width:auto;font-size:11px;padding:4px 8px;border-color:${statusColor};color:${statusColor}" onchange="updateOrderStatus(${o.ID}, this.value)">
+                                ${ORDER_STATUSES.map(s => `<option value="${s}" ${s === o.Status ? 'selected' : ''}>${s}</option>`).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:4px">
+                                <button class="action-btn" onclick="viewOrderDetails(${o.ID})">View</button>
+                                <button class="action-btn" onclick="deleteOrder(${o.ID})" style="color:#e74c3c">Delete</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
             }
         }
         
-        function togglePastOrders() {
-            const list = $('pastOrdersList');
-            const toggle = $('pastOrdersToggle');
-            if (list.style.display === 'none') {
-                list.style.display = 'block';
-                toggle.textContent = '▲ Hide';
-            } else {
-                list.style.display = 'none';
-                toggle.textContent = '▼ Show';
+        function filterOrders(status) {
+            $('orderStatusFilter').value = status;
+            renderOrders();
+        }
+        
+        function clearOrderFilters() {
+            $('orderSearch').value = '';
+            $('orderStatusFilter').value = '';
+            $('orderSortBy').value = 'status';
+            renderOrders();
+        }
+        
+        function toggleAllOrderCheckboxes(checked) {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = checked);
+            updateOrderSelection();
+        }
+        
+        function viewOrderDetails(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            
+            // Try to open client if exists
+            if (order.ClientID) {
+                const client = getClient(order.ClientID);
+                if (client) {
+                    openClient(order.ClientID);
+                    return;
+                }
             }
+            
+            // Otherwise show order details in alert (can be enhanced later)
+            alert(`Order Details:\n\nClient: ${order.ClientName}\nPO: ${order.PO}\nDress: ${order.Dress}\nDesigner: ${order.Designer}\nSize: ${order.Size}\nStatus: ${order.Status}\nWedding: ${order.WeddingDate}\n\nAccessories: ${order.Accessories || 'None'}\nNotes: ${order.Notes || 'None'}`);
         }
         
         function renderOrderCard(o, isPast = false) {
@@ -5610,13 +6080,16 @@ The Estrelle Bridal Team`;
             }
             
             // Add delete button
-            actionButtons += `<button class="btn btn-sm btn-secondary" onclick="deleteOrder(${o.ID})" title="Delete Order" style="color:#e74c3c">🗑️</button>`;
+            actionButtons += `<button class="btn btn-sm btn-secondary" onclick="deleteOrder(${o.ID})" title="Delete Order" style="color:#e74c3c">✕</button>`;
             
             return `<div style="padding:12px;background:var(--cream);border-radius:5px;margin-bottom:12px;border-left:3px solid ${getStatusColor(status)}">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
-                    <div>
-                        <div style="font-weight:600;font-size:14px">${c ? c.FirstName + ' ' + c.LastName : '?'}</div>
-                        <div style="font-size:10px;color:var(--taupe)">Order: ${fmtDate(o.OrderDate)} · Wedding: ${c ? fmtDate(c.WeddingDate) : '?'}</div>
+                    <div style="display:flex;align-items:flex-start;gap:10px">
+                        <input type="checkbox" class="order-checkbox" data-order-id="${o.ID}" onchange="updateOrderSelection()" style="margin-top:4px;width:16px;height:16px;cursor:pointer">
+                        <div>
+                            <div style="font-weight:600;font-size:14px">${c ? c.FirstName + ' ' + c.LastName : (o.ClientName || '?')}</div>
+                            <div style="font-size:10px;color:var(--taupe)">${o.PO ? 'PO#' + o.PO + ' · ' : ''}Order: ${fmtDate(o.OrderDate)} · Wedding: ${o.WeddingDate ? fmtDate(o.WeddingDate) : (c ? fmtDate(c.WeddingDate) : '?')}</div>
+                        </div>
                     </div>
                     <div style="text-align:right">
                         ${isPast ? 
@@ -5640,6 +6113,7 @@ The Estrelle Bridal Team`;
                 'ordered': '#3498db',
                 'in production': '#9b59b6',
                 'shipped': '#f39c12',
+                'arrived': '#e67e22',
                 'arrived - pending QA': '#e74c3c',
                 'QA complete': '#27ae60',
                 'in alterations': '#1abc9c',
@@ -5647,6 +6121,82 @@ The Estrelle Bridal Team`;
                 'picked up': '#95a5a6'
             };
             return colors[status] || '#95a5a6';
+        }
+        
+        // Bulk order actions
+        function updateOrderSelection() {
+            const checkboxes = document.querySelectorAll('.order-checkbox:checked');
+            const count = checkboxes.length;
+            const bulkBar = $('ordersBulkBar');
+            
+            if (count > 0) {
+                bulkBar.style.display = 'flex';
+                $('ordersSelectedCount').textContent = count + ' selected';
+            } else {
+                bulkBar.style.display = 'none';
+            }
+        }
+        
+        function selectAllOrders() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = true);
+            updateOrderSelection();
+        }
+        
+        function deselectAllOrders() {
+            document.querySelectorAll('.order-checkbox').forEach(cb => cb.checked = false);
+            updateOrderSelection();
+        }
+        
+        function getSelectedOrderIds() {
+            return Array.from(document.querySelectorAll('.order-checkbox:checked'))
+                .map(cb => cb.dataset.orderId);
+        }
+        
+        async function applyBulkStatus() {
+            const newStatus = $('bulkStatusSelect').value;
+            if (!newStatus) {
+                toast('Select a status first', 'error');
+                return;
+            }
+            
+            const orderIds = getSelectedOrderIds();
+            if (orderIds.length === 0) {
+                toast('No orders selected', 'error');
+                return;
+            }
+            
+            if (!confirm(`Change status to "${newStatus}" for ${orderIds.length} orders?`)) return;
+            
+            for (const id of orderIds) {
+                await updateRecord('Orders', id, { Status: newStatus });
+                const order = data.orders.find(o => String(o.ID) === String(id));
+                if (order) order.Status = newStatus;
+            }
+            
+            saveCachedData();
+            renderOrders();
+            deselectAllOrders();
+            toast(`Updated ${orderIds.length} orders to "${newStatus}"`, 'success');
+        }
+        
+        async function bulkDeleteOrders() {
+            const orderIds = getSelectedOrderIds();
+            if (orderIds.length === 0) {
+                toast('No orders selected', 'error');
+                return;
+            }
+            
+            if (!confirm(`Delete ${orderIds.length} orders? This cannot be undone.`)) return;
+            
+            for (const id of orderIds) {
+                await deleteRecord('Orders', id);
+                data.orders = data.orders.filter(o => String(o.ID) !== String(id));
+            }
+            
+            saveCachedData();
+            renderOrders();
+            deselectAllOrders();
+            toast(`Deleted ${orderIds.length} orders`, 'success');
         }
         
         async function toggleItemArrived(orderId, itemId) {
@@ -6284,10 +6834,77 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         
         function parseDate(dateStr) {
             if (!dateStr) return null;
+            
+            // Handle Excel serial number
             if (typeof dateStr === 'number') {
                 return new Date((dateStr - 25569) * 86400 * 1000);
             }
-            const d = new Date(dateStr);
+            
+            const str = String(dateStr).trim();
+            
+            // Handle empty or invalid
+            if (!str || str === 'nan' || str === 'NaN' || str === 'undefined') return null;
+            
+            // Try ISO format first (2025-06-15)
+            if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+                const d = new Date(str.split('T')[0] + 'T00:00:00');
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            // Handle "Month Day, Year" format (June 6th, 2024 or Sept 13, 2025)
+            const monthNames = {
+                'jan': 0, 'january': 0,
+                'feb': 1, 'february': 1,
+                'mar': 2, 'march': 2,
+                'apr': 3, 'april': 3,
+                'may': 4,
+                'jun': 5, 'june': 5,
+                'jul': 6, 'july': 6,
+                'aug': 7, 'august': 7,
+                'sep': 8, 'sept': 8, 'september': 8,
+                'oct': 9, 'october': 9,
+                'nov': 10, 'november': 10,
+                'dec': 11, 'december': 11
+            };
+            
+            // Try "Month Day, Year" or "Month Day Year"
+            const textMatch = str.match(/^([a-zA-Z]+)\s*(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{4})/i);
+            if (textMatch) {
+                const month = monthNames[textMatch[1].toLowerCase()];
+                const day = parseInt(textMatch[2]);
+                const year = parseInt(textMatch[3]);
+                if (month !== undefined && day && year) {
+                    return new Date(year, month, day);
+                }
+            }
+            
+            // Try "Day Month Year" format
+            const textMatch2 = str.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+([a-zA-Z]+),?\s*(\d{4})/i);
+            if (textMatch2) {
+                const day = parseInt(textMatch2[1]);
+                const month = monthNames[textMatch2[2].toLowerCase()];
+                const year = parseInt(textMatch2[3]);
+                if (month !== undefined && day && year) {
+                    return new Date(year, month, day);
+                }
+            }
+            
+            // Handle MM/DD/YYYY or DD/MM/YYYY (assume MM/DD/YYYY for US)
+            const slashMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+            if (slashMatch) {
+                const month = parseInt(slashMatch[1]) - 1;
+                const day = parseInt(slashMatch[2]);
+                const year = parseInt(slashMatch[3]);
+                return new Date(year, month, day);
+            }
+            
+            // Handle partial dates like "SEPT/OCT" - return null
+            if (str.includes('/') && !slashMatch) {
+                return null;
+            }
+            
+            // Fallback to native Date parsing
+            const d = new Date(str);
             return isNaN(d.getTime()) ? null : d;
         }
         
@@ -6400,28 +7017,36 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         let currentAltItems = [];
         
         function renderAlts() {
-            // Get clients in alterations (orders with status 'in alterations' or 'QA complete')
+            // Get clients in alterations from TWO sources:
+            // 1. Orders with status 'in alterations' or 'QA complete'
+            // 2. Records in data.alterations array
+            
             const altsClients = [];
+            const processedClientIds = new Set();
             const now = new Date();
             const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
             
+            // Source 1: From orders
             data.orders.forEach(o => {
                 if (o.Status === 'in alterations' || o.Status === 'QA complete') {
                     const c = getClient(o.ClientID);
-                    if (c) {
+                    if (c && !processedClientIds.has(String(c.ID))) {
+                        processedClientIds.add(String(c.ID));
                         const weddingDate = parseDate(c.WeddingDate);
                         const daysToWedding = weddingDate ? Math.ceil((weddingDate - now) / (1000 * 60 * 60 * 24)) : 999;
                         
-                        // Get fitting appointments
                         const fittings = data.appointments.filter(a => 
                             a.ClientID == c.ID && 
                             (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
                         ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
                         
-                        // Get alteration items from localStorage
                         const altItems = JSON.parse(localStorage.getItem(`alts_${c.ID}`) || '[]');
                         const doneCount = altItems.filter(i => i.status === 'done').length;
                         const totalCount = altItems.length;
+                        
+                        // Get today's date at start of day for comparison
+                        const todayStart = new Date();
+                        todayStart.setHours(0, 0, 0, 0);
                         
                         altsClients.push({
                             client: c,
@@ -6431,11 +7056,70 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             doneCount,
                             totalCount,
                             daysToWedding,
-                            nextFitting: fittings.find(f => parseDate(f.Date) >= now)
+                            nextFitting: fittings.find(f => {
+                                const fDate = parseDate(f.Date);
+                                return fDate && fDate >= todayStart;
+                            })
                         });
                     }
                 }
             });
+            
+            // Source 2: From data.alterations array (created by sync or auto-create)
+            console.log('Checking data.alterations:', data.alterations?.length || 0, 'records');
+            (data.alterations || []).forEach(alt => {
+                console.log('Alteration record:', alt.ClientID, alt.ClientName, alt.Status);
+                if (alt.Status === 'complete') return; // Skip completed
+                
+                const clientId = String(alt.ClientID);
+                if (processedClientIds.has(clientId)) {
+                    console.log('Already processed from orders:', clientId);
+                    return;
+                }
+                
+                const c = getClient(clientId);
+                console.log('getClient(' + clientId + ') =', c ? c.FirstName + ' ' + c.LastName : 'NOT FOUND');
+                
+                if (c) {
+                    processedClientIds.add(clientId);
+                    const weddingDate = parseDate(c.WeddingDate);
+                    const daysToWedding = weddingDate ? Math.ceil((weddingDate - now) / (1000 * 60 * 60 * 24)) : 999;
+                    
+                    const fittings = data.appointments.filter(a => 
+                        String(a.ClientID) === clientId && 
+                        (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                    ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+                    
+                    // Get order for this client
+                    const order = data.orders.find(o => String(o.ClientID) === clientId && o.Status !== 'picked up');
+                    
+                    const altItems = JSON.parse(localStorage.getItem(`alts_${c.ID}`) || '[]');
+                    const doneCount = altItems.filter(i => i.status === 'done').length;
+                    const totalCount = altItems.length;
+                    
+                    // Get today's date at start of day for comparison
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0);
+                    
+                    altsClients.push({
+                        client: c,
+                        order: order || { ID: alt.OrderID, Dress: alt.Items },
+                        alteration: alt,
+                        fittings,
+                        altItems,
+                        doneCount,
+                        totalCount,
+                        daysToWedding,
+                        nextFitting: fittings.find(f => {
+                            const fDate = parseDate(f.Date);
+                            return fDate && fDate >= todayStart;
+                        })
+                    });
+                    console.log('Added to altsClients:', c.FirstName, c.LastName);
+                }
+            });
+            
+            console.log('Total altsClients after both sources:', altsClients.length);
             
             // Sort by urgency (days to wedding)
             altsClients.sort((a, b) => a.daysToWedding - b.daysToWedding);
@@ -6479,7 +7163,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     if (ac.altItems.length > 4) itemsHtml += `<span style="font-size:10px;color:var(--taupe)">+${ac.altItems.length - 4} more</span>`;
                 }
                 
-                return `<div class="card" style="margin-bottom:12px;border-left:3px solid ${urgencyColor}">
+                return `<div class="card" style="margin-bottom:12px;border-left:3px solid ${urgencyColor};cursor:pointer" onclick="openClient(${c.ID})">
                     <div class="card-body">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
                             <div>
@@ -6497,9 +7181,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         </div>
                         <div style="margin-bottom:8px">${itemsHtml || '<span style="font-size:10px;color:var(--taupe)">No alteration items yet</span>'}</div>
                         <div style="display:flex;justify-content:flex-end;gap:6px">
-                            <button class="btn btn-sm btn-secondary" onclick="deleteAlteration(${c.ID})" title="Remove from alterations" style="color:#e74c3c">🗑️</button>
-                            <button class="btn btn-sm btn-secondary" onclick="scheduleClientFitting(${c.ID})">📅 Schedule Fitting</button>
-                            <button class="btn btn-sm btn-primary" onclick="openAlterationDetail(${c.ID})">✂️ Manage</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAlteration(${c.ID})" title="Remove from alterations" style="color:#e74c3c">✕</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();scheduleClientFitting(${c.ID})">📅 Schedule Fitting</button>
+                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openAlterationDetail(${c.ID})">✂️ Edit</button>
                         </div>
                     </div>
                 </div>`;
@@ -6622,17 +7306,20 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Get order info
             const order = data.orders.find(o => o.ClientID == clientId && (o.Status === 'in alterations' || o.Status === 'QA complete'));
             
-            // Client info
+            // Client info - clickable to edit
             const weddingDate = parseDate(c.WeddingDate);
             const daysToWedding = weddingDate ? Math.ceil((weddingDate - new Date()) / (1000 * 60 * 60 * 24)) : '?';
             
             $('altClientInfo').innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div>
-                        <div style="font-weight:600;font-size:16px">${c.FirstName} ${c.LastName}</div>
+                    <div style="cursor:pointer" onclick="closeModal('alteration');openClient(${clientId})">
+                        <div style="font-weight:600;font-size:16px">${c.FirstName} ${c.LastName} <span style="font-size:11px;color:var(--dusty)">✏️</span></div>
                         <div style="font-size:11px;color:var(--taupe)">Wedding: ${fmtDate(c.WeddingDate)} · ${daysToWedding} days away</div>
                     </div>
-                    <div style="font-size:11px;color:var(--taupe)">${c.Phone || ''}<br>${c.Email || ''}</div>
+                    <div style="text-align:right">
+                        <div style="font-size:11px;color:var(--taupe)">${c.Phone || ''}</div>
+                        <div style="font-size:11px;color:var(--taupe)">${c.Email || ''}</div>
+                    </div>
                 </div>
             `;
             
@@ -6647,7 +7334,10 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             } else {
                 $('altFittingsList').innerHTML = fittings.map((f, idx) => {
                     const d = parseDate(f.Date);
-                    const isPast = d < new Date();
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0);
+                    const isPast = d && d < todayStart;
+                    const isToday = d && d.toDateString() === new Date().toDateString();
                     // Format time properly
                     let timeStr = f.Time || '';
                     if (timeStr.includes('T')) {
@@ -6668,14 +7358,14 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         const hour12 = hour % 12 || 12;
                         timeStr = `${hour12}:${m} ${ampm}`;
                     }
-                    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${isPast ? 'var(--cream)' : 'var(--blush)'};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt(${f.ID})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-                        <div style="width:24px;height:24px;background:${isPast ? 'var(--champagne)' : 'var(--dusty)'};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${idx + 1}</div>
+                    const bgColor = isToday ? '#e8f5e9' : (isPast ? 'var(--cream)' : 'var(--blush)');
+                    const circleColor = isToday ? '#27ae60' : (isPast ? 'var(--champagne)' : 'var(--dusty)');
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${bgColor};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt(${f.ID})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+                        <div style="width:24px;height:24px;background:${circleColor};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${idx + 1}</div>
                         <div style="flex:1">
-                            <div style="font-size:11px;font-weight:500">${f.Type} - ${fmtDate(f.Date)} @ ${timeStr}</div>
-                            ${f.Notes ? `<div style="font-size:10px;color:var(--taupe)">${f.Notes}</div>` : ''}
+                            <div style="font-size:11px;font-weight:500">${f.Type} - ${fmtDate(f.Date)}${isToday ? ' (TODAY)' : ''} @ ${timeStr}</div>
                             ${f.Consultant ? `<div style="font-size:9px;color:var(--taupe)">with ${f.Consultant}</div>` : ''}
                         </div>
-                        ${isPast ? '<span style="font-size:10px;color:#27ae60">✓ Done</span>' : '<span style="font-size:10px;color:var(--dusty)">✏️ Edit</span>'}
                     </div>`;
                 }).join('');
             }
@@ -7334,6 +8024,299 @@ www.estrellebridal.com`;
             toast('Designer deleted', 'success');
         }
 
+        // ========== EMAIL TEMPLATES ==========
+        function renderEmailTemplates() {
+            const templates = data.emailtemplates || [];
+            const container = $('emailTemplatesList');
+            if (!container) return;
+            
+            container.innerHTML = templates.length ? templates.map(t => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:14px;background:var(--bg);border-radius:10px;margin-bottom:8px">
+                    <div style="flex:1;min-width:0">
+                        <div style="font-weight:600">${t.Name || 'Untitled'}</div>
+                        <div style="font-size:12px;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Subject: ${t.Subject || '(no subject)'}</div>
+                    </div>
+                    <div style="display:flex;gap:4px">
+                        <button class="btn btn-secondary btn-sm" onclick="editEmailTemplate('${t.ID}')">Edit</button>
+                        <button class="btn btn-sm" onclick="deleteEmailTemplate('${t.ID}')" style="background:var(--red);color:white">Delete</button>
+                    </div>
+                </div>
+            `).join('') : '<p style="color:var(--text-secondary);font-size:13px">No templates yet. Click "Add Template" to create one.</p>';
+        }
+        
+        function openAddTemplateModal() {
+            $('emailTemplateModalTitle').textContent = 'Add Email Template';
+            $('editTemplateId').value = '';
+            $('tplName').value = '';
+            $('tplSubject').value = '';
+            $('tplBody').value = '';
+            openModal('emailTemplate');
+        }
+        
+        function editEmailTemplate(id) {
+            const template = (data.emailtemplates || []).find(t => String(t.ID) === String(id));
+            if (!template) { toast('Template not found', 'error'); return; }
+            
+            $('emailTemplateModalTitle').textContent = 'Edit Email Template';
+            $('editTemplateId').value = id;
+            $('tplName').value = template.Name || '';
+            $('tplSubject').value = template.Subject || '';
+            $('tplBody').value = template.Body || '';
+            openModal('emailTemplate');
+        }
+        
+        async function saveEmailTemplate() {
+            const name = $('tplName').value.trim();
+            const subject = $('tplSubject').value.trim();
+            const body = $('tplBody').value.trim();
+            
+            if (!name || !subject || !body) {
+                toast('Please fill in all fields', 'error');
+                return;
+            }
+            
+            const id = $('editTemplateId').value;
+            const record = { Name: name, Subject: subject, Body: body };
+            
+            if (id) {
+                // Update existing
+                updateRecord('EmailTemplates', id, record);
+                const existing = (data.emailtemplates || []).find(t => String(t.ID) === String(id));
+                if (existing) Object.assign(existing, record);
+                toast('Template updated!', 'success');
+            } else {
+                // Create new
+                const tempId = Date.now();
+                const newTemplate = { ...record, ID: tempId };
+                if (!data.emailtemplates) data.emailtemplates = [];
+                data.emailtemplates.push(newTemplate);
+                
+                api('POST', { action: 'add', sheet: 'EmailTemplates', record })
+                    .then(res => {
+                        if (res && res.id) {
+                            const idx = data.emailtemplates.findIndex(t => t.ID === tempId);
+                            if (idx >= 0) data.emailtemplates[idx].ID = res.id;
+                        }
+                    });
+                toast('Template created!', 'success');
+            }
+            
+            saveCachedData();
+            closeModal('emailTemplate');
+            renderEmailTemplates();
+            renderSettings();
+        }
+        
+        async function deleteEmailTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            
+            deleteRecord('EmailTemplates', id);
+            data.emailtemplates = (data.emailtemplates || []).filter(t => String(t.ID) !== String(id));
+            saveCachedData();
+            renderEmailTemplates();
+            renderSettings();
+            toast('Template deleted', 'success');
+        }
+        
+        function insertPlaceholder(fieldId, placeholder) {
+            const field = $(fieldId);
+            if (!field) return;
+            
+            const start = field.selectionStart;
+            const end = field.selectionEnd;
+            const text = field.value;
+            
+            field.value = text.substring(0, start) + placeholder + text.substring(end);
+            field.selectionStart = field.selectionEnd = start + placeholder.length;
+            field.focus();
+        }
+        
+        function copyPlaceholder(placeholder) {
+            navigator.clipboard.writeText(placeholder);
+            toast('Copied: ' + placeholder, 'success');
+        }
+        
+        // ========== CLIENT EMAIL ==========
+        function openClientEmailModal() {
+            if (!currentClient) { toast('No client selected', 'error'); return; }
+            if (!currentClient.Email) { 
+                toast('This client has no email address. Please add one first.', 'error'); 
+                return; 
+            }
+            
+            $('clientEmailTo').textContent = `${currentClient.FirstName} ${currentClient.LastName} <${currentClient.Email}>`;
+            $('clientEmailSubject').value = '';
+            $('clientEmailBody').value = '';
+            
+            // Populate template dropdown with system + custom templates
+            const customTemplates = data.emailtemplates || [];
+            $('clientEmailTemplate').innerHTML = `
+                <option value="">-- Select a template --</option>
+                <optgroup label="System Templates">
+                    <option value="sys_confirmation">📅 Appointment Confirmation</option>
+                    <option value="sys_followup">📞 Follow-up Email</option>
+                    <option value="sys_anniversary">💍 Anniversary Email</option>
+                </optgroup>
+                ${customTemplates.length ? `
+                <optgroup label="Custom Templates">
+                    ${customTemplates.map(t => `<option value="custom_${t.ID}">${t.Name}</option>`).join('')}
+                </optgroup>
+                ` : ''}
+                <option value="custom">✏️ Write Custom Email</option>
+            `;
+            
+            // Populate appointment dropdown
+            const clientAppts = data.appointments
+                .filter(a => String(a.ClientID) === String(currentClient.ID))
+                .sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
+            
+            $('clientEmailAppt').innerHTML = `
+                <option value="">-- No appointment selected --</option>
+                ${clientAppts.map(a => `<option value="${a.ID}">${fmtDate(a.Date)} at ${fmtTime(a.Time)} - ${a.Type || 'Appointment'}</option>`).join('')}
+            `;
+            
+            $('clientEmailApptGroup').style.display = 'none';
+            openModal('clientEmail');
+        }
+        
+        function loadClientEmailTemplate() {
+            const templateId = $('clientEmailTemplate').value;
+            
+            if (templateId === 'custom' || templateId === '') {
+                $('clientEmailSubject').value = '';
+                $('clientEmailBody').value = '';
+                $('clientEmailApptGroup').style.display = 'none';
+                return;
+            }
+            
+            let subject = '';
+            let body = '';
+            
+            // Handle system templates
+            if (templateId === 'sys_confirmation') {
+                subject = 'Your appointment at {StoreName} is confirmed!';
+                body = getConfirmTemplate();
+                $('clientEmailApptGroup').style.display = 'block';
+            } else if (templateId === 'sys_followup') {
+                const template = getFollowupTemplate();
+                subject = template.subject;
+                body = template.body;
+                $('clientEmailApptGroup').style.display = 'block';
+            } else if (templateId === 'sys_anniversary') {
+                const template = getAnniversaryTemplate();
+                subject = template.subject;
+                body = template.body;
+                $('clientEmailApptGroup').style.display = 'none';
+            } else if (templateId.startsWith('custom_')) {
+                // Handle custom templates
+                const customId = templateId.replace('custom_', '');
+                const template = (data.emailtemplates || []).find(t => String(t.ID) === String(customId));
+                if (template) {
+                    subject = template.Subject;
+                    body = template.Body;
+                    
+                    // Check if template uses appointment placeholders
+                    const hasApptPlaceholders = subject.includes('{Appointment') || 
+                                                subject.includes('{Consultant}') ||
+                                                body.includes('{Appointment') || 
+                                                body.includes('{Consultant}');
+                    $('clientEmailApptGroup').style.display = hasApptPlaceholders ? 'block' : 'none';
+                }
+            }
+            
+            // Replace placeholders with client data
+            $('clientEmailSubject').value = replacePlaceholders(subject, currentClient, null);
+            $('clientEmailBody').value = replacePlaceholders(body, currentClient, null);
+        }
+        
+        function updateClientEmailPreview() {
+            const templateId = $('clientEmailTemplate').value;
+            if (!templateId || templateId === 'custom') return;
+            
+            const apptId = $('clientEmailAppt').value;
+            const appt = apptId ? data.appointments.find(a => String(a.ID) === String(apptId)) : null;
+            
+            let subject = $('clientEmailSubject').value;
+            let body = $('clientEmailBody').value;
+            
+            // Re-replace placeholders with appointment data if selected
+            if (appt) {
+                // Get original template to re-apply placeholders
+                if (templateId === 'sys_confirmation') {
+                    subject = 'Your appointment at {StoreName} is confirmed!';
+                    body = getConfirmTemplate();
+                } else if (templateId === 'sys_followup') {
+                    const template = getFollowupTemplate();
+                    subject = template.subject;
+                    body = template.body;
+                } else if (templateId === 'sys_anniversary') {
+                    const template = getAnniversaryTemplate();
+                    subject = template.subject;
+                    body = template.body;
+                } else if (templateId.startsWith('custom_')) {
+                    const customId = templateId.replace('custom_', '');
+                    const template = (data.emailtemplates || []).find(t => String(t.ID) === String(customId));
+                    if (template) {
+                        subject = template.Subject;
+                        body = template.Body;
+                    }
+                }
+                
+                subject = replacePlaceholders(subject, currentClient, appt);
+                body = replacePlaceholders(body, currentClient, appt);
+                
+                $('clientEmailSubject').value = subject;
+                $('clientEmailBody').value = body;
+            }
+        }
+        
+        function replacePlaceholders(text, client, appt) {
+            const storeInfo = getStoreInfo();
+            
+            // Client placeholders
+            text = text.replace(/\{FirstName\}/g, client.FirstName || '');
+            text = text.replace(/\{LastName\}/g, client.LastName || '');
+            text = text.replace(/\{WeddingDate\}/g, fmtDate(client.WeddingDate) || '');
+            text = text.replace(/\{Venue\}/g, client.Venue || '');
+            
+            // Appointment placeholders
+            if (appt) {
+                text = text.replace(/\{AppointmentDate\}/g, fmtDate(appt.Date) || '');
+                text = text.replace(/\{AppointmentTime\}/g, fmtTime(appt.Time) || '');
+                text = text.replace(/\{Consultant\}/g, appt.Consultant || '');
+            } else {
+                text = text.replace(/\{AppointmentDate\}/g, '');
+                text = text.replace(/\{AppointmentTime\}/g, '');
+                text = text.replace(/\{Consultant\}/g, '');
+            }
+            
+            // Store placeholders
+            text = text.replace(/\{StoreName\}/g, storeInfo.name || 'Estrelle Bridal');
+            text = text.replace(/\{StorePhone\}/g, storeInfo.phone || '');
+            text = text.replace(/\{StoreAddress\}/g, storeInfo.address || '');
+            text = text.replace(/\{StoreEmail\}/g, storeInfo.email || '');
+            
+            return text;
+        }
+        
+        function openInEmailApp() {
+            const subject = $('clientEmailSubject').value.trim();
+            const body = $('clientEmailBody').value.trim();
+            const email = currentClient.Email;
+            
+            if (!subject) { toast('Please enter a subject', 'error'); return; }
+            if (!body) { toast('Please enter a message', 'error'); return; }
+            
+            // Create mailto link
+            const mailtoLink = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Open in email app
+            window.location.href = mailtoLink;
+            
+            closeModal('clientEmail');
+            toast('Opening email app...', 'success');
+        }
+
         // ========== CONSULTANTS ==========
         let consultantSigPad = null;
         
@@ -7452,6 +8435,9 @@ www.estrellebridal.com`;
             // Load service types
             renderServiceTypes();
             
+            // Load email templates
+            renderEmailTemplates();
+            
             // Ensure designer data is loaded
             if (!designerData || designerData.length === 0) {
                 loadDesignerData();
@@ -7460,6 +8446,8 @@ www.estrellebridal.com`;
             // Update counts
             $('consultantCount').textContent = `(${data.consultants.length})`;
             $('designerCount').textContent = `(${designerData.length})`;
+            const templateCount = data.emailtemplates ? data.emailtemplates.length : 0;
+            $('templateCount').textContent = `(${templateCount})`;
             
             // Render consultants in settings
             $('settingsConsultantsList').innerHTML = data.consultants.length ? data.consultants.map(c => `
@@ -9992,11 +10980,36 @@ The {storeName} Team`
             $('orderSubtotal').style.display = 'none';
             $('orderHstRow').style.display = 'none';
             $('yDate').value = fmtDate(today());
+            
+            // Auto-generate PO number
+            const nextPO = generateNextPO();
+            $('oiPO').value = nextPO;
+            
+            // Clear arrival date
+            $('oiArrivalDate').value = '';
+            $('arrivalDateHint').textContent = 'Will auto-calculate when dress is added';
+            $('arrivalDateHint').style.color = 'var(--taupe)';
+            
             updateYSteps();
             openModal('yes');
             
             // Check if there's a draft for this client
             checkForDraft();
+        }
+        
+        function generateNextPO() {
+            // Get all existing PO numbers from orders
+            const existingPOs = (data.orders || [])
+                .map(o => o.PO)
+                .filter(po => po && !isNaN(parseInt(String(po).replace(/^0+/, ''))))
+                .map(po => parseInt(String(po).replace(/^0+/, '')));
+            
+            // Find the highest PO number
+            const maxPO = existingPOs.length > 0 ? Math.max(...existingPOs) : 0;
+            
+            // Return next number (padded to 6 digits)
+            const nextNum = maxPO + 1;
+            return String(nextNum).padStart(6, '0');
         }
         
         function populateSavedMeasurementsDropdown() {
@@ -10395,6 +11408,19 @@ The {storeName} Team`
                 item.qaChecked = false;
                 item.arrived = false;
                 if (!item.designer || !item.name) { toast('Enter designer and style'); return; }
+                
+                // Auto-calculate arrival date if not set and this is a dress
+                if (type === 'dress' && !$('oiArrivalDate').value) {
+                    const designerInfo = designerData.find(d => d.name.toLowerCase() === item.designer.toLowerCase());
+                    if (designerInfo && designerInfo.standard) {
+                        const eta = new Date();
+                        eta.setMonth(eta.getMonth() + parseInt(designerInfo.standard));
+                        $('oiArrivalDate').value = eta.toISOString().split('T')[0];
+                        $('arrivalDateHint').textContent = `Auto-calculated: ${designerInfo.name} = ${designerInfo.standard} months`;
+                        $('arrivalDateHint').style.color = 'var(--sage)';
+                    }
+                }
+                
                 // Clear fields
                 ['oiDesigner','oiStyle','oiSize','oiColor','oiPrice'].forEach(i => $(i).value = '');
             } else if (type === 'inhouse') {
@@ -10872,15 +11898,31 @@ The {storeName} Team`
                 fittingPhotos = currentOrder.fittingPhotoUrls || [];
             }
             
+            // Get dress info for individual fields
+            const dressItem = o.items.find(i => i.type === 'dress');
+            const accessoryItems = o.items.filter(i => i.type === 'accessory' || i.type === 'inhouse');
+            
             const record = {
                 ClientID: c.ID,
                 ClientName: clientName,
+                Phone: c.Phone || '',
+                Email: c.Email || '',
+                PO: $('oiPO').value || generateNextPO(),
                 OrderDate: today(),
+                WeddingDate: c.WeddingDate || '',
+                ArrivalDate: $('oiArrivalDate').value || '',
                 Status: 'ordered',
+                Consultant: $('yConsultantSelect').value,
+                Dress: dressItem ? dressItem.name : '',
+                Designer: dressItem ? dressItem.designer : '',
+                Size: dressItem ? dressItem.size : '',
+                Customization: dressItem && dressItem.customizations ? dressItem.customizations.map(c => c.name).join(', ') : '',
+                Accessories: accessoryItems.map(i => i.name).join(', '),
+                Notes: $('oiDetails') ? $('oiDetails').value : '',
+                Seamstress: '',
                 Total: total,
                 Subtotal: subtotal,
                 HST: hst,
-                Consultant: $('yConsultantSelect').value,
                 Items: JSON.stringify(o.items),
                 Measurements: JSON.stringify(o.measurements),
                 FittingPhotos: JSON.stringify(fittingPhotos),
