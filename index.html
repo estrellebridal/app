@@ -880,7 +880,7 @@
                 <div id="allClientsView">
                     <div class="card"><div class="card-body">
                         <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input type="text" placeholder="Search..." id="clientSearch" oninput="filterClients()"></div>
-                        <div class="table-wrap"><table class="table"><thead><tr><th style="width:30px"><input type="checkbox" id="selectAllClients" onchange="toggleAllClients(this.checked)"></th><th>Client</th><th>Wedding</th><th>Status</th><th>Last Visit</th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
+                        <div class="table-wrap"><table class="table"><thead><tr><th style="width:30px"><input type="checkbox" id="selectAllClients" onchange="toggleAllClients(this.checked)"></th><th style="cursor:pointer" onclick="sortClientsBy('name')">Client <span id="clientSortArrow_name" style="opacity:0.3">↕</span></th><th style="cursor:pointer" onclick="sortClientsBy('wedding')">Wedding <span id="clientSortArrow_wedding" style="opacity:0.3">↕</span></th><th style="cursor:pointer" onclick="sortClientsBy('status')">Status <span id="clientSortArrow_status" style="opacity:0.3">↕</span></th><th style="cursor:pointer" onclick="sortClientsBy('lastVisit')">Last Visit <span id="clientSortArrow_lastVisit" style="opacity:1">↓</span></th><th></th></tr></thead><tbody id="clientsTable"></tbody></table></div>
                     </div></div>
                 </div>
                 
@@ -995,7 +995,7 @@
                             <button class="btn btn-sm" id="viewOrders" onclick="setOrdersView('orders')" style="border:none;border-radius:0;background:var(--accent);color:white">Orders</button>
                             <button class="btn btn-sm" id="viewAlterations" onclick="setOrdersView('alterations')" style="border:none;border-radius:0;background:white;color:var(--text)">Alterations</button>
                         </div>
-                        <button class="btn btn-primary" id="ordersAddBtn" onclick="openAddAlterationItem()">+ Add Fitting</button>
+                        <button class="btn btn-primary" id="ordersAddBtn" onclick="openAddOrder()">+ Add Order</button>
                     </div>
                 </div>
                 
@@ -1011,13 +1011,12 @@
                         <div style="display:flex;align-items:center;gap:8px">
                             <select class="form-input" id="bulkStatusSelect" style="width:auto;padding:6px 10px;font-size:12px">
                                 <option value="">Change Status...</option>
-                                <option value="ordered">Ordered (In Production)</option>
+                                <option value="pending submission">Pending Submission</option>
+                                <option value="in production">In Production</option>
                                 <option value="shipped">Shipped</option>
-                                <option value="arrived">Arrived (In Store)</option>
-                                <option value="arrived - pending QA">Arrived - Pending QA</option>
+                                <option value="arrived - pending QA">Arrived - Needs QA</option>
                                 <option value="QA complete">QA Complete</option>
                                 <option value="in alterations">In Alterations</option>
-                                <option value="ready for pickup">Ready for Pickup</option>
                                 <option value="picked up">Picked Up</option>
                             </select>
                             <button class="btn btn-sm btn-primary" onclick="applyBulkStatus()">Apply</button>
@@ -1027,33 +1026,33 @@
                     
                     <!-- Orders Stats -->
                     <div class="orders-stats" style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px">
-                        <div class="card" style="border-left:3px solid #3498db;cursor:pointer" onclick="filterOrders('ordered')">
+                        <div class="card order-stat-card" style="border-left:3px solid #9b59b6;cursor:pointer" id="cardArrivingSoon" onclick="toggleArrivingSoon()">
+                            <div class="card-body" style="padding:14px">
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Arriving Soon 📦</div>
+                                <div style="font-size:24px;font-weight:600" id="ordersArrivingSoon">0</div>
+                            </div>
+                        </div>
+                        <div class="card order-stat-card" style="border-left:3px solid #3498db;cursor:pointer" id="cardInProduction" onclick="filterOrders('in production')">
                             <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Production</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersInProduction">0</div>
                             </div>
                         </div>
-                        <div class="card" style="border-left:3px solid #e67e22;cursor:pointer" onclick="filterOrders('arrived')">
+                        <div class="card order-stat-card" style="border-left:3px solid #e67e22;cursor:pointer" id="cardArrived" onclick="filterOrders('arrived')">
                             <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Arrived</div>
-                                <div style="font-size:24px;font-weight:600" id="ordersArrived">0</div>
+                                <div style="font-size:24px;font-weight:600"><span id="ordersArrived">0</span> <span id="ordersNeedsQA" style="font-size:12px;color:#e67e22"></span></div>
                             </div>
                         </div>
-                        <div class="card" style="border-left:3px solid #1abc9c;cursor:pointer" onclick="filterOrders('in alterations')">
+                        <div class="card order-stat-card" style="border-left:3px solid #1abc9c;cursor:pointer" id="cardInAlterations" onclick="filterOrders('in alterations')">
                             <div class="card-body" style="padding:14px">
                                 <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">In Alterations</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersInAlterations">0</div>
                             </div>
                         </div>
-                        <div class="card" style="border-left:3px solid #27ae60;cursor:pointer" onclick="filterOrders('ready for pickup')">
+                        <div class="card order-stat-card" style="border-left:3px solid #95a5a6;cursor:pointer;opacity:0.7" id="cardPickedUp" onclick="filterOrders('picked up')" title="Click to view archived orders">
                             <div class="card-body" style="padding:14px">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Ready</div>
-                                <div style="font-size:24px;font-weight:600" id="ordersReady">0</div>
-                            </div>
-                        </div>
-                        <div class="card" style="border-left:3px solid #95a5a6;cursor:pointer" onclick="filterOrders('picked up')">
-                            <div class="card-body" style="padding:14px">
-                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Picked Up</div>
+                                <div style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-secondary);margin-bottom:4px">Picked Up 📁</div>
                                 <div style="font-size:24px;font-weight:600" id="ordersPickedUp">0</div>
                             </div>
                         </div>
@@ -1064,21 +1063,8 @@
                         <div class="card-body" style="padding:12px">
                             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
                                 <input type="text" class="form-input" id="orderSearch" placeholder="Search orders..." style="flex:1;min-width:200px" oninput="renderOrders()">
-                                <select class="form-input" id="orderStatusFilter" style="width:auto" onchange="renderOrders()">
+                                <select class="form-input" id="orderStatusFilter" style="display:none">
                                     <option value="">All Statuses</option>
-                                    <option value="ordered">Ordered (In Production)</option>
-                                    <option value="shipped">Shipped</option>
-                                    <option value="arrived">Arrived</option>
-                                    <option value="in alterations">In Alterations</option>
-                                    <option value="ready for pickup">Ready for Pickup</option>
-                                    <option value="picked up">Picked Up</option>
-                                </select>
-                                <select class="form-input" id="orderSortBy" style="width:auto" onchange="renderOrders()">
-                                    <option value="status">Sort by: Status</option>
-                                    <option value="weddingDate">Sort by: Wedding Date</option>
-                                    <option value="arrivalDate">Sort by: Arrival Date</option>
-                                    <option value="orderDate">Sort by: Order Date</option>
-                                    <option value="clientName">Sort by: Client Name</option>
                                 </select>
                                 <button class="btn btn-secondary btn-sm" onclick="clearOrderFilters()">Clear</button>
                             </div>
@@ -1095,12 +1081,14 @@
                                 <thead>
                                     <tr>
                                         <th style="width:40px"><input type="checkbox" id="selectAllOrdersCheckbox" onchange="toggleAllOrderCheckboxes(this.checked)"></th>
-                                        <th>Client</th>
+                                        <th style="cursor:pointer" onclick="sortOrdersBy('clientName')">Client <span id="sortArrow_clientName" style="opacity:0.3">↕</span></th>
                                         <th>PO</th>
                                         <th>Dress</th>
                                         <th>Designer</th>
-                                        <th>Wedding</th>
-                                        <th>Status</th>
+                                        <th style="cursor:pointer" onclick="sortOrdersBy('orderDate')">Order Date <span id="sortArrow_orderDate" style="opacity:1">↓</span></th>
+                                        <th style="cursor:pointer" onclick="sortOrdersBy('weddingDate')">Wedding <span id="sortArrow_weddingDate" style="opacity:0.3">↕</span></th>
+                                        <th style="cursor:pointer" onclick="sortOrdersBy('arrivalDate')">ETA <span id="sortArrow_arrivalDate" style="opacity:0.3">↕</span></th>
+                                        <th style="cursor:pointer" onclick="sortOrdersBy('status')">Status <span id="sortArrow_status" style="opacity:0.3">↕</span></th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -1894,7 +1882,9 @@
                 <button class="btn btn-secondary" onclick="closeModal('alteration')">Close</button>
                 <button class="btn btn-secondary" onclick="copySeamstressText()">📋 Copy for Seamstress</button>
                 <button class="btn btn-secondary" onclick="sendFittingSummary()">📧 Email Bride</button>
+                <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
+                <button class="btn btn-primary" onclick="saveAndMarkReady()" style="background:#27ae60">✓ Save & Mark Picked Up</button>
             </div>
         </div>
     </div>
@@ -2159,6 +2149,9 @@ The {StoreName} Team
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('clientEmail')">Cancel</button>
+                <button class="btn btn-secondary" onclick="openInGmail('clientEmailTo', 'clientEmailSubject', 'clientEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
+                </button>
                 <button class="btn btn-primary" onclick="openInEmailApp()">📤 Open in Email App</button>
             </div>
         </div>
@@ -2193,7 +2186,13 @@ The {StoreName} Team
                     <button class="btn btn-sm btn-secondary" onclick="saveEmailTemplate()">💾 Save Template</button>
                 </div>
             </div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('orderEmail')">Cancel</button><button class="btn btn-primary" onclick="sendOrderEmail()">📧 Send Email</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('orderEmail')">Cancel</button>
+                <button class="btn btn-secondary" onclick="openInGmail('orderEmailTo', 'orderEmailSubject', 'orderEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
+                </button>
+                <button class="btn btn-primary" onclick="sendOrderEmail()">📧 Send Email</button>
+            </div>
         </div>
     </div>
     
@@ -2211,10 +2210,326 @@ The {StoreName} Team
                 <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="annEmailSubject"></div>
                 <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="annEmailBody" style="min-height:200px;font-size:12px;line-height:1.6"></textarea></div>
             </div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('anniversaryEmail')">Cancel</button><button class="btn btn-primary" onclick="sendAnniversaryEmail()">📧 Send Email</button></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('anniversaryEmail')">Cancel</button>
+                <button class="btn btn-secondary" onclick="openInGmail('annEmailTo', 'annEmailSubject', 'annEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
+                </button>
+                <button class="btn btn-primary" onclick="sendAnniversaryEmail()">📧 Send Email</button>
+            </div>
         </div>
     </div>
     
+    <!-- QA Checklist Modal -->
+    <div class="modal-overlay" id="modal-qaChecklist">
+        <div class="modal" style="max-width:500px">
+            <div class="modal-header"><h2 class="modal-title">✓ QA Checklist</h2><button class="modal-close" onclick="closeModal('qaChecklist')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="qaOrderId">
+                
+                <!-- Order Info -->
+                <div style="background:var(--cream);padding:12px;border-radius:5px;margin-bottom:16px">
+                    <div style="font-weight:600;font-size:16px" id="qaClientName">Client Name</div>
+                    <div style="font-size:12px;color:var(--taupe)" id="qaOrderInfo">PO# · Dress · Designer</div>
+                </div>
+                
+                <!-- Checklist -->
+                <div style="margin-bottom:16px">
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:white;border:1px solid var(--champagne);border-radius:5px;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="qaCheck1" style="width:20px;height:20px">
+                        <div>
+                            <div style="font-weight:500">Correct dress/style received</div>
+                            <div style="font-size:11px;color:var(--taupe)">Matches the ordered style number</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:white;border:1px solid var(--champagne);border-radius:5px;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="qaCheck2" style="width:20px;height:20px">
+                        <div>
+                            <div style="font-weight:500">Correct size</div>
+                            <div style="font-size:11px;color:var(--taupe)">Size tag matches order</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:white;border:1px solid var(--champagne);border-radius:5px;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="qaCheck3" style="width:20px;height:20px">
+                        <div>
+                            <div style="font-weight:500">Correct color</div>
+                            <div style="font-size:11px;color:var(--taupe)">Color matches order specifications</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:white;border:1px solid var(--champagne);border-radius:5px;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="qaCheck4" style="width:20px;height:20px">
+                        <div>
+                            <div style="font-weight:500">No damages or defects</div>
+                            <div style="font-size:11px;color:var(--taupe)">No tears, stains, missing beading, etc.</div>
+                        </div>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:10px;padding:12px;background:white;border:1px solid var(--champagne);border-radius:5px;margin-bottom:8px;cursor:pointer">
+                        <input type="checkbox" id="qaCheck5" style="width:20px;height:20px">
+                        <div>
+                            <div style="font-weight:500">Customizations correct</div>
+                            <div style="font-size:11px;color:var(--taupe)">All requested modifications done</div>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Notes -->
+                <div class="form-group">
+                    <label class="form-label">Notes (optional)</label>
+                    <textarea class="form-input" id="qaNotes" placeholder="Any issues or observations..." style="min-height:60px"></textarea>
+                </div>
+                
+                <!-- QA By -->
+                <div class="form-group">
+                    <label class="form-label">QA performed by</label>
+                    <select class="form-input" id="qaPerformedBy">
+                        <option value="">Select consultant...</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content:space-between">
+                <button class="btn" onclick="flagQAIssue()" style="background:#e74c3c;color:white">⚠️ Flag Issue</button>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-secondary" onclick="closeModal('qaChecklist')">Cancel</button>
+                    <button class="btn btn-primary" onclick="passQA()" style="background:#27ae60">✓ QA Passed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Order Modal (Quick order for veils, jewelry, etc.) -->
+    <div class="modal-overlay" id="modal-addOrder">
+        <div class="modal" style="max-width:550px">
+            <div class="modal-header"><h2 class="modal-title">+ Add Order</h2><button class="modal-close" onclick="closeModal('addOrder')">×</button></div>
+            <div class="modal-body">
+                <!-- Client Search/Select -->
+                <div class="form-group">
+                    <label class="form-label">Client</label>
+                    <input type="text" class="form-input" id="newOrderClientSearch" placeholder="Search existing client or enter new name..." oninput="searchClientsForNewOrder(this.value)">
+                    <div id="newOrderClientResults" style="max-height:120px;overflow-y:auto;margin-top:4px"></div>
+                    <input type="hidden" id="newOrderClientId">
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="tel" class="form-input" id="newOrderPhone">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="newOrderEmail">
+                    </div>
+                </div>
+                
+                <hr style="border:none;border-top:1px solid var(--champagne);margin:16px 0">
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Item Type</label>
+                        <select class="form-input" id="newOrderItemType">
+                            <option value="Veil">Veil</option>
+                            <option value="Jewelry">Jewelry</option>
+                            <option value="Belt">Belt</option>
+                            <option value="Headpiece">Headpiece</option>
+                            <option value="Shoes">Shoes</option>
+                            <option value="Dress">Dress</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Item Name</label>
+                        <input type="text" class="form-input" id="newOrderItemName" placeholder="e.g., Cathedral Veil">
+                    </div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">Designer/Brand</label>
+                        <input type="text" class="form-input" id="newOrderDesigner">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Size (if applicable)</label>
+                        <input type="text" class="form-input" id="newOrderSize">
+                    </div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                    <div class="form-group">
+                        <label class="form-label">PO #</label>
+                        <input type="text" class="form-input" id="newOrderPO">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Order Date</label>
+                        <input type="date" class="form-input" id="newOrderDate">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Est. Arrival</label>
+                        <input type="date" class="form-input" id="newOrderArrival">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="form-input" id="newOrderStatus">
+                        <option value="pending submission">Pending Submission</option>
+                        <option value="in production">In Production</option>
+                        <option value="shipped">Shipped</option>
+                        <option value="arrived - pending QA">Arrived - Needs QA</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-input" id="newOrderNotes" placeholder="Any special notes..." style="min-height:50px"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addOrder')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveNewOrder()">💾 Save Order</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Order Details Modal -->
+    <div class="modal-overlay" id="modal-orderDetails">
+        <div class="modal" style="max-width:600px">
+            <div class="modal-header"><h2 class="modal-title">📦 Order Details</h2><button class="modal-close" onclick="closeModal('orderDetails')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editOrderId">
+                <input type="hidden" id="editOrderClientId">
+                
+                <!-- Client Info -->
+                <div style="background:var(--cream);padding:12px;border-radius:5px;margin-bottom:16px">
+                    <div id="orderClientLinked" style="display:flex;justify-content:space-between;align-items:flex-start">
+                        <div>
+                            <div style="font-weight:600;font-size:16px" id="orderDetailClient">Client Name</div>
+                            <div style="font-size:11px;color:var(--taupe)" id="orderDetailContact">Phone / Email</div>
+                            <div style="font-size:11px;margin-top:6px" id="orderDetailDates"></div>
+                        </div>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn btn-sm btn-secondary" onclick="openClientFromOrder()">View Client</button>
+                            <button class="btn btn-sm btn-secondary" onclick="unlinkClientFromOrder()">Unlink</button>
+                        </div>
+                    </div>
+                    <div id="orderClientNotLinked" style="display:none">
+                        <div class="form-row" style="margin-bottom:8px">
+                            <div class="form-group" style="flex:2">
+                                <label class="form-label">Client Name</label>
+                                <input type="text" class="form-input" id="editOrderClientName">
+                            </div>
+                            <div class="form-group" style="flex:1">
+                                <label class="form-label">Phone</label>
+                                <input type="text" class="form-input" id="editOrderPhone">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-bottom:8px">
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                <input type="text" class="form-input" id="editOrderEmail">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Wedding Date</label>
+                                <input type="date" class="form-input" id="editOrderWedding">
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <input type="text" class="form-input" id="orderClientSearch" placeholder="Search to link existing client..." style="flex:1" oninput="searchClientsForOrder(this.value)">
+                        </div>
+                        <div id="orderClientSearchResults" style="max-height:120px;overflow-y:auto;margin-top:8px"></div>
+                    </div>
+                </div>
+                
+                <!-- Order Fields -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">PO Number</label>
+                        <input type="text" class="form-input" id="editOrderPO">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Order Date</label>
+                        <input type="date" class="form-input" id="editOrderDate">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Dress / Item</label>
+                        <input type="text" class="form-input" id="editOrderDress">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Designer</label>
+                        <input type="text" class="form-input" id="editOrderDesigner">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Size</label>
+                        <input type="text" class="form-input" id="editOrderSize">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input" id="editOrderStatus">
+                            <option value="pending submission">pending submission</option>
+                            <option value="in production">in production</option>
+                            <option value="shipped">shipped</option>
+                            <option value="arrived - pending QA">arrived - needs QA</option>
+                            <option value="QA complete">QA complete</option>
+                            <option value="in alterations">in alterations</option>
+                            <option value="picked up">picked up</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Est. Arrival (ETA)</label>
+                    <input type="date" class="form-input" id="editOrderArrival">
+                </div>
+                
+                <!-- Order Submitted Tracking -->
+                <div style="background:#f0f7ff;padding:12px;border-radius:5px;margin-bottom:16px;border-left:3px solid #3498db">
+                    <div style="font-weight:600;font-size:12px;margin-bottom:8px">📋 Order Submitted to Designer</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label" style="font-size:11px">Submitted by</label>
+                            <select class="form-input" id="editOrderSubmittedBy" style="font-size:12px">
+                                <option value="">Not submitted yet</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label" style="font-size:11px">Date submitted</label>
+                            <input type="date" class="form-input" id="editOrderSubmittedDate" style="font-size:12px">
+                        </div>
+                    </div>
+                    <div id="orderSubmittedStatus" style="font-size:11px;margin-top:8px;color:var(--taupe)"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Customization</label>
+                    <input type="text" class="form-input" id="editOrderCustomization" placeholder="e.g., Add beading, shorten straps">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Accessories</label>
+                    <input type="text" class="form-input" id="editOrderAccessories" placeholder="e.g., Veil, belt">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Seamstress</label>
+                    <input type="text" class="form-input" id="editOrderSeamstress">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-input" id="editOrderNotes" style="min-height:60px"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('orderDetails')">Cancel</button>
+                <button class="btn btn-primary" onclick="saveOrderDetails()">💾 Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Anniversary Template Modal -->
     <div class="modal-overlay" id="modal-anniversaryTemplate">
         <div class="modal">
@@ -2816,6 +3131,23 @@ The {StoreName} Team
                     renderWeek();
                     renderDash();
                     toast(`${action.records.length} appointments restored!`, 'success');
+                    
+                } else if (action.type === 'delete_order') {
+                    // Re-add order
+                    const result = await api('POST', { action: 'add', sheet: 'Orders', record: action.record });
+                    action.record.ID = result.id || action.record.ID;
+                    data.orders.push(action.record);
+                    
+                    // Restore alteration data
+                    if (action.alts && action.record.ClientID) {
+                        if (action.alts.items) localStorage.setItem(`alts_${action.record.ClientID}`, action.alts.items);
+                        if (action.alts.notes) localStorage.setItem(`alts_notes_${action.record.ClientID}`, action.alts.notes);
+                        if (action.alts.neededby) localStorage.setItem(`alts_neededby_${action.record.ClientID}`, action.alts.neededby);
+                    }
+                    
+                    renderOrders();
+                    renderAlts();
+                    toast('Order restored!', 'success');
                 }
                 
                 saveCachedData();
@@ -3958,8 +4290,25 @@ The {StoreName} Team
         }
 
         // ========== CLIENTS ==========
+        let clientSortField = 'lastVisit';
+        let clientSortDirection = { name: 'asc', wedding: 'asc', status: 'asc', lastVisit: 'desc' };
+        
         function renderClients() {
-            const activeClients = data.clients.filter(c => c.Status !== 'archived');
+            let activeClients = data.clients.filter(c => c.Status !== 'archived');
+            
+            // Sort clients
+            const dir = clientSortDirection[clientSortField] === 'desc' ? -1 : 1;
+            if (clientSortField === 'name') {
+                activeClients.sort((a, b) => dir * `${a.FirstName} ${a.LastName}`.localeCompare(`${b.FirstName} ${b.LastName}`));
+            } else if (clientSortField === 'wedding') {
+                activeClients.sort((a, b) => dir * (a.WeddingDate || '9999').localeCompare(b.WeddingDate || '9999'));
+            } else if (clientSortField === 'status') {
+                const statusOrder = { 'new': 0, 'active': 1, 'said yes': 2, 'ordered': 3, 'archived': 4 };
+                activeClients.sort((a, b) => dir * ((statusOrder[a.Status] ?? 1) - (statusOrder[b.Status] ?? 1)));
+            } else if (clientSortField === 'lastVisit') {
+                activeClients.sort((a, b) => dir * (b.LastVisit || '').localeCompare(a.LastVisit || ''));
+            }
+            
             $('clientCount').textContent = activeClients.length + ' clients';
             $('selectAllClients').checked = false;
             $('btnDeleteClients').style.display = 'none';
@@ -3973,6 +4322,33 @@ The {StoreName} Team
                     <td><button class="action-btn" onclick="event.stopPropagation();editClient('${c.ID}')">Edit</button></td>
                 </tr>
             `).join('') : '<tr><td colspan="6" class="empty">No clients</td></tr>';
+            
+            updateClientSortArrows();
+        }
+        
+        function sortClientsBy(field) {
+            if (clientSortField === field) {
+                clientSortDirection[field] = clientSortDirection[field] === 'asc' ? 'desc' : 'asc';
+            } else {
+                clientSortField = field;
+            }
+            renderClients();
+        }
+        
+        function updateClientSortArrows() {
+            const fields = ['name', 'wedding', 'status', 'lastVisit'];
+            fields.forEach(f => {
+                const arrow = $('clientSortArrow_' + f);
+                if (arrow) {
+                    if (f === clientSortField) {
+                        arrow.style.opacity = '1';
+                        arrow.textContent = clientSortDirection[f] === 'desc' ? '↓' : '↑';
+                    } else {
+                        arrow.style.opacity = '0.3';
+                        arrow.textContent = '↕';
+                    }
+                }
+            });
         }
         
         function toggleAllClients(checked) {
@@ -5741,7 +6117,7 @@ The Estrelle Bridal Team`;
                 saveCachedData();
                 
                 // Also update order status to "in alterations" if exists
-                if (order && order.Status !== 'in alterations' && order.Status !== 'ready for pickup' && order.Status !== 'picked up') {
+                if (order && order.Status !== 'in alterations' && order.Status !== 'picked up' && order.Status !== 'picked up') {
                     await updateRecord('Orders', order.ID, { Status: 'in alterations' });
                     order.Status = 'in alterations';
                     saveCachedData();
@@ -5825,7 +6201,7 @@ The Estrelle Bridal Team`;
                     data.alterations.push(altRecord);
                     
                     // Also update order status to "in alterations" if exists
-                    if (order && order.Status !== 'in alterations' && order.Status !== 'ready for pickup' && order.Status !== 'picked up') {
+                    if (order && order.Status !== 'in alterations' && order.Status !== 'picked up' && order.Status !== 'picked up') {
                         await updateRecord('Orders', order.ID, { Status: 'in alterations' });
                         order.Status = 'in alterations';
                     }
@@ -5849,15 +6225,17 @@ The Estrelle Bridal Team`;
 
         // ========== ORDERS ==========
         const ORDER_STATUSES = [
-            'ordered',
+            'pending submission',
             'in production',
             'shipped',
             'arrived - pending QA',
             'QA complete',
             'in alterations',
-            'ready for pickup',
             'picked up'
         ];
+        
+        let orderSortBy = 'orderDate';
+        let arrivingSoonFilter = false;
         
         function getMonthKey(dateVal) {
             if (!dateVal) return null;
@@ -5873,110 +6251,363 @@ The Estrelle Bridal Team`;
         function renderOrders() {
             const searchTerm = ($('orderSearch')?.value || '').toLowerCase();
             const statusFilter = $('orderStatusFilter')?.value || '';
-            const sortBy = $('orderSortBy')?.value || 'status';
+            const sortBy = orderSortBy;
             
-            // Filter orders
-            let orders = data.orders.filter(o => {
-                // Search filter
-                if (searchTerm) {
-                    const clientName = (o.ClientName || '').toLowerCase();
-                    const dress = (o.Dress || '').toLowerCase();
-                    const designer = (o.Designer || '').toLowerCase();
-                    const po = (o.PO || '').toLowerCase();
-                    if (!clientName.includes(searchTerm) && !dress.includes(searchTerm) && 
-                        !designer.includes(searchTerm) && !po.includes(searchTerm)) {
-                        return false;
-                    }
-                }
-                // Status filter
-                if (statusFilter && o.Status !== statusFilter) {
-                    return false;
-                }
-                return true;
-            });
+            // Calculate 3 months from now for "Arriving Soon" filter
+            const threeMonthsFromNow = new Date();
+            threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3);
+            const threeMonthsStr = threeMonthsFromNow.toISOString().split('T')[0];
+            const todayStr = new Date().toISOString().split('T')[0];
             
             // Count stats (from all orders, not filtered)
             const allOrders = data.orders;
-            const inProduction = allOrders.filter(o => o.Status === 'ordered' || o.Status === 'shipped').length;
-            const arrived = allOrders.filter(o => o.Status === 'arrived' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete').length;
+            const inProduction = allOrders.filter(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped').length;
+            const arrived = allOrders.filter(o => o.Status === 'arrived - pending QA' || o.Status === 'QA complete').length;
+            const needsQA = allOrders.filter(o => o.Status === 'arrived - pending QA').length;
             const inAlterations = allOrders.filter(o => o.Status === 'in alterations').length;
-            const ready = allOrders.filter(o => o.Status === 'ready for pickup').length;
             const pickedUp = allOrders.filter(o => o.Status === 'picked up').length;
             
+            // Count arriving soon (for button badge)
+            const arrivingSoonCount = allOrders.filter(o => {
+                if (!o.ArrivalDate || o.Status === 'picked up' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete' || o.Status === 'in alterations') return false;
+                const arrDate = getDateStr(o.ArrivalDate);
+                return arrDate >= todayStr && arrDate <= threeMonthsStr;
+            }).length;
+            
+            $('ordersArrivingSoon').textContent = arrivingSoonCount;
             $('ordersInProduction').textContent = inProduction;
             $('ordersArrived').textContent = arrived;
+            $('ordersNeedsQA').textContent = needsQA > 0 ? `(${needsQA} need QA)` : '';
             $('ordersInAlterations').textContent = inAlterations;
-            $('ordersReady').textContent = ready;
             $('ordersPickedUp').textContent = pickedUp;
-            $('ordersCount').textContent = `(${orders.length})`;
             
-            // Sort orders based on selected option
-            if (sortBy === 'status') {
-                const statusOrder = ['arrived - pending QA', 'QA complete', 'arrived', 'in alterations', 'ready for pickup', 'shipped', 'ordered', 'picked up'];
-                orders.sort((a, b) => {
-                    const aIdx = statusOrder.indexOf(a.Status || 'ordered');
-                    const bIdx = statusOrder.indexOf(b.Status || 'ordered');
-                    if (aIdx !== bIdx) return aIdx - bIdx;
-                    return (a.WeddingDate || '').localeCompare(b.WeddingDate || '');
+            // First, group ALL orders by client name (before filtering)
+            const allClientGroups = {};
+            allOrders.forEach(o => {
+                const rawName = (o.ClientName || 'Unknown').trim().replace(/\s+/g, ' ');
+                const key = rawName.toLowerCase();
+                if (!allClientGroups[key]) {
+                    allClientGroups[key] = { displayName: rawName, orders: [] };
+                }
+                allClientGroups[key].orders.push(o);
+            });
+            
+            // Convert to array and filter: show client if ANY order is active (not picked up)
+            // Unless specifically filtering for picked up or searching
+            let groupedOrders = Object.values(allClientGroups).map(g => ({
+                clientName: g.displayName,
+                orders: g.orders,
+                primaryOrder: g.orders[0],
+                hasActiveOrders: g.orders.some(o => o.Status !== 'picked up')
+            })).filter(group => {
+                // Arriving Soon filter
+                if (arrivingSoonFilter) {
+                    const hasArrivingSoon = group.orders.some(o => {
+                        if (!o.ArrivalDate || o.Status === 'picked up' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete' || o.Status === 'in alterations') return false;
+                        const arrDate = getDateStr(o.ArrivalDate);
+                        return arrDate >= todayStr && arrDate <= threeMonthsStr;
+                    });
+                    if (!hasArrivingSoon) return false;
+                }
+                
+                // If filtering for picked up, only show clients where ALL orders are picked up
+                if (statusFilter === 'picked up') {
+                    return group.orders.every(o => o.Status === 'picked up');
+                }
+                
+                // Apply search filter first
+                if (searchTerm) {
+                    const searchStr = group.orders.map(o => 
+                        `${o.ClientName || ''} ${o.Dress || ''} ${o.Designer || ''} ${o.PO || ''}`
+                    ).join(' ').toLowerCase();
+                    if (!searchStr.includes(searchTerm)) return false;
+                    // When searching, show client regardless of order status
+                    return true;
+                }
+                
+                // Otherwise, show client if they have ANY active order
+                if (!group.hasActiveOrders) return false;
+                
+                // Apply status filter (check if ANY order matches)
+                if (statusFilter) {
+                    // "in production" includes pending submission, ordered, in production, and shipped
+                    if (statusFilter === 'in production') {
+                        if (!group.orders.some(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped')) {
+                            return false;
+                        }
+                    } else if (!group.orders.some(o => o.Status === statusFilter)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            // For display, filter individual orders within each group based on status filter
+            if (statusFilter && statusFilter !== 'picked up') {
+                groupedOrders.forEach(group => {
+                    // "in production" includes pending submission, ordered, in production, and shipped
+                    if (statusFilter === 'in production') {
+                        group.filteredOrders = group.orders.filter(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped');
+                    } else {
+                        group.filteredOrders = group.orders.filter(o => o.Status === statusFilter);
+                    }
                 });
-            } else if (sortBy === 'weddingDate') {
-                orders.sort((a, b) => (a.WeddingDate || '9999').localeCompare(b.WeddingDate || '9999'));
-            } else if (sortBy === 'arrivalDate') {
-                orders.sort((a, b) => (a.ArrivalDate || '9999').localeCompare(b.ArrivalDate || '9999'));
-            } else if (sortBy === 'orderDate') {
-                orders.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || '')); // Most recent first
-            } else if (sortBy === 'clientName') {
-                orders.sort((a, b) => (a.ClientName || '').localeCompare(b.ClientName || ''));
+            } else if (statusFilter === 'picked up') {
+                groupedOrders.forEach(group => {
+                    group.filteredOrders = group.orders;
+                });
+            } else if (searchTerm) {
+                // When searching, show ALL orders including picked up
+                groupedOrders.forEach(group => {
+                    group.filteredOrders = group.orders;
+                });
+            } else {
+                // Default: show all non-picked-up orders for each client
+                groupedOrders.forEach(group => {
+                    group.filteredOrders = group.orders.filter(o => o.Status !== 'picked up');
+                });
             }
             
+            // Count total items shown
+            const totalItems = groupedOrders.reduce((sum, g) => sum + g.filteredOrders.length, 0);
+            
+            // Debug: log clients with multiple orders
+            const multipleOrders = groupedOrders.filter(g => g.filteredOrders.length > 1);
+            if (multipleOrders.length > 0) {
+                console.log('Clients with multiple orders:', multipleOrders.map(g => `${g.clientName} (${g.filteredOrders.length})`));
+            }
+            
+            // Sort groups
+            const statusOrderMap = { 'pending submission': 0, 'arrived - pending QA': 1, 'QA complete': 2, 'in alterations': 3, 'shipped': 4, 'in production': 5, 'ordered': 5, 'picked up': 6 };
+            const dir = orderSortDirection[sortBy] === 'desc' ? -1 : 1;
+            
+            if (sortBy === 'status') {
+                groupedOrders.forEach(g => {
+                    g.minStatus = Math.min(...g.filteredOrders.map(o => statusOrderMap[o.Status] ?? 6));
+                });
+                groupedOrders.sort((a, b) => dir * (a.minStatus - b.minStatus) || (a.primaryOrder.WeddingDate || '').localeCompare(b.primaryOrder.WeddingDate || ''));
+            } else if (sortBy === 'weddingDate') {
+                groupedOrders.sort((a, b) => dir * (a.primaryOrder.WeddingDate || '9999').localeCompare(b.primaryOrder.WeddingDate || '9999'));
+            } else if (sortBy === 'arrivalDate') {
+                groupedOrders.sort((a, b) => dir * (a.primaryOrder.ArrivalDate || '9999').localeCompare(b.primaryOrder.ArrivalDate || '9999'));
+            } else if (sortBy === 'orderDate') {
+                // Order date defaults to newest first (descending)
+                const orderDir = orderSortDirection[sortBy] === 'asc' ? 1 : -1;
+                groupedOrders.sort((a, b) => orderDir * (b.primaryOrder.OrderDate || '').localeCompare(a.primaryOrder.OrderDate || ''));
+            } else if (sortBy === 'clientName') {
+                groupedOrders.sort((a, b) => dir * a.clientName.localeCompare(b.clientName));
+            }
+            
+            $('ordersCount').textContent = `(${groupedOrders.length} clients, ${totalItems} items)`;
+            
             // Render table
-            if (orders.length === 0) {
-                $('ordersTableBody').innerHTML = '<tr><td colspan="8" class="empty">No orders found</td></tr>';
-            } else {
-                $('ordersTableBody').innerHTML = orders.map(o => {
+            if (groupedOrders.length === 0) {
+                $('ordersTableBody').innerHTML = '<tr><td colspan="10" class="empty">No orders found</td></tr>';
+                return;
+            }
+            
+            let html = '';
+            groupedOrders.forEach(group => {
+                const ordersToShow = group.filteredOrders;
+                const hasMultiple = ordersToShow.length > 1;
+                const gid = 'og_' + group.clientName.replace(/[^a-zA-Z0-9]/g, '_');
+                const pickedUpCount = ordersToShow.filter(o => o.Status === 'picked up').length;
+                
+                if (hasMultiple) {
+                    // Client header row with expand/collapse
+                    html += `<tr class="client-group-header" style="background:var(--cream);cursor:pointer" onclick="toggleOrderGroup('${gid}')">
+                        <td><input type="checkbox" class="order-group-checkbox" data-group="${gid}" onclick="event.stopPropagation();toggleGroupCheckboxes('${gid}', this.checked)"></td>
+                        <td colspan="9">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span class="order-group-arrow" id="arrow_${gid}" style="transition:transform 0.2s">▶</span>
+                                <span style="font-weight:600">${group.clientName}</span>
+                                <span style="font-size:11px;color:var(--text-secondary)">${ordersToShow.length} items${pickedUpCount ? ` <span style="color:#95a5a6">(${pickedUpCount} picked up)</span>` : ''}</span>
+                                <span style="font-size:11px;color:var(--text-secondary);margin-left:auto">Wedding: ${fmtDate(group.primaryOrder.WeddingDate) || '—'}</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                    
+                    // Individual order rows (hidden by default)
+                    ordersToShow.forEach(o => {
+                        const statusColor = getStatusColor(o.Status);
+                        const isPickedUp = o.Status === 'picked up';
+                        const needsQA = o.Status === 'arrived - pending QA';
+                        html += `<tr class="order-group-item ${gid}" style="display:none;background:${isPickedUp ? '#f5f5f5' : '#fafafa'};${isPickedUp ? 'opacity:0.7;' : ''}">
+                            <td style="padding-left:30px"><input type="checkbox" class="order-checkbox" data-order-id="${o.ID}" data-group="${gid}" onchange="updateOrderSelection()"></td>
+                            <td style="padding-left:30px;font-size:11px;color:var(--text-secondary)">${o.Phone || o.Email || ''}</td>
+                            <td>${o.PO || '—'}</td>
+                            <td>${o.Dress || o.Accessories || '—'}${o.Size ? `<div style="font-size:11px;color:var(--text-secondary)">Size ${o.Size}</div>` : ''}${isPickedUp ? '<div style="font-size:10px;color:#95a5a6">📁 picked up</div>' : ''}</td>
+                            <td>${o.Designer || '—'}</td>
+                            <td>${fmtDate(o.OrderDate) || '—'}</td>
+                            <td>${fmtDate(o.WeddingDate) || '—'}</td>
+                            <td>${fmtDate(o.ArrivalDate) || '—'}</td>
+                            <td>
+                                <select class="form-input" style="width:auto;font-size:11px;padding:4px 8px;border-color:${statusColor};color:${statusColor}" onchange="updateOrderStatus(${o.ID}, this.value)">
+                                    ${ORDER_STATUSES.map(s => `<option value="${s}" ${s === o.Status ? 'selected' : ''}>${s}</option>`).join('')}
+                                </select>
+                            </td>
+                            <td>
+                                ${needsQA ? `<button class="action-btn" onclick="openQAChecklist(${o.ID})" style="background:#e67e22;color:white;border-color:#e67e22">QA</button>` : ''}
+                                <button class="action-btn" onclick="viewOrderDetails(${o.ID})">Edit</button>
+                                <button class="action-btn" onclick="deleteOrder(${o.ID})" style="color:#e74c3c">✕</button>
+                            </td>
+                        </tr>`;
+                    });
+                } else if (ordersToShow.length === 1) {
+                    // Single order - show as regular row
+                    const o = ordersToShow[0];
                     const statusColor = getStatusColor(o.Status);
-                    return `<tr>
+                    html += `<tr>
                         <td><input type="checkbox" class="order-checkbox" data-order-id="${o.ID}" onchange="updateOrderSelection()"></td>
                         <td>
                             <div style="font-weight:500">${o.ClientName || '—'}</div>
                             <div style="font-size:11px;color:var(--text-secondary)">${o.Phone || o.Email || ''}</div>
                         </td>
                         <td>${o.PO || '—'}</td>
-                        <td>
-                            <div>${o.Dress || '—'}</div>
-                            ${o.Size ? `<div style="font-size:11px;color:var(--text-secondary)">Size ${o.Size}</div>` : ''}
-                        </td>
+                        <td>${o.Dress || '—'}${o.Size ? `<div style="font-size:11px;color:var(--text-secondary)">Size ${o.Size}</div>` : ''}</td>
                         <td>${o.Designer || '—'}</td>
-                        <td>
-                            <div>${fmtDate(o.WeddingDate) || '—'}</div>
-                            ${o.ArrivalDate ? `<div style="font-size:10px;color:var(--text-secondary)">ETA: ${fmtDate(o.ArrivalDate)}</div>` : ''}
-                        </td>
+                        <td>${fmtDate(o.OrderDate) || '—'}</td>
+                        <td>${fmtDate(o.WeddingDate) || '—'}</td>
+                        <td>${fmtDate(o.ArrivalDate) || '—'}</td>
                         <td>
                             <select class="form-input" style="width:auto;font-size:11px;padding:4px 8px;border-color:${statusColor};color:${statusColor}" onchange="updateOrderStatus(${o.ID}, this.value)">
                                 ${ORDER_STATUSES.map(s => `<option value="${s}" ${s === o.Status ? 'selected' : ''}>${s}</option>`).join('')}
                             </select>
                         </td>
                         <td>
-                            <div style="display:flex;gap:4px">
-                                <button class="action-btn" onclick="viewOrderDetails(${o.ID})">View</button>
-                                <button class="action-btn" onclick="deleteOrder(${o.ID})" style="color:#e74c3c">Delete</button>
-                            </div>
+                            ${(o.Status === 'arrived' || o.Status === 'arrived - pending QA') ? `<button class="action-btn" onclick="openQAChecklist(${o.ID})" style="background:#e67e22;color:white;border-color:#e67e22">QA</button>` : ''}
+                            <button class="action-btn" onclick="viewOrderDetails(${o.ID})">Edit</button>
+                            <button class="action-btn" onclick="deleteOrder(${o.ID})" style="color:#e74c3c">✕</button>
                         </td>
                     </tr>`;
-                }).join('');
+                }
+            });
+            
+            $('ordersTableBody').innerHTML = html;
+        }
+        
+        function toggleOrderGroup(groupId) {
+            const items = document.querySelectorAll(`.order-group-item.${groupId}`);
+            const arrow = $('arrow_' + groupId);
+            const isHidden = items[0]?.style.display === 'none';
+            
+            items.forEach(item => {
+                item.style.display = isHidden ? 'table-row' : 'none';
+            });
+            
+            if (arrow) {
+                arrow.style.transform = isHidden ? 'rotate(90deg)' : 'rotate(0deg)';
             }
         }
         
+        function toggleGroupCheckboxes(groupId, checked) {
+            document.querySelectorAll(`.order-checkbox[data-group="${groupId}"]`).forEach(cb => {
+                cb.checked = checked;
+            });
+            updateOrderSelection();
+        }
+        
         function filterOrders(status) {
+            // Clear other filters when clicking a stat card
+            arrivingSoonFilter = false;
+            $('orderSearch').value = '';
             $('orderStatusFilter').value = status;
             renderOrders();
+            highlightActiveStatCard(status);
+        }
+        
+        function highlightActiveStatCard(activeStatus) {
+            // Reset all cards
+            document.querySelectorAll('.order-stat-card').forEach(card => {
+                card.style.boxShadow = '';
+                card.style.transform = '';
+            });
+            
+            // Highlight active card
+            const cardMap = {
+                'ordered': 'cardInProduction',
+                'arrived': 'cardArrived',
+                'arrived - pending QA': 'cardArrived',
+                'QA complete': 'cardArrived',
+                'in alterations': 'cardInAlterations',
+                'picked up': 'cardPickedUp'
+            };
+            
+            const cardId = cardMap[activeStatus];
+            if (cardId) {
+                const card = $(cardId);
+                if (card) {
+                    card.style.boxShadow = '0 0 0 2px var(--accent)';
+                    card.style.transform = 'scale(1.02)';
+                }
+            }
+            
+            // Handle Arriving Soon separately
+            if (arrivingSoonFilter) {
+                const card = $('cardArrivingSoon');
+                if (card) {
+                    card.style.boxShadow = '0 0 0 2px #9b59b6';
+                    card.style.transform = 'scale(1.02)';
+                }
+            }
         }
         
         function clearOrderFilters() {
             $('orderSearch').value = '';
             $('orderStatusFilter').value = '';
-            $('orderSortBy').value = 'status';
+            orderSortBy = 'orderDate';
+            arrivingSoonFilter = false;
+            orderSortDirection = {};
             renderOrders();
+            updateSortArrows('orderDate');
+            highlightActiveStatCard(''); // Clear all highlights
+        }
+        
+        function toggleArrivingSoon() {
+            arrivingSoonFilter = !arrivingSoonFilter;
+            if (arrivingSoonFilter) {
+                // Clear other filters when enabling arriving soon
+                $('orderStatusFilter').value = '';
+                $('orderSearch').value = '';
+                // Sort by arrival date
+                orderSortBy = 'arrivalDate';
+                orderSortDirection['arrivalDate'] = 'asc';
+            }
+            renderOrders();
+            updateSortArrows(orderSortBy);
+            highlightActiveStatCard(arrivingSoonFilter ? 'arrivingSoon' : '');
+        }
+        
+        let orderSortDirection = {}; // Track sort direction for each column
+        
+        function sortOrdersBy(field) {
+            // Toggle direction if same field, otherwise default to ascending
+            if (orderSortBy === field) {
+                orderSortDirection[field] = orderSortDirection[field] === 'asc' ? 'desc' : 'asc';
+            } else {
+                orderSortDirection[field] = field === 'orderDate' ? 'desc' : 'asc';
+            }
+            
+            orderSortBy = field;
+            renderOrders();
+            updateSortArrows(field);
+        }
+        
+        function updateSortArrows(activeField) {
+            const fields = ['clientName', 'weddingDate', 'status', 'orderDate', 'arrivalDate'];
+            fields.forEach(f => {
+                const arrow = $('sortArrow_' + f);
+                if (arrow) {
+                    if (f === activeField) {
+                        arrow.style.opacity = '1';
+                        arrow.textContent = orderSortDirection[f] === 'desc' ? '↓' : '↑';
+                    } else {
+                        arrow.style.opacity = '0.3';
+                        arrow.textContent = '↕';
+                    }
+                }
+            });
         }
         
         function toggleAllOrderCheckboxes(checked) {
@@ -5988,17 +6619,327 @@ The Estrelle Bridal Team`;
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) return;
             
-            // Try to open client if exists
-            if (order.ClientID) {
-                const client = getClient(order.ClientID);
-                if (client) {
-                    openClient(order.ClientID);
-                    return;
-                }
+            // Populate modal fields
+            $('editOrderId').value = order.ID;
+            
+            // Client info
+            const client = order.ClientID ? getClient(order.ClientID) : null;
+            $('orderDetailClient').textContent = client ? `${client.FirstName} ${client.LastName}` : (order.ClientName || 'Unknown');
+            $('orderDetailContact').textContent = client ? 
+                [client.Phone, client.Email].filter(Boolean).join(' · ') || 'No contact info' :
+                [order.Phone, order.Email].filter(Boolean).join(' · ') || 'No contact info';
+            
+            // Order fields
+            $('editOrderPO').value = order.PO || '';
+            $('editOrderDate').value = order.OrderDate || '';
+            $('editOrderDress').value = order.Dress || '';
+            $('editOrderDesigner').value = order.Designer || '';
+            $('editOrderSize').value = order.Size || '';
+            $('editOrderStatus').value = order.Status || 'pending submission';
+            $('editOrderArrival').value = order.ArrivalDate || '';
+            $('editOrderCustomization').value = order.Customization || '';
+            $('editOrderAccessories').value = order.Accessories || '';
+            $('editOrderSeamstress').value = order.Seamstress || '';
+            $('editOrderNotes').value = order.Notes || '';
+            
+            // Order submitted tracking
+            const submittedBySelect = $('editOrderSubmittedBy');
+            submittedBySelect.innerHTML = '<option value="">Not submitted yet</option>' + 
+                (data.consultants || []).map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            submittedBySelect.value = order.SubmittedBy || '';
+            $('editOrderSubmittedDate').value = order.SubmittedDate || '';
+            
+            // Show submitted status
+            const statusEl = $('orderSubmittedStatus');
+            if (order.SubmittedBy && order.SubmittedDate) {
+                statusEl.innerHTML = `<span style="color:#27ae60">✓ Submitted by ${order.SubmittedBy} on ${fmtDate(order.SubmittedDate)}</span>`;
+            } else if (order.SubmittedBy || order.SubmittedDate) {
+                statusEl.innerHTML = `<span style="color:#e67e22">⚠️ Incomplete - please fill both fields</span>`;
+            } else {
+                statusEl.innerHTML = `<span style="color:#e74c3c">⚠️ Not yet submitted to designer</span>`;
             }
             
-            // Otherwise show order details in alert (can be enhanced later)
-            alert(`Order Details:\n\nClient: ${order.ClientName}\nPO: ${order.PO}\nDress: ${order.Dress}\nDesigner: ${order.Designer}\nSize: ${order.Size}\nStatus: ${order.Status}\nWedding: ${order.WeddingDate}\n\nAccessories: ${order.Accessories || 'None'}\nNotes: ${order.Notes || 'None'}`);
+            // Handle client linking
+            $('editOrderClientId').value = order.ClientID || '';
+            $('orderClientSearch').value = '';
+            $('orderClientSearchResults').innerHTML = '';
+            
+            if (client) {
+                // Client is linked - show linked view with dates
+                $('orderClientLinked').style.display = 'flex';
+                $('orderClientNotLinked').style.display = 'none';
+                
+                // Show wedding and leaving dates
+                let datesHtml = '';
+                if (client.WeddingDate) {
+                    datesHtml += `<span style="color:var(--dusty)">💒 Wedding: ${fmtDate(client.WeddingDate)}</span>`;
+                }
+                if (client.LeavingDate) {
+                    datesHtml += `${datesHtml ? ' · ' : ''}<span style="color:#e74c3c">✈️ Leaving: ${fmtDate(client.LeavingDate)}</span>`;
+                }
+                $('orderDetailDates').innerHTML = datesHtml || '<span style="color:var(--taupe)">No wedding date set</span>';
+            } else {
+                // Client not linked - show edit view
+                $('orderClientLinked').style.display = 'none';
+                $('orderClientNotLinked').style.display = 'block';
+                $('editOrderClientName').value = order.ClientName || '';
+                $('editOrderPhone').value = order.Phone || '';
+                $('editOrderEmail').value = order.Email || '';
+                $('editOrderWedding').value = order.WeddingDate || '';
+            }
+            
+            openModal('orderDetails');
+        }
+        
+        async function saveOrderDetails() {
+            const orderId = $('editOrderId').value;
+            if (!orderId) return;
+            
+            const clientId = $('editOrderClientId').value;
+            const isLinked = clientId && getClient(clientId);
+            
+            const updates = {
+                PO: $('editOrderPO').value,
+                OrderDate: $('editOrderDate').value,
+                Dress: $('editOrderDress').value,
+                Designer: $('editOrderDesigner').value,
+                Size: $('editOrderSize').value,
+                Status: $('editOrderStatus').value,
+                ArrivalDate: $('editOrderArrival').value,
+                Customization: $('editOrderCustomization').value,
+                Accessories: $('editOrderAccessories').value,
+                Seamstress: $('editOrderSeamstress').value,
+                Notes: $('editOrderNotes').value,
+                SubmittedBy: $('editOrderSubmittedBy').value,
+                SubmittedDate: $('editOrderSubmittedDate').value
+            };
+            
+            // Add client info if not linked
+            if (!isLinked) {
+                updates.ClientName = $('editOrderClientName').value;
+                updates.Phone = $('editOrderPhone').value;
+                updates.Email = $('editOrderEmail').value;
+                updates.WeddingDate = $('editOrderWedding').value;
+            }
+            
+            // Add ClientID if linked
+            if (clientId) {
+                updates.ClientID = clientId;
+            }
+            
+            try {
+                await updateRecord('Orders', orderId, updates);
+                
+                // Update local data
+                const order = data.orders.find(o => String(o.ID) === String(orderId));
+                if (order) {
+                    Object.assign(order, updates);
+                }
+                saveCachedData();
+                
+                closeModal('orderDetails');
+                renderOrders();
+                toast('Order updated!', 'success');
+            } catch (e) {
+                console.error('Failed to save order:', e);
+                toast('Failed to save order', 'error');
+            }
+        }
+        
+        function openClientFromOrder() {
+            const clientId = $('editOrderClientId').value;
+            if (clientId && getClient(clientId)) {
+                closeModal('orderDetails');
+                openClient(clientId);
+            } else {
+                toast('Client not linked to this order', 'error');
+            }
+        }
+        
+        function unlinkClientFromOrder() {
+            $('editOrderClientId').value = '';
+            
+            // Get current client info before unlinking
+            const orderId = $('editOrderId').value;
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            
+            $('orderClientLinked').style.display = 'none';
+            $('orderClientNotLinked').style.display = 'block';
+            $('editOrderClientName').value = order?.ClientName || '';
+            $('editOrderPhone').value = order?.Phone || '';
+            $('editOrderEmail').value = order?.Email || '';
+        }
+        
+        // ========== ADD NEW ORDER ==========
+        function openAddOrder() {
+            // Reset form
+            $('newOrderClientSearch').value = '';
+            $('newOrderClientId').value = '';
+            $('newOrderClientResults').innerHTML = '';
+            $('newOrderPhone').value = '';
+            $('newOrderEmail').value = '';
+            $('newOrderItemType').value = 'Veil';
+            $('newOrderItemName').value = '';
+            $('newOrderDesigner').value = '';
+            $('newOrderSize').value = '';
+            $('newOrderPO').value = generateNextPO();
+            $('newOrderDate').value = today();
+            $('newOrderArrival').value = '';
+            $('newOrderStatus').value = 'pending submission';
+            $('newOrderNotes').value = '';
+            
+            openModal('addOrder');
+        }
+        
+        function searchClientsForNewOrder(query) {
+            const results = $('newOrderClientResults');
+            
+            if (!query || query.length < 2) {
+                results.innerHTML = '';
+                $('newOrderClientId').value = '';
+                return;
+            }
+            
+            const q = query.toLowerCase();
+            const matches = data.clients.filter(c => {
+                const name = `${c.FirstName} ${c.LastName}`.toLowerCase();
+                const phone = (c.Phone || '').toLowerCase();
+                const email = (c.Email || '').toLowerCase();
+                return name.includes(q) || phone.includes(q) || email.includes(q);
+            }).slice(0, 5);
+            
+            if (matches.length === 0) {
+                results.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--taupe)">No existing client found - will create as new order</div>';
+                return;
+            }
+            
+            results.innerHTML = matches.map(c => `
+                <div style="padding:8px;border:1px solid var(--champagne);border-radius:4px;margin-bottom:4px;cursor:pointer;transition:background 0.2s" 
+                     onmouseover="this.style.background='var(--blush)'" 
+                     onmouseout="this.style.background=''" 
+                     onclick="selectClientForNewOrder(${c.ID})">
+                    <div style="font-weight:500">${c.FirstName} ${c.LastName}</div>
+                    <div style="font-size:10px;color:var(--taupe)">${c.Phone || ''} ${c.Email || ''}</div>
+                </div>
+            `).join('');
+        }
+        
+        function selectClientForNewOrder(clientId) {
+            const client = getClient(clientId);
+            if (!client) return;
+            
+            $('newOrderClientId').value = clientId;
+            $('newOrderClientSearch').value = `${client.FirstName} ${client.LastName}`;
+            $('newOrderPhone').value = client.Phone || '';
+            $('newOrderEmail').value = client.Email || '';
+            $('newOrderClientResults').innerHTML = `<div style="padding:8px;background:var(--blush);border-radius:4px;font-size:11px">✓ Linked to existing client: ${client.FirstName} ${client.LastName}</div>`;
+        }
+        
+        async function saveNewOrder() {
+            const clientName = $('newOrderClientSearch').value.trim();
+            const itemName = $('newOrderItemName').value.trim();
+            
+            if (!clientName) {
+                toast('Please enter a client name', 'error');
+                return;
+            }
+            
+            if (!itemName) {
+                toast('Please enter an item name', 'error');
+                return;
+            }
+            
+            const clientId = $('newOrderClientId').value;
+            const itemType = $('newOrderItemType').value;
+            
+            const record = {
+                ClientID: clientId || '',
+                ClientName: clientName,
+                Phone: $('newOrderPhone').value,
+                Email: $('newOrderEmail').value,
+                PO: $('newOrderPO').value || generateNextPO(),
+                OrderDate: $('newOrderDate').value || today(),
+                Dress: itemType === 'Dress' ? itemName : '',
+                Accessories: itemType !== 'Dress' ? `${itemType}: ${itemName}` : '',
+                Designer: $('newOrderDesigner').value,
+                Size: $('newOrderSize').value,
+                Status: $('newOrderStatus').value,
+                ArrivalDate: $('newOrderArrival').value,
+                Notes: $('newOrderNotes').value,
+                WeddingDate: clientId ? (getClient(clientId)?.WeddingDate || '') : ''
+            };
+            
+            try {
+                const result = await saveRecord('Orders', record);
+                record.ID = result.id || Date.now();
+                data.orders.push(record);
+                saveCachedData();
+                
+                closeModal('addOrder');
+                renderOrders();
+                toast(`Order added for ${clientName}!`, 'success');
+            } catch (e) {
+                console.error('Failed to save order:', e);
+                toast('Failed to save order', 'error');
+            }
+        }
+        
+        function searchClientsForOrder(query) {
+            const results = $('orderClientSearchResults');
+            
+            if (!query || query.length < 2) {
+                results.innerHTML = '';
+                return;
+            }
+            
+            const q = query.toLowerCase();
+            const matches = data.clients.filter(c => {
+                const name = `${c.FirstName} ${c.LastName}`.toLowerCase();
+                const phone = (c.Phone || '').toLowerCase();
+                const email = (c.Email || '').toLowerCase();
+                return name.includes(q) || phone.includes(q) || email.includes(q);
+            }).slice(0, 5);
+            
+            if (matches.length === 0) {
+                results.innerHTML = '<div style="padding:8px;font-size:11px;color:var(--taupe)">No clients found</div>';
+                return;
+            }
+            
+            results.innerHTML = matches.map(c => `
+                <div style="padding:8px;border-bottom:1px solid var(--champagne);cursor:pointer;transition:background 0.2s" 
+                     onmouseover="this.style.background='var(--blush)'" 
+                     onmouseout="this.style.background=''" 
+                     onclick="linkClientToOrder(${c.ID})">
+                    <div style="font-weight:500">${c.FirstName} ${c.LastName}</div>
+                    <div style="font-size:10px;color:var(--taupe)">${c.Phone || ''} ${c.Email || ''}</div>
+                </div>
+            `).join('');
+        }
+        
+        function linkClientToOrder(clientId) {
+            const client = getClient(clientId);
+            if (!client) return;
+            
+            $('editOrderClientId').value = clientId;
+            $('orderDetailClient').textContent = `${client.FirstName} ${client.LastName}`;
+            $('orderDetailContact').textContent = [client.Phone, client.Email].filter(Boolean).join(' · ') || 'No contact info';
+            
+            // Show wedding and leaving dates
+            let datesHtml = '';
+            if (client.WeddingDate) {
+                datesHtml += `<span style="color:var(--dusty)">💒 Wedding: ${fmtDate(client.WeddingDate)}</span>`;
+            }
+            if (client.LeavingDate) {
+                datesHtml += `${datesHtml ? ' · ' : ''}<span style="color:#e74c3c">✈️ Leaving: ${fmtDate(client.LeavingDate)}</span>`;
+            }
+            $('orderDetailDates').innerHTML = datesHtml || '<span style="color:var(--taupe)">No wedding date set</span>';
+            
+            $('orderClientLinked').style.display = 'flex';
+            $('orderClientNotLinked').style.display = 'none';
+            $('orderClientSearch').value = '';
+            $('orderClientSearchResults').innerHTML = '';
+            
+            toast(`Linked to ${client.FirstName} ${client.LastName}`, 'success');
         }
         
         function renderOrderCard(o, isPast = false) {
@@ -6110,17 +7051,124 @@ The Estrelle Bridal Team`;
         
         function getStatusColor(status) {
             const colors = {
+                'pending submission': '#e74c3c',
                 'ordered': '#3498db',
-                'in production': '#9b59b6',
+                'in production': '#3498db',
                 'shipped': '#f39c12',
                 'arrived': '#e67e22',
-                'arrived - pending QA': '#e74c3c',
+                'arrived - pending QA': '#e67e22',
                 'QA complete': '#27ae60',
                 'in alterations': '#1abc9c',
-                'ready for pickup': '#27ae60',
                 'picked up': '#95a5a6'
             };
             return colors[status] || '#95a5a6';
+        }
+        
+        // ========== QA CHECKLIST ==========
+        function openQAChecklist(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            
+            $('qaOrderId').value = orderId;
+            $('qaClientName').textContent = order.ClientName || 'Unknown Client';
+            $('qaOrderInfo').textContent = `PO# ${order.PO || '—'} · ${order.Dress || 'Item'} · ${order.Designer || ''}`;
+            
+            // Reset checkboxes
+            for (let i = 1; i <= 5; i++) {
+                $('qaCheck' + i).checked = false;
+            }
+            $('qaNotes').value = '';
+            
+            // Populate consultant dropdown
+            const qaBy = $('qaPerformedBy');
+            qaBy.innerHTML = '<option value="">Select consultant...</option>' + 
+                (data.consultants || []).map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            
+            openModal('qaChecklist');
+        }
+        
+        async function passQA() {
+            const orderId = $('qaOrderId').value;
+            if (!orderId) return;
+            
+            // Check if all items are checked
+            let allChecked = true;
+            for (let i = 1; i <= 5; i++) {
+                if (!$('qaCheck' + i).checked) allChecked = false;
+            }
+            
+            if (!allChecked) {
+                if (!confirm('Not all items are checked. Pass QA anyway?')) return;
+            }
+            
+            const qaBy = $('qaPerformedBy').value;
+            const notes = $('qaNotes').value;
+            
+            // Update order
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            
+            const updates = {
+                Status: 'QA complete',
+                QADate: today(),
+                QABy: qaBy,
+                QANotes: notes ? (order.QANotes ? order.QANotes + '\n' + notes : notes) : order.QANotes
+            };
+            
+            try {
+                await updateRecord('Orders', orderId, updates);
+                Object.assign(order, updates);
+                saveCachedData();
+                
+                closeModal('qaChecklist');
+                renderOrders();
+                toast(`QA passed! Ready for alterations.`, 'success');
+                
+                // Ask if they want to schedule fitting
+                const client = order.ClientID ? getClient(order.ClientID) : null;
+                if (client && confirm(`Schedule fitting for ${client.FirstName} ${client.LastName}?`)) {
+                    scheduleClientFitting(client.ID);
+                }
+            } catch (e) {
+                console.error('QA update failed:', e);
+                toast('Failed to update order', 'error');
+            }
+        }
+        
+        async function flagQAIssue() {
+            const orderId = $('qaOrderId').value;
+            if (!orderId) return;
+            
+            const notes = $('qaNotes').value;
+            if (!notes.trim()) {
+                toast('Please describe the issue in notes', 'error');
+                return;
+            }
+            
+            const qaBy = $('qaPerformedBy').value;
+            
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            
+            const updates = {
+                Status: 'arrived - pending QA',
+                QADate: today(),
+                QABy: qaBy,
+                QANotes: `⚠️ ISSUE FLAGGED (${today()}): ${notes}` + (order.QANotes ? '\n' + order.QANotes : '')
+            };
+            
+            try {
+                await updateRecord('Orders', orderId, updates);
+                Object.assign(order, updates);
+                saveCachedData();
+                
+                closeModal('qaChecklist');
+                renderOrders();
+                toast(`Issue flagged for ${order.ClientName}`, 'error');
+            } catch (e) {
+                console.error('QA flag failed:', e);
+                toast('Failed to update order', 'error');
+            }
         }
         
         // Bulk order actions
@@ -6485,30 +7533,44 @@ The Estrelle Bridal Team`;
             if (!o) return;
             
             const c = getClient(o.ClientID);
-            const clientName = c ? `${c.FirstName} ${c.LastName}` : 'Unknown';
+            const clientName = c ? `${c.FirstName} ${c.LastName}` : (o.ClientName || 'Unknown');
             
-            if (!confirm(`Delete order for ${clientName}?\n\nTotal: ${money(o.Total)}\nStatus: ${o.Status}\n\nThis will also remove alteration data for this client.`)) {
-                return;
+            // Store for undo
+            const deletedOrder = { ...o };
+            const deletedAlts = o.ClientID ? {
+                items: localStorage.getItem(`alts_${o.ClientID}`),
+                notes: localStorage.getItem(`alts_notes_${o.ClientID}`),
+                neededby: localStorage.getItem(`alts_neededby_${o.ClientID}`)
+            } : null;
+            
+            // Remove from local data immediately (optimistic)
+            data.orders = data.orders.filter(x => x.ID != id);
+            
+            // Remove alteration data from localStorage
+            if (o.ClientID) {
+                localStorage.removeItem(`alts_${o.ClientID}`);
+                localStorage.removeItem(`alts_notes_${o.ClientID}`);
+                localStorage.removeItem(`alts_neededby_${o.ClientID}`);
             }
             
+            renderOrders();
+            renderAlts();
+            
+            // Push to undo stack
+            undoStack.push({
+                type: 'delete_order',
+                record: deletedOrder,
+                alts: deletedAlts
+            });
+            
+            // Show toast with undo
+            toast(`Order deleted for ${clientName}`, 'success', true);
+            
+            // Delete from server in background
             try {
                 await deleteRecord('Orders', id);
-                
-                // Remove from local data
-                data.orders = data.orders.filter(x => x.ID != id);
-                
-                // Remove alteration data from localStorage
-                if (o.ClientID) {
-                    localStorage.removeItem(`alts_${o.ClientID}`);
-                    localStorage.removeItem(`alts_notes_${o.ClientID}`);
-                    localStorage.removeItem(`alts_neededby_${o.ClientID}`);
-                }
-                
-                renderOrders();
-                renderAlts();
-                toast('Order deleted', 'success');
             } catch (e) {
-                toast('Error deleting order', 'error');
+                console.error('Error deleting order from server:', e);
             }
         }
         
@@ -7182,8 +8244,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <div style="margin-bottom:8px">${itemsHtml || '<span style="font-size:10px;color:var(--taupe)">No alteration items yet</span>'}</div>
                         <div style="display:flex;justify-content:flex-end;gap:6px">
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAlteration(${c.ID})" title="Remove from alterations" style="color:#e74c3c">✕</button>
-                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();scheduleClientFitting(${c.ID})">📅 Schedule Fitting</button>
-                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openAlterationDetail(${c.ID})">✂️ Edit</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();scheduleClientFitting(${c.ID})">📅 Schedule</button>
+                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openAlterationDetail(${c.ID})">✂️ Edit</button>
+                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markAlterationComplete(${c.ID})" style="background:#27ae60">✓ Picked Up</button>
                         </div>
                     </div>
                 </div>`;
@@ -7698,6 +8761,78 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             toast('Alterations saved!', 'success');
             closeModal('alteration');
             renderAlts();
+        }
+        
+        async function saveAndMarkReady() {
+            if (!currentAltClientId) return;
+            
+            // Save first
+            localStorage.setItem(`alts_${currentAltClientId}`, JSON.stringify(currentAltItems));
+            localStorage.setItem(`alts_notes_${currentAltClientId}`, $('altNotes').value);
+            
+            // Then mark ready
+            await markAlterationComplete(currentAltClientId);
+            closeModal('alteration');
+        }
+        
+        async function markAlterationComplete(clientId) {
+            const c = getClient(clientId);
+            if (!c) return;
+            
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            
+            if (!confirm(`Mark ${clientName}'s alterations complete?\n\nThis will:\n• Set order status to "Picked Up"\n• Remove from active alterations list`)) {
+                return;
+            }
+            
+            // Update order status to "picked up"
+            const order = data.orders.find(o => String(o.ClientID) === String(clientId) && 
+                (o.Status === 'in alterations' || o.Status === 'QA complete' || o.Status === 'arrived - pending QA'));
+            
+            if (order) {
+                await updateRecord('Orders', order.ID, { Status: 'picked up' });
+                order.Status = 'picked up';
+            }
+            
+            // Update alteration record if exists
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId));
+            if (altRecord) {
+                altRecord.Status = 'complete';
+                await updateRecord('Alterations', altRecord.ID, { Status: 'complete' });
+            }
+            
+            saveCachedData();
+            renderAlts();
+            renderOrders();
+            
+            toast(`${clientName} marked as picked up! 🎉`, 'success');
+            
+            // Offer to send email
+            if (c.Email && confirm(`Send pickup confirmation email to ${c.Email}?`)) {
+                sendPickupEmail(clientId);
+            }
+        }
+        
+        function sendPickupEmail(clientId) {
+            const c = getClient(clientId);
+            if (!c || !c.Email) return;
+            
+            const storeName = store.name || 'Estrelle Bridal';
+            const subject = `Your dress is ready for pickup! 👰`;
+            const body = `Hi ${c.FirstName},
+
+Great news! Your dress alterations are complete and your gown is ready for pickup.
+
+Please contact us to schedule a convenient time to pick up your dress.
+
+We can't wait to see you!
+
+${storeName}
+${store.phone || ''}`;
+            
+            // Open Gmail
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.Email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(gmailUrl, '_blank');
         }
         
         function sendFittingSummary() {
@@ -8316,6 +9451,37 @@ www.estrellebridal.com`;
             closeModal('clientEmail');
             toast('Opening email app...', 'success');
         }
+        
+        function openInGmail(toFieldId, subjectFieldId, bodyFieldId) {
+            // Handle different field ID formats
+            let email, subject, body;
+            
+            if (toFieldId === 'clientEmailTo') {
+                // Client email modal uses span, not input
+                email = currentClient?.Email || '';
+            } else {
+                const toField = $(toFieldId);
+                email = toField ? (toField.value || toField.textContent || '') : '';
+            }
+            
+            const subjectField = $(subjectFieldId);
+            const bodyField = $(bodyFieldId);
+            
+            subject = subjectField ? subjectField.value.trim() : '';
+            body = bodyField ? bodyField.value.trim() : '';
+            
+            if (!email) { toast('No email address', 'error'); return; }
+            if (!subject) { toast('Please enter a subject', 'error'); return; }
+            if (!body) { toast('Please enter a message', 'error'); return; }
+            
+            // Create Gmail compose URL
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Open in new tab
+            window.open(gmailUrl, '_blank');
+            
+            toast('Opening Gmail...', 'success');
+        }
 
         // ========== CONSULTANTS ==========
         let consultantSigPad = null;
@@ -8599,7 +9765,7 @@ www.estrellebridal.com`;
             
             if (view === 'orders') {
                 $('ordersAddBtn').textContent = '+ Add Order';
-                $('ordersAddBtn').onclick = () => toast('Use "She Said Yes" flow to create orders', '');
+                $('ordersAddBtn').onclick = openAddOrder;
                 renderOrders();
             } else {
                 $('ordersAddBtn').textContent = '+ Add Fitting';
@@ -11911,7 +13077,7 @@ The {storeName} Team`
                 OrderDate: today(),
                 WeddingDate: c.WeddingDate || '',
                 ArrivalDate: $('oiArrivalDate').value || '',
-                Status: 'ordered',
+                Status: 'pending submission',
                 Consultant: $('yConsultantSelect').value,
                 Dress: dressItem ? dressItem.name : '',
                 Designer: dressItem ? dressItem.designer : '',
