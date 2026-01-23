@@ -991,6 +991,7 @@
                 <div class="header">
                     <div><h1 class="title">Orders & Alterations</h1><p class="subtitle" id="ordersSubtitle">Track orders and fittings</p></div>
                     <div style="display:flex;gap:8px;align-items:center">
+                        <button class="btn btn-secondary btn-sm" onclick="syncData()" title="Sync with server" style="padding:8px">🔄</button>
                         <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
                             <button class="btn btn-sm" id="viewOrders" onclick="setOrdersView('orders')" style="border:none;border-radius:0;background:var(--accent);color:white">Orders</button>
                             <button class="btn btn-sm" id="viewAlterations" onclick="setOrdersView('alterations')" style="border:none;border-radius:0;background:white;color:var(--text)">Alterations</button>
@@ -3148,6 +3149,52 @@ The {StoreName} Team
                     renderOrders();
                     renderAlts();
                     toast('Order restored!', 'success');
+                    
+                } else if (action.type === 'picked_up') {
+                    // Undo picked up - restore previous statuses
+                    if (action.orderId && action.previousOrderStatus) {
+                        const order = data.orders.find(o => o.ID == action.orderId);
+                        if (order) {
+                            order.Status = action.previousOrderStatus;
+                            await updateRecord('Orders', action.orderId, { Status: action.previousOrderStatus });
+                        }
+                    }
+                    
+                    if (action.altRecordId && action.previousAltStatus) {
+                        const altRecord = data.alterations?.find(a => a.ID == action.altRecordId);
+                        if (altRecord) {
+                            altRecord.Status = action.previousAltStatus;
+                            await updateRecord('Alterations', action.altRecordId, { Status: action.previousAltStatus });
+                        }
+                    }
+                    
+                    renderOrders();
+                    renderAlts();
+                    toast(`${action.clientName} restored to alterations!`, 'success');
+                    
+                } else if (action.type === 'delete_topoption') {
+                    // Re-add top option
+                    const result = await api('POST', { action: 'add', sheet: 'TopOptions', record: action.record });
+                    action.record.ID = result.id || action.record.ID;
+                    data.topoptions.push(action.record);
+                    renderClientOptions();
+                    toast('Option restored!', 'success');
+                    
+                } else if (action.type === 'delete_alteration') {
+                    // Re-add alteration
+                    const result = await api('POST', { action: 'add', sheet: 'Alterations', record: action.record });
+                    action.record.ID = result.id || action.record.ID;
+                    data.alterations.push(action.record);
+                    
+                    // Restore localStorage data
+                    if (action.localData && action.record.ClientID) {
+                        if (action.localData.items) localStorage.setItem(`alts_${action.record.ClientID}`, action.localData.items);
+                        if (action.localData.notes) localStorage.setItem(`alts_notes_${action.record.ClientID}`, action.localData.notes);
+                        if (action.localData.neededby) localStorage.setItem(`alts_neededby_${action.record.ClientID}`, action.localData.neededby);
+                    }
+                    
+                    renderAlts();
+                    toast('Alteration restored!', 'success');
                 }
                 
                 saveCachedData();
@@ -3296,31 +3343,41 @@ The {StoreName} Team
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             weddingDate.setHours(0, 0, 0, 0);
-            const diffMs = weddingDate - today;
-            const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
             
-            // Calculate business days (exclude weekends)
-            let businessDays = 0;
-            let currentDate = new Date(today);
-            while (currentDate < weddingDate) {
-                const dayOfWeek = currentDate.getDay();
-                if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Not Sunday (0) or Saturday (6)
-                    businessDays++;
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
+            if (weddingDate <= today) {
+                return { months: 0, weeks: 0, totalWeeks: 0, totalDays: 0 };
             }
             
-            // Convert to business weeks (5 days = 1 week)
-            const businessWeeks = Math.floor(businessDays / 5);
-            const months = Math.floor(businessWeeks / 4);
-            const remainingWeeks = businessWeeks % 4;
+            // Calculate calendar months
+            let months = 0;
+            let tempDate = new Date(today);
+            
+            // Count full months
+            while (true) {
+                let nextMonth = new Date(tempDate);
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                if (nextMonth <= weddingDate) {
+                    months++;
+                    tempDate = nextMonth;
+                } else {
+                    break;
+                }
+            }
+            
+            // Calculate remaining full weeks (7 days each)
+            const remainingMs = weddingDate - tempDate;
+            const remainingDays = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
+            const weeks = Math.floor(remainingDays / 7); // Only count full 7-day weeks
+            
+            // Total days for reference
+            const totalDays = Math.floor((weddingDate - today) / (1000 * 60 * 60 * 24));
+            const totalWeeks = Math.floor(totalDays / 7);
             
             return { 
                 months, 
-                weeks: remainingWeeks, 
-                totalWeeks: businessWeeks,
-                totalDays,
-                businessDays
+                weeks, 
+                totalWeeks,
+                totalDays
             };
         };
         
@@ -3484,6 +3541,53 @@ The {StoreName} Team
             }
         }
 
+        async function syncData() {
+            toast('Syncing...', '');
+            try {
+                const d = await api('GET');
+                if (!d || typeof d !== 'object') {
+                    toast('Sync failed - invalid response', 'error');
+                    return;
+                }
+                
+                data = { 
+                    clients: d.clients || [], 
+                    appointments: d.appointments || [], 
+                    topoptions: d.topoptions || [], 
+                    orders: d.orders || [], 
+                    alterations: d.alterations || [], 
+                    designers: d.designers || [],
+                    consultants: d.consultants || [],
+                    visitnotes: d.visitnotes || [],
+                    announcements: d.announcements || [],
+                    emailtemplates: d.emailtemplates || []
+                };
+                
+                // Also sync localStorage alteration data from Google Sheets
+                (data.alterations || []).forEach(alt => {
+                    if (alt.AlterationItems) {
+                        localStorage.setItem(`alts_${alt.ClientID}`, alt.AlterationItems);
+                    }
+                    if (alt.Notes) {
+                        localStorage.setItem(`alts_notes_${alt.ClientID}`, alt.Notes);
+                    }
+                    if (alt.DueDate) {
+                        const dueDate = typeof alt.DueDate === 'string' ? alt.DueDate.split('T')[0] : alt.DueDate;
+                        if (dueDate) localStorage.setItem(`alts_neededby_${alt.ClientID}`, dueDate);
+                    }
+                });
+                
+                saveCachedData();
+                renderDash();
+                renderOrders();
+                renderAlts();
+                toast('Synced!', 'success');
+            } catch (e) {
+                console.error('Sync error:', e);
+                toast('Sync failed: ' + e.message, 'error');
+            }
+        }
+
         async function saveRecord(sheet, record) {
             // Optimistic update - add to local data immediately with temp ID
             const tempId = Date.now();
@@ -3624,7 +3728,12 @@ The {StoreName} Team
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
             if (name === 'clients') setClientsView(clientsView || 'all');
             if (name === 'schedule') setScheduleView(scheduleView || 'week');
-            if (name === 'orders') { setOrdersView(ordersView || 'orders'); }
+            if (name === 'orders') { 
+                // Refresh data when switching to Orders/Alterations tab
+                loadData().then(() => {
+                    setOrdersView(ordersView || 'orders');
+                });
+            }
             if (name === 'reporting') renderReporting();
             if (name === 'settings') renderSettings();
             
@@ -4561,10 +4670,6 @@ The {StoreName} Team
             if (!currentClient) return;
             const name = `${currentClient.FirstName} ${currentClient.LastName}`;
             
-            if (!confirm(`⚠️ DELETE "${name}"?\n\nThis will be moved to trash but can be undone.`)) {
-                return;
-            }
-            
             // Store for undo before removing
             const clientCopy = { ...currentClient };
             addUndo({ type: 'delete_client', record: clientCopy });
@@ -5075,8 +5180,6 @@ The {StoreName} Team
         }
 
         async function deleteAppt(id) {
-            if (!confirm('Delete this appointment?')) return;
-            
             // Store for undo before removing
             const removedIdx = data.appointments.findIndex(a => a.ID == id);
             let removedAppt = null;
@@ -8252,7 +8355,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     if (ac.altItems.length > 4) itemsHtml += `<span style="font-size:10px;color:var(--taupe)">+${ac.altItems.length - 4} more</span>`;
                 }
                 
-                return `<div class="card" style="margin-bottom:12px;border-left:3px solid ${urgencyColor};cursor:pointer" onclick="openClient(${c.ID})">
+                return `<div class="card" style="margin-bottom:12px;border-left:3px solid ${urgencyColor};cursor:pointer" onclick="openAlterationDetail(${c.ID})">
                     <div class="card-body">
                         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
                             <div>
@@ -8272,7 +8375,6 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <div style="display:flex;justify-content:flex-end;gap:6px">
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAlteration(${c.ID})" title="Remove from alterations" style="color:#e74c3c">✕</button>
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();scheduleClientFitting(${c.ID})">📅 Schedule</button>
-                            <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openAlterationDetail(${c.ID})">✂️ Edit</button>
                             <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markAlterationComplete(${c.ID})" style="background:#27ae60">✓ Picked Up</button>
                         </div>
                     </div>
@@ -8286,8 +8388,23 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             const clientName = `${c.FirstName} ${c.LastName}`;
             
-            if (!confirm(`Remove ${clientName} from alterations?\n\nThis will clear all alteration items and notes for this client, but keep the order.`)) {
-                return;
+            // Save data for undo before removing
+            const localData = {
+                items: localStorage.getItem(`alts_${clientId}`),
+                notes: localStorage.getItem(`alts_notes_${clientId}`),
+                neededby: localStorage.getItem(`alts_neededby_${clientId}`)
+            };
+            
+            // Find alteration record
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
+            const altRecordCopy = altRecord ? { ...altRecord } : null;
+            
+            // Remove from data.alterations
+            if (altRecord) {
+                const idx = data.alterations.indexOf(altRecord);
+                if (idx >= 0) data.alterations.splice(idx, 1);
+                // Delete from server
+                api('POST', { action: 'delete', sheet: 'Alterations', id: altRecord.ID }).catch(() => {});
             }
             
             // Remove alteration data from localStorage
@@ -8297,14 +8414,27 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             // Set order status back to QA complete (so they can re-enter alterations if needed)
             const order = data.orders.find(o => o.ClientID == clientId && o.Status === 'in alterations');
+            const prevOrderStatus = order?.Status;
             if (order) {
-                await updateRecord('Orders', order.ID, { Status: 'QA complete' });
                 order.Status = 'QA complete';
+                updateRecord('Orders', order.ID, { Status: 'QA complete' });
             }
             
+            saveCachedData();
             renderAlts();
             renderOrders();
-            toast(`${clientName} removed from alterations`, 'success');
+            
+            // Add to undo stack
+            addUndo({ 
+                type: 'delete_alteration', 
+                record: altRecordCopy,
+                localData,
+                clientName,
+                orderId: order?.ID,
+                prevOrderStatus
+            });
+            
+            toast(`${clientName} removed from alterations`, 'success', true);
         }
         
         function scheduleClientFitting(clientId) {
@@ -8400,36 +8530,34 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             currentAltClientId = clientId;
             
-            // PRIORITY 1: Load from localStorage (most reliable, has all existing data)
-            const localItems = localStorage.getItem(`alts_${clientId}`);
-            const localNotes = localStorage.getItem(`alts_notes_${clientId}`);
-            const localNeededBy = localStorage.getItem(`alts_neededby_${clientId}`);
+            // PRIORITY 1: Load from Google Sheets (for cross-device sync)
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
             
-            if (localItems) {
+            if (altRecord && altRecord.AlterationItems) {
                 try {
-                    currentAltItems = JSON.parse(localItems);
-                    console.log(`[ALTS] Loaded ${currentAltItems.length} items from localStorage for client ${clientId}`);
+                    currentAltItems = JSON.parse(altRecord.AlterationItems);
+                    // Also update localStorage for offline use
+                    localStorage.setItem(`alts_${clientId}`, altRecord.AlterationItems);
+                    console.log(`[ALTS] Loaded ${currentAltItems.length} items from Google Sheets for client ${clientId}`);
                 } catch (e) {
-                    console.error('[ALTS] Failed to parse localStorage items:', e);
+                    console.error('[ALTS] Failed to parse Google Sheets items:', e);
                     currentAltItems = [];
                 }
             } else {
                 currentAltItems = [];
             }
             
-            // PRIORITY 2: If localStorage empty, try Google Sheets (for cross-device sync)
-            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
-            if (currentAltItems.length === 0 && altRecord && altRecord.AlterationItems) {
-                try {
-                    const sheetItems = JSON.parse(altRecord.AlterationItems);
-                    if (sheetItems.length > 0) {
-                        currentAltItems = sheetItems;
-                        // Save to localStorage for future use
-                        localStorage.setItem(`alts_${clientId}`, altRecord.AlterationItems);
-                        console.log(`[ALTS] Loaded ${currentAltItems.length} items from Google Sheets (synced to localStorage)`);
+            // PRIORITY 2: If Google Sheets empty, try localStorage (for offline data)
+            if (currentAltItems.length === 0) {
+                const localItems = localStorage.getItem(`alts_${clientId}`);
+                if (localItems) {
+                    try {
+                        currentAltItems = JSON.parse(localItems);
+                        console.log(`[ALTS] Loaded ${currentAltItems.length} items from localStorage (offline fallback)`);
+                    } catch (e) {
+                        console.error('[ALTS] Failed to parse localStorage items:', e);
+                        currentAltItems = [];
                     }
-                } catch (e) {
-                    console.error('[ALTS] Failed to parse Google Sheets items:', e);
                 }
             }
             
@@ -8503,25 +8631,28 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Render alteration items
             renderAltItems();
             
-            // Load notes - localStorage first (existing data), then Google Sheets (for sync)
-            let notes = localNotes || '';
-            if (!notes && altRecord && altRecord.Notes) {
+            // Load notes - Google Sheets first (for sync), then localStorage
+            let notes = '';
+            if (altRecord && altRecord.Notes) {
                 notes = altRecord.Notes;
                 localStorage.setItem(`alts_notes_${clientId}`, notes);
-                console.log(`[ALTS] Loaded notes from Google Sheets (synced to localStorage)`);
+            } else {
+                notes = localStorage.getItem(`alts_notes_${clientId}`) || '';
             }
             $('altNotes').value = notes;
             
-            // Load dress needed by - localStorage first, then Google Sheets, then default
-            let neededBy = localNeededBy || '';
-            if (!neededBy && altRecord && altRecord.DueDate) {
+            // Load dress needed by - Google Sheets first, then localStorage, then default
+            let neededBy = '';
+            if (altRecord && altRecord.DueDate) {
                 neededBy = typeof altRecord.DueDate === 'string' ? altRecord.DueDate.split('T')[0] : String(altRecord.DueDate);
                 if (neededBy && neededBy !== 'undefined' && neededBy !== 'null') {
                     localStorage.setItem(`alts_neededby_${clientId}`, neededBy);
-                    console.log(`[ALTS] Loaded neededBy from Google Sheets (synced to localStorage): ${neededBy}`);
                 } else {
                     neededBy = '';
                 }
+            }
+            if (!neededBy) {
+                neededBy = localStorage.getItem(`alts_neededby_${clientId}`) || '';
             }
             if (!neededBy && weddingDate) {
                 // Default to 2 weeks before wedding ONLY if no saved date
@@ -8956,36 +9087,51 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             const clientName = `${c.FirstName} ${c.LastName}`;
             
-            if (!confirm(`Mark ${clientName}'s alterations complete?\n\nThis will:\n• Set order status to "Picked Up"\n• Remove from active alterations list`)) {
-                return;
-            }
-            
-            // Update order status to "picked up"
+            // Find order and save previous status for undo
             const order = data.orders.find(o => String(o.ClientID) === String(clientId) && 
                 (o.Status === 'in alterations' || o.Status === 'QA complete' || o.Status === 'arrived - pending QA'));
             
+            const previousOrderStatus = order ? order.Status : null;
+            
+            // Find alteration record
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId));
+            const previousAltStatus = altRecord ? altRecord.Status : null;
+            
+            // Update order status to "picked up"
             if (order) {
-                await updateRecord('Orders', order.ID, { Status: 'picked up' });
                 order.Status = 'picked up';
+                updateRecord('Orders', order.ID, { Status: 'picked up' });
             }
             
             // Update alteration record if exists
-            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId));
             if (altRecord) {
                 altRecord.Status = 'complete';
-                await updateRecord('Alterations', altRecord.ID, { Status: 'complete' });
+                updateRecord('Alterations', altRecord.ID, { Status: 'complete' });
             }
             
             saveCachedData();
             renderAlts();
             renderOrders();
             
-            toast(`${clientName} marked as picked up! 🎉`, 'success');
+            // Add to undo stack
+            addUndo({ 
+                type: 'picked_up', 
+                clientId,
+                clientName,
+                orderId: order?.ID,
+                previousOrderStatus,
+                altRecordId: altRecord?.ID,
+                previousAltStatus
+            });
             
-            // Offer to send email
-            if (c.Email && confirm(`Send pickup confirmation email to ${c.Email}?`)) {
-                sendPickupEmail(clientId);
-            }
+            toast(`${clientName} marked as picked up! 🎉`, 'success', true);
+            
+            // Offer to send email after a short delay
+            setTimeout(() => {
+                if (c.Email && confirm(`Send pickup confirmation email to ${c.Email}?`)) {
+                    sendPickupEmail(clientId);
+                }
+            }, 500);
         }
         
         function sendPickupEmail(clientId) {
@@ -9053,7 +9199,7 @@ ${'─'.repeat(30)}
             if (nextFitting) {
                 body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}. We look forward to seeing you then!`;
             } else {
-                body += `\n\nPlease contact us to schedule your next fitting appointment.`;
+                body += `\n\nYour next fitting: TBD. Please contact us to schedule your next appointment.`;
             }
             
             if (weddingDate) {
@@ -9121,6 +9267,8 @@ www.estrellebridal.com`;
             }
             if (nextFitting) {
                 text += `📅 Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}\n`;
+            } else {
+                text += `📅 Next fitting: TBD\n`;
             }
             text += `\n`;
             
@@ -11348,8 +11496,6 @@ The {storeName} Team`
         }
 
         async function deleteApptConfirm(id) {
-            if (!confirm('Delete this appointment?')) return;
-            
             // Store for undo before removing
             const removedIdx = data.appointments.findIndex(a => a.ID == id);
             let removedAppt = null;
@@ -11367,10 +11513,10 @@ The {storeName} Team`
             renderWeek();
             renderAllAppointments();
             renderDash();
-            toast('Deleted', 'success', true);
+            toast('Appointment deleted', 'success', true);
             
             // Delete from server in background
-            deleteRecord('Appointments', id);
+            api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(() => {});
         }
 
         function populateOptionModal() {
@@ -11478,10 +11624,26 @@ The {storeName} Team`
         }
 
         async function deleteOptionConfirm(id) {
-            if (!confirm('Delete this option?')) return;
-            deleteRecord('TopOptions', id);
+            // Find and save option for undo
+            const option = data.topoptions.find(o => o.ID == id);
+            if (!option) return;
+            
+            const optionCopy = { ...option };
+            
+            // Remove from local data
+            const idx = data.topoptions.findIndex(o => o.ID == id);
+            if (idx >= 0) data.topoptions.splice(idx, 1);
+            
+            saveCachedData();
             renderClientOptions();
-            toast('Deleted', 'success');
+            
+            // Add to undo stack
+            addUndo({ type: 'delete_topoption', record: optionCopy });
+            
+            toast('Option deleted', 'success', true);
+            
+            // Delete from server in background
+            api('POST', { action: 'delete', sheet: 'TopOptions', id }).catch(() => {});
         }
 
         // ========== CLIENT PHOTOS ==========
