@@ -8849,7 +8849,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             // THEN try to sync to Google Sheets as backup (non-blocking, won't lose data if fails)
             try {
+                console.log('[ALTS] Looking for alteration record. ClientID:', currentAltClientId);
+                console.log('[ALTS] data.alterations count:', data.alterations?.length || 0);
+                console.log('[ALTS] All alterations:', data.alterations?.map(a => ({ ID: a.ID, ClientID: a.ClientID, Status: a.Status })));
+                
                 const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+                console.log('[ALTS] Found record:', altRecord ? { ID: altRecord.ID, ClientID: altRecord.ClientID } : 'NONE');
+                
                 if (altRecord && altRecord.ID) {
                     // Update existing record - preserve existing DueDate if not changed
                     const updates = {
@@ -8858,6 +8864,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     };
                     if (neededBy) updates.DueDate = neededBy;
                     
+                    console.log('[ALTS] Updating record ID:', altRecord.ID, 'with:', Object.keys(updates));
                     updateRecord('Alterations', altRecord.ID, updates).catch(e => {
                         console.warn('[ALTS] Google Sheets sync failed (data safe in localStorage):', e);
                     });
@@ -8866,6 +8873,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     altRecord.AlterationItems = itemsJson;
                     altRecord.Notes = notes;
                     if (neededBy) altRecord.DueDate = neededBy;
+                    console.log('[ALTS] Updated local cache');
                 } else {
                     // Create new alteration record in background
                     const client = getClient(currentAltClientId);
