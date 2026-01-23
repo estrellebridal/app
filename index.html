@@ -6039,6 +6039,12 @@ The Estrelle Bridal Team`;
             // Close immediately
             closeModal('newAppt');
             
+            // Save dress needed by date for fitting appointments
+            const apptType = record.Type.toLowerCase();
+            if (apptType.includes('fitting') && $('aDressNeededBy') && $('aDressNeededBy').value) {
+                localStorage.setItem(`alts_neededby_${clientId}`, $('aDressNeededBy').value);
+            }
+            
             if (id) {
                 // Store previous values for undo
                 const existingAppt = data.appointments.find(a => a.ID == id);
@@ -8102,7 +8108,19 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
                         ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
                         
-                        const altItems = JSON.parse(localStorage.getItem(`alts_${c.ID}`) || '[]');
+                        // Load alt items - localStorage FIRST (has existing data), then Google Sheets
+                        let altItems = [];
+                        const localItems = localStorage.getItem(`alts_${c.ID}`);
+                        if (localItems) {
+                            try { altItems = JSON.parse(localItems); } catch (e) {}
+                        }
+                        // If localStorage empty, try Google Sheets
+                        if (altItems.length === 0) {
+                            const altRec = data.alterations?.find(a => String(a.ClientID) === String(c.ID) && a.Status !== 'complete');
+                            if (altRec && altRec.AlterationItems) {
+                                try { altItems = JSON.parse(altRec.AlterationItems); } catch (e) {}
+                            }
+                        }
                         const doneCount = altItems.filter(i => i.status === 'done').length;
                         const totalCount = altItems.length;
                         
@@ -8155,7 +8173,16 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     // Get order for this client
                     const order = data.orders.find(o => String(o.ClientID) === clientId && o.Status !== 'picked up');
                     
-                    const altItems = JSON.parse(localStorage.getItem(`alts_${c.ID}`) || '[]');
+                    // Load alt items - localStorage FIRST (has existing data), then Google Sheets
+                    let altItems = [];
+                    const localItems = localStorage.getItem(`alts_${c.ID}`);
+                    if (localItems) {
+                        try { altItems = JSON.parse(localItems); } catch (e) {}
+                    }
+                    // If localStorage empty, try Google Sheets record
+                    if (altItems.length === 0 && alt.AlterationItems) {
+                        try { altItems = JSON.parse(alt.AlterationItems); } catch (e) {}
+                    }
                     const doneCount = altItems.filter(i => i.status === 'done').length;
                     const totalCount = altItems.length;
                     
@@ -8294,7 +8321,15 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Now set all the fields AFTER modal is open
             $('aDate').value = today();
             $('aTime').value = '11:00';
+            
+            // Populate type dropdown BEFORE setting value
+            const serviceTypes = getServiceTypes();
+            $('aType').innerHTML = serviceTypes.map(t => {
+                const val = t.toLowerCase();
+                return `<option value="${val}">${t}</option>`;
+            }).join('');
             $('aType').value = 'fitting';
+            
             $('apptModalTitle').textContent = 'Schedule Fitting';
             
             // Show fixed client name, hide client dropdown
@@ -8316,20 +8351,28 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             });
             
             // Populate wedding date and dress needed by
+            // First check for saved neededby date
+            const savedNeededBy = localStorage.getItem(`alts_neededby_${clientId}`);
+            
             if (c.WeddingDate) {
                 $('aWeddingDateDisplay').value = fmtDate(c.WeddingDate);
                 const weddingDate = parseDate(c.WeddingDate);
                 if (weddingDate) {
                     const daysUntil = Math.ceil((weddingDate - new Date()) / (1000 * 60 * 60 * 24));
                     $('aDaysUntilWedding').textContent = `${daysUntil} days until wedding`;
-                    // Default dress needed by to 2 weeks before wedding
+                }
+                
+                // Use saved date if exists, otherwise default to 2 weeks before wedding
+                if (savedNeededBy) {
+                    $('aDressNeededBy').value = savedNeededBy;
+                } else if (weddingDate) {
                     const neededBy = new Date(weddingDate.getTime() - 14 * 24 * 60 * 60 * 1000);
                     $('aDressNeededBy').value = neededBy.toISOString().split('T')[0];
                 }
             } else {
                 $('aWeddingDateDisplay').value = 'Not set';
                 $('aDaysUntilWedding').textContent = '';
-                $('aDressNeededBy').value = '';
+                $('aDressNeededBy').value = savedNeededBy || '';
             }
             
             // Populate consultant dropdown
@@ -8339,21 +8382,15 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         function openAddAlterationItem() {
-            // Open modal to select client and schedule fitting
-            const clientsInAlts = data.orders
-                .filter(o => o.Status === 'QA complete' || o.Status === 'in alterations')
-                .map(o => getClient(o.ClientID))
-                .filter(c => c);
-            
-            if (clientsInAlts.length === 0) {
-                toast('No clients ready for alterations. Complete QA first.', 'error');
-                return;
-            }
-            
-            // Just open the appointment modal with fitting type
+            // Open appointment modal with fitting type selected
             $('editApptId').value = '';
-            $('apptType').value = 'first fitting';
+            $('apptForClientId').value = '';
             populateApptModal();
+            
+            // Set type to fitting
+            $('aType').value = 'fitting';
+            toggleConsultationReason();
+            
             openModal('newAppt');
         }
         
@@ -8363,8 +8400,38 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             currentAltClientId = clientId;
             
-            // Load alteration items from localStorage
-            currentAltItems = JSON.parse(localStorage.getItem(`alts_${clientId}`) || '[]');
+            // PRIORITY 1: Load from localStorage (most reliable, has all existing data)
+            const localItems = localStorage.getItem(`alts_${clientId}`);
+            const localNotes = localStorage.getItem(`alts_notes_${clientId}`);
+            const localNeededBy = localStorage.getItem(`alts_neededby_${clientId}`);
+            
+            if (localItems) {
+                try {
+                    currentAltItems = JSON.parse(localItems);
+                    console.log(`[ALTS] Loaded ${currentAltItems.length} items from localStorage for client ${clientId}`);
+                } catch (e) {
+                    console.error('[ALTS] Failed to parse localStorage items:', e);
+                    currentAltItems = [];
+                }
+            } else {
+                currentAltItems = [];
+            }
+            
+            // PRIORITY 2: If localStorage empty, try Google Sheets (for cross-device sync)
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
+            if (currentAltItems.length === 0 && altRecord && altRecord.AlterationItems) {
+                try {
+                    const sheetItems = JSON.parse(altRecord.AlterationItems);
+                    if (sheetItems.length > 0) {
+                        currentAltItems = sheetItems;
+                        // Save to localStorage for future use
+                        localStorage.setItem(`alts_${clientId}`, altRecord.AlterationItems);
+                        console.log(`[ALTS] Loaded ${currentAltItems.length} items from Google Sheets (synced to localStorage)`);
+                    }
+                } catch (e) {
+                    console.error('[ALTS] Failed to parse Google Sheets items:', e);
+                }
+            }
             
             // Get order info
             const order = data.orders.find(o => o.ClientID == clientId && (o.Status === 'in alterations' || o.Status === 'QA complete'));
@@ -8436,15 +8503,31 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Render alteration items
             renderAltItems();
             
-            // Load notes
-            $('altNotes').value = localStorage.getItem(`alts_notes_${clientId}`) || '';
+            // Load notes - localStorage first (existing data), then Google Sheets (for sync)
+            let notes = localNotes || '';
+            if (!notes && altRecord && altRecord.Notes) {
+                notes = altRecord.Notes;
+                localStorage.setItem(`alts_notes_${clientId}`, notes);
+                console.log(`[ALTS] Loaded notes from Google Sheets (synced to localStorage)`);
+            }
+            $('altNotes').value = notes;
             
-            // Load dress needed by date
-            let neededBy = localStorage.getItem(`alts_neededby_${clientId}`);
+            // Load dress needed by - localStorage first, then Google Sheets, then default
+            let neededBy = localNeededBy || '';
+            if (!neededBy && altRecord && altRecord.DueDate) {
+                neededBy = typeof altRecord.DueDate === 'string' ? altRecord.DueDate.split('T')[0] : String(altRecord.DueDate);
+                if (neededBy && neededBy !== 'undefined' && neededBy !== 'null') {
+                    localStorage.setItem(`alts_neededby_${clientId}`, neededBy);
+                    console.log(`[ALTS] Loaded neededBy from Google Sheets (synced to localStorage): ${neededBy}`);
+                } else {
+                    neededBy = '';
+                }
+            }
             if (!neededBy && weddingDate) {
-                // Default to 2 weeks before wedding
+                // Default to 2 weeks before wedding ONLY if no saved date
                 const defaultNeededBy = new Date(weddingDate.getTime() - 14 * 24 * 60 * 60 * 1000);
                 neededBy = defaultNeededBy.toISOString().split('T')[0];
+                console.log(`[ALTS] Using default neededBy (2 weeks before wedding): ${neededBy}`);
             }
             $('altDressNeededBy').value = neededBy || '';
             updateNeededByCountdown();
@@ -8746,11 +8829,76 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
         }
         
-        function saveAlterations() {
+        async function saveAlterations() {
             if (!currentAltClientId) return;
             
-            localStorage.setItem(`alts_${currentAltClientId}`, JSON.stringify(currentAltItems));
-            localStorage.setItem(`alts_notes_${currentAltClientId}`, $('altNotes').value);
+            const itemsJson = JSON.stringify(currentAltItems);
+            const notes = $('altNotes').value;
+            const neededBy = $('altDressNeededBy').value;
+            
+            // ALWAYS save to localStorage FIRST (this is the safe, working storage)
+            localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
+            localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
+            if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
+            
+            console.log(`[ALTS] Saved to localStorage for client ${currentAltClientId}:`, {
+                items: currentAltItems.length,
+                notes: notes.length + ' chars',
+                neededBy: neededBy
+            });
+            
+            // THEN try to sync to Google Sheets as backup (non-blocking, won't lose data if fails)
+            try {
+                const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+                if (altRecord && altRecord.ID) {
+                    // Update existing record - preserve existing DueDate if not changed
+                    const updates = {
+                        AlterationItems: itemsJson,
+                        Notes: notes
+                    };
+                    if (neededBy) updates.DueDate = neededBy;
+                    
+                    updateRecord('Alterations', altRecord.ID, updates).catch(e => {
+                        console.warn('[ALTS] Google Sheets sync failed (data safe in localStorage):', e);
+                    });
+                    
+                    // Update local cache
+                    altRecord.AlterationItems = itemsJson;
+                    altRecord.Notes = notes;
+                    if (neededBy) altRecord.DueDate = neededBy;
+                } else {
+                    // Create new alteration record in background
+                    const client = getClient(currentAltClientId);
+                    const order = data.orders.find(o => String(o.ClientID) === String(currentAltClientId) && o.Status !== 'picked up');
+                    const newAlt = {
+                        ClientID: currentAltClientId,
+                        ClientName: client ? `${client.FirstName} ${client.LastName}` : '',
+                        OrderID: order ? order.ID : '',
+                        Items: order ? (order.Dress || 'Dress') : 'Dress',
+                        AlterationItems: itemsJson,
+                        Notes: notes,
+                        Status: 'in progress',
+                        StartDate: today(),
+                        DueDate: neededBy || (client ? client.WeddingDate : '') || '',
+                        Seamstress: ''
+                    };
+                    
+                    api('POST', { action: 'add', sheet: 'Alterations', record: newAlt })
+                        .then(result => {
+                            newAlt.ID = result?.id || 'alt_' + Date.now();
+                            data.alterations.push(newAlt);
+                            saveCachedData();
+                            console.log('[ALTS] Created new record in Google Sheets:', newAlt.ID);
+                        })
+                        .catch(e => {
+                            console.warn('[ALTS] Failed to create Google Sheets record (data safe in localStorage):', e);
+                        });
+                }
+            } catch (e) {
+                console.warn('[ALTS] Google Sheets sync error (data safe in localStorage):', e);
+            }
+            
+            saveCachedData();
             
             // Update order status to 'in alterations' if needed
             const order = data.orders.find(o => o.ClientID == currentAltClientId && o.Status === 'QA complete');
@@ -8766,9 +8914,28 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         async function saveAndMarkReady() {
             if (!currentAltClientId) return;
             
-            // Save first
-            localStorage.setItem(`alts_${currentAltClientId}`, JSON.stringify(currentAltItems));
-            localStorage.setItem(`alts_notes_${currentAltClientId}`, $('altNotes').value);
+            const itemsJson = JSON.stringify(currentAltItems);
+            const notes = $('altNotes').value;
+            const neededBy = $('altDressNeededBy').value;
+            
+            // ALWAYS save to localStorage FIRST
+            localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
+            localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
+            if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
+            
+            console.log(`[ALTS] Saved to localStorage before marking ready for client ${currentAltClientId}`);
+            
+            // Try to sync to Google Sheets (non-blocking)
+            try {
+                const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+                if (altRecord && altRecord.ID) {
+                    const updates = { AlterationItems: itemsJson, Notes: notes };
+                    if (neededBy) updates.DueDate = neededBy;
+                    await updateRecord('Alterations', altRecord.ID, updates);
+                }
+            } catch (e) {
+                console.warn('[ALTS] Google Sheets sync failed (data safe in localStorage):', e);
+            }
             
             // Then mark ready
             await markAlterationComplete(currentAltClientId);
@@ -8876,7 +9043,7 @@ ${'─'.repeat(30)}
             body += `\n${'─'.repeat(30)}`;
             
             if (nextFitting) {
-                body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)}. We look forward to seeing you then!`;
+                body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}. We look forward to seeing you then!`;
             } else {
                 body += `\n\nPlease contact us to schedule your next fitting appointment.`;
             }
@@ -8945,7 +9112,7 @@ www.estrellebridal.com`;
                 text += ` (${daysUntil} days)\n`;
             }
             if (nextFitting) {
-                text += `📅 Next fitting: ${fmtDate(nextFitting.Date)}\n`;
+                text += `📅 Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}\n`;
             }
             text += `\n`;
             
@@ -11174,9 +11341,28 @@ The {storeName} Team`
 
         async function deleteApptConfirm(id) {
             if (!confirm('Delete this appointment?')) return;
-            deleteRecord('Appointments', id);
+            
+            // Store for undo before removing
+            const removedIdx = data.appointments.findIndex(a => a.ID == id);
+            let removedAppt = null;
+            if (removedIdx >= 0) {
+                removedAppt = { ...data.appointments[removedIdx] };
+                data.appointments.splice(removedIdx, 1);
+                saveCachedData();
+                
+                // Add to undo stack
+                addUndo({ type: 'delete_appointment', record: removedAppt });
+            }
+            
+            // Update UI
             renderClientAppts();
-            toast('Deleted', 'success');
+            renderWeek();
+            renderAllAppointments();
+            renderDash();
+            toast('Deleted', 'success', true);
+            
+            // Delete from server in background
+            deleteRecord('Appointments', id);
         }
 
         function populateOptionModal() {
