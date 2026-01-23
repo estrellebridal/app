@@ -6390,93 +6390,64 @@ The Estrelle Bridal Team`;
             $('ordersInAlterations').textContent = inAlterations;
             $('ordersPickedUp').textContent = pickedUp;
             
-            // First, group ALL orders by client name (before filtering)
-            const allClientGroups = {};
-            allOrders.forEach(o => {
-                const rawName = (o.ClientName || 'Unknown').trim().replace(/\s+/g, ' ');
-                const key = rawName.toLowerCase();
-                if (!allClientGroups[key]) {
-                    allClientGroups[key] = { displayName: rawName, orders: [] };
-                }
-                allClientGroups[key].orders.push(o);
-            });
-            
-            // Convert to array and filter: show client if ANY order is active (not picked up)
-            // Unless specifically filtering for picked up or searching
-            let groupedOrders = Object.values(allClientGroups).map(g => ({
-                clientName: g.displayName,
-                orders: g.orders,
-                primaryOrder: g.orders[0],
-                hasActiveOrders: g.orders.some(o => o.Status !== 'picked up')
-            })).filter(group => {
-                // Arriving Soon filter
-                if (arrivingSoonFilter) {
-                    const hasArrivingSoon = group.orders.some(o => {
-                        if (!o.ArrivalDate || o.Status === 'picked up' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete' || o.Status === 'in alterations') return false;
-                        const arrDate = getDateStr(o.ArrivalDate);
-                        return arrDate >= todayStr && arrDate <= threeMonthsStr;
-                    });
-                    if (!hasArrivingSoon) return false;
-                }
-                
-                // If filtering for picked up, only show clients where ALL orders are picked up
-                if (statusFilter === 'picked up') {
-                    return group.orders.every(o => o.Status === 'picked up');
-                }
-                
-                // Apply search filter first
-                if (searchTerm) {
-                    const searchStr = group.orders.map(o => 
-                        `${o.ClientName || ''} ${o.Dress || ''} ${o.Designer || ''} ${o.PO || ''}`
-                    ).join(' ').toLowerCase();
-                    if (!searchStr.includes(searchTerm)) return false;
-                    // When searching, show client regardless of order status
-                    return true;
-                }
-                
-                // Otherwise, show client if they have ANY active order
-                if (!group.hasActiveOrders) return false;
-                
-                // Apply status filter (check if ANY order matches)
+            // FIRST: Filter individual orders based on filter criteria
+            let filteredOrders = allOrders.filter(o => {
+                // Apply status filter
                 if (statusFilter) {
-                    // "in production" includes pending submission, ordered, in production, and shipped
                     if (statusFilter === 'in production') {
-                        if (!group.orders.some(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped')) {
+                        if (!(o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped')) {
                             return false;
                         }
-                    } else if (!group.orders.some(o => o.Status === statusFilter)) {
+                    } else if (statusFilter === 'arrived') {
+                        // "arrived" means arrived - pending QA or QA complete
+                        if (!(o.Status === 'arrived - pending QA' || o.Status === 'QA complete')) {
+                            return false;
+                        }
+                    } else if (o.Status !== statusFilter) {
                         return false;
                     }
+                }
+                
+                // Apply Arriving Soon filter
+                if (arrivingSoonFilter) {
+                    if (!o.ArrivalDate || o.Status === 'picked up' || o.Status === 'arrived - pending QA' || o.Status === 'QA complete' || o.Status === 'in alterations') return false;
+                    const arrDate = getDateStr(o.ArrivalDate);
+                    if (!(arrDate >= todayStr && arrDate <= threeMonthsStr)) return false;
+                }
+                
+                // If no filter, exclude picked up by default
+                if (!statusFilter && !arrivingSoonFilter && !searchTerm) {
+                    if (o.Status === 'picked up') return false;
+                }
+                
+                // Apply search filter
+                if (searchTerm) {
+                    const searchStr = `${o.ClientName || ''} ${o.Dress || ''} ${o.Designer || ''} ${o.PO || ''}`.toLowerCase();
+                    if (!searchStr.includes(searchTerm)) return false;
                 }
                 
                 return true;
             });
             
-            // For display, filter individual orders within each group based on status filter
-            if (statusFilter && statusFilter !== 'picked up') {
-                groupedOrders.forEach(group => {
-                    // "in production" includes pending submission, ordered, in production, and shipped
-                    if (statusFilter === 'in production') {
-                        group.filteredOrders = group.orders.filter(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped');
-                    } else {
-                        group.filteredOrders = group.orders.filter(o => o.Status === statusFilter);
-                    }
-                });
-            } else if (statusFilter === 'picked up') {
-                groupedOrders.forEach(group => {
-                    group.filteredOrders = group.orders;
-                });
-            } else if (searchTerm) {
-                // When searching, show ALL orders including picked up
-                groupedOrders.forEach(group => {
-                    group.filteredOrders = group.orders;
-                });
-            } else {
-                // Default: show all non-picked-up orders for each client
-                groupedOrders.forEach(group => {
-                    group.filteredOrders = group.orders.filter(o => o.Status !== 'picked up');
-                });
-            }
+            // THEN: Group filtered orders by client name
+            const clientGroups = {};
+            filteredOrders.forEach(o => {
+                const rawName = (o.ClientName || 'Unknown').trim().replace(/\s+/g, ' ');
+                const key = rawName.toLowerCase();
+                if (!clientGroups[key]) {
+                    clientGroups[key] = { displayName: rawName, orders: [] };
+                }
+                clientGroups[key].orders.push(o);
+            });
+            
+            // Convert to array
+            let groupedOrders = Object.values(clientGroups).map(g => ({
+                clientName: g.displayName,
+                orders: g.orders,
+                primaryOrder: g.orders[0],
+                hasActiveOrders: g.orders.some(o => o.Status !== 'picked up'),
+                filteredOrders: g.orders // All orders in group are already filtered
+            }));
             
             // Count total items shown
             const totalItems = groupedOrders.reduce((sum, g) => sum + g.filteredOrders.length, 0);
@@ -6617,8 +6588,22 @@ The Estrelle Bridal Team`;
             updateOrderSelection();
         }
         
+        let currentStatusFilter = '';
+        
         function filterOrders(status) {
+            // Toggle off if clicking the same filter
+            if (currentStatusFilter === status) {
+                currentStatusFilter = '';
+                $('orderStatusFilter').value = '';
+                arrivingSoonFilter = false;
+                $('orderSearch').value = '';
+                renderOrders();
+                highlightActiveStatCard('');
+                return;
+            }
+            
             // Clear other filters when clicking a stat card
+            currentStatusFilter = status;
             arrivingSoonFilter = false;
             $('orderSearch').value = '';
             $('orderStatusFilter').value = status;
@@ -6635,12 +6620,14 @@ The Estrelle Bridal Team`;
             
             // Highlight active card
             const cardMap = {
+                'in production': 'cardInProduction',
                 'ordered': 'cardInProduction',
                 'arrived': 'cardArrived',
                 'arrived - pending QA': 'cardArrived',
                 'QA complete': 'cardArrived',
                 'in alterations': 'cardInAlterations',
-                'picked up': 'cardPickedUp'
+                'picked up': 'cardPickedUp',
+                'arrivingSoon': 'cardArrivingSoon'
             };
             
             const cardId = cardMap[activeStatus];
@@ -6651,15 +6638,6 @@ The Estrelle Bridal Team`;
                     card.style.transform = 'scale(1.02)';
                 }
             }
-            
-            // Handle Arriving Soon separately
-            if (arrivingSoonFilter) {
-                const card = $('cardArrivingSoon');
-                if (card) {
-                    card.style.boxShadow = '0 0 0 2px #9b59b6';
-                    card.style.transform = 'scale(1.02)';
-                }
-            }
         }
         
         function clearOrderFilters() {
@@ -6667,6 +6645,7 @@ The Estrelle Bridal Team`;
             $('orderStatusFilter').value = '';
             orderSortBy = 'orderDate';
             arrivingSoonFilter = false;
+            currentStatusFilter = '';
             orderSortDirection = {};
             renderOrders();
             updateSortArrows('orderDate');
@@ -6674,18 +6653,26 @@ The Estrelle Bridal Team`;
         }
         
         function toggleArrivingSoon() {
-            arrivingSoonFilter = !arrivingSoonFilter;
+            // Toggle off if already on
             if (arrivingSoonFilter) {
-                // Clear other filters when enabling arriving soon
-                $('orderStatusFilter').value = '';
-                $('orderSearch').value = '';
-                // Sort by arrival date
-                orderSortBy = 'arrivalDate';
-                orderSortDirection['arrivalDate'] = 'asc';
+                arrivingSoonFilter = false;
+                currentStatusFilter = '';
+                renderOrders();
+                highlightActiveStatCard('');
+                return;
             }
+            
+            // Enable arriving soon, clear other filters
+            arrivingSoonFilter = true;
+            currentStatusFilter = '';
+            $('orderStatusFilter').value = '';
+            $('orderSearch').value = '';
+            // Sort by arrival date
+            orderSortBy = 'arrivalDate';
+            orderSortDirection['arrivalDate'] = 'asc';
             renderOrders();
             updateSortArrows(orderSortBy);
-            highlightActiveStatCard(arrivingSoonFilter ? 'arrivingSoon' : '');
+            highlightActiveStatCard('arrivingSoon');
         }
         
         let orderSortDirection = {}; // Track sort direction for each column
