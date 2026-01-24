@@ -4371,31 +4371,11 @@ The {StoreName} Team
                 return;
             }
             
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        action: 'sendEmail',
-                        to: to,
-                        subject: subject,
-                        body: body
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    saveAnniversaryEmail(clientId, 'sent', new Date().toISOString().split('T')[0]);
-                    closeModal('sendAnnEmail');
-                    renderAnniversariesView();
-                    toast('Anniversary email sent!', 'success');
-                } else {
-                    toast('Failed to send: ' + (result.error || 'Unknown error'), 'error');
-                }
-            } catch (err) {
-                toast('Error sending email: ' + err.message, 'error');
-            }
+            closeModal('sendAnnEmail');
+            sendEmailViaPreferredMethod(to, subject, body, () => {
+                saveAnniversaryEmail(clientId, 'sent', new Date().toISOString().split('T')[0]);
+                renderAnniversariesView();
+            });
         }
 
         // ========== CLIENTS ==========
@@ -5180,8 +5160,12 @@ The {StoreName} Team
         }
 
         async function deleteAppt(id) {
+            console.log('deleteAppt called with ID:', id, 'type:', typeof id);
+            
             // Store for undo before removing
-            const removedIdx = data.appointments.findIndex(a => a.ID == id);
+            const removedIdx = data.appointments.findIndex(a => String(a.ID) === String(id));
+            console.log('Found appointment at index:', removedIdx);
+            
             let removedAppt = null;
             if (removedIdx >= 0) {
                 removedAppt = { ...data.appointments[removedIdx] };
@@ -5190,17 +5174,21 @@ The {StoreName} Team
                 
                 // Add to undo stack
                 addUndo({ type: 'delete_appointment', record: removedAppt });
+                
+                // Update UI immediately
+                toast('Appointment deleted', 'success', true);
+                renderDash();
+                renderWeek();
+                renderAllAppointments();
+                if (currentClient) renderClientAppts();
+                
+                // Send to server in background (fire and forget)
+                api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(e => console.error('Delete API error:', e));
+            } else {
+                console.error('Appointment not found with ID:', id);
+                console.log('Available IDs:', data.appointments.map(a => a.ID));
+                toast('Could not find appointment', 'error');
             }
-            
-            // Update UI immediately
-            toast('Appointment deleted', 'success', true);
-            renderDash();
-            renderWeek();
-            renderAllAppointments();
-            if (currentClient) renderClientAppts();
-            
-            // Send to server in background (fire and forget)
-            api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(() => {});
         }
 
         // ========== CONFIRMATION EMAIL ==========
@@ -5252,12 +5240,16 @@ The Estrelle Bridal Team`;
         const CONFIRM_TEMPLATE_KEY = 'estrelle_confirm_template';
 
         function getConfirmTemplate() {
-            return localStorage.getItem(CONFIRM_TEMPLATE_KEY) || DEFAULT_CONFIRM_TEMPLATE;
+            const saved = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
+            console.log('Loading template from localStorage:', saved ? 'Found (' + saved.length + ' chars)' : 'Not found, using default');
+            return saved || DEFAULT_CONFIRM_TEMPLATE;
         }
 
         function saveConfirmTemplate() {
             // Get the current text and reverse the replacements to create template
             let template = $('confirmBody').value;
+            
+            console.log('Saving template, length:', template.length);
             
             // Get the values that were substituted
             const firstName = $('confirmFirstName').value;
@@ -5267,7 +5259,6 @@ The Estrelle Bridal Team`;
             const apptType = $('confirmApptType').value;
             
             // Replace actual values back to placeholders
-            // Use word boundaries to avoid partial replacements
             if (firstName) {
                 template = template.split(firstName).join('{{firstName}}');
             }
@@ -5285,7 +5276,9 @@ The Estrelle Bridal Team`;
             }
             
             localStorage.setItem(CONFIRM_TEMPLATE_KEY, template);
-            toast('Template saved! Placeholders restored.', 'success');
+            console.log('Template saved to localStorage, key:', CONFIRM_TEMPLATE_KEY);
+            console.log('Saved template preview:', template.substring(0, 100));
+            toast('Template saved!', 'success');
         }
 
         function resetConfirmTemplate() {
@@ -5444,16 +5437,9 @@ The Estrelle Bridal Team`;
             if (!to) { toast('No email address', 'error'); return; }
             
             closeModal('confirmEmail');
-            toast('Sending email...', 'success');
             
-            try {
-                await api('POST', { 
-                    action: 'sendConfirmation', 
-                    email: to, 
-                    subject: subject, 
-                    body: body 
-                });
-                
+            // Send via preferred method (Gmail or direct)
+            sendEmailViaPreferredMethod(to, subject, body, () => {
                 // Mark appointment as confirmation sent
                 updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
                 
@@ -5461,15 +5447,11 @@ The Estrelle Bridal Team`;
                 const appt = data.appointments.find(a => a.ID == apptId);
                 if (appt) appt.ConfirmationSent = new Date().toISOString();
                 
-                toast('✓ Confirmation email sent!', 'success');
-                
                 // Re-render views
                 renderDash();
                 renderWeek();
                 renderAllAppointments();
-            } catch (e) {
-                toast('Failed to send email', 'error');
-            }
+            });
         }
 
         // ========== FOLLOW-UP EMAILS ==========
@@ -8154,20 +8136,11 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 return;
             }
             
-            closeModal('orderEmail');
-            toast('Sending email...', '');
+            const subject = $('orderEmailSubject').value;
+            const body = $('orderEmailBody').value;
             
-            try {
-                await api('POST', {
-                    action: 'sendOrderEmail',
-                    email: email,
-                    subject: $('orderEmailSubject').value,
-                    body: $('orderEmailBody').value
-                });
-                toast('Email sent to ' + email, 'success');
-            } catch (e) {
-                toast('Failed to send email', 'error');
-            }
+            closeModal('orderEmail');
+            sendEmailViaPreferredMethod(email, subject, body);
         }
 
         // ========== ALTERATIONS ==========
@@ -9885,6 +9858,34 @@ www.estrellebridal.com`;
             return { ...DEFAULT_STORE_INFO };
         }
         
+        // Email mode: 'gmail' (open in Gmail) or 'direct' (send via API)
+        // Default to 'gmail' for now - can change to 'direct' when ready
+        function getEmailMode() {
+            return localStorage.getItem('estrelle_email_mode') || 'gmail';
+        }
+        
+        function setEmailMode(mode) {
+            localStorage.setItem('estrelle_email_mode', mode);
+        }
+        
+        // Helper to send email - uses Gmail or direct based on setting
+        function sendEmailViaPreferredMethod(to, subject, body, onSuccess) {
+            if (getEmailMode() === 'gmail') {
+                const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                window.open(gmailUrl, '_blank');
+                toast('Email opened in Gmail', 'success');
+                if (onSuccess) onSuccess();
+            } else {
+                // Direct send via API (for future use)
+                api('POST', { action: 'sendEmail', to, subject, body })
+                    .then(() => {
+                        toast('Email sent!', 'success');
+                        if (onSuccess) onSuccess();
+                    })
+                    .catch(e => toast('Failed to send email', 'error'));
+            }
+        }
+        
         function getServiceTypes() {
             const saved = localStorage.getItem('estrelle_service_types');
             if (saved) {
@@ -10848,26 +10849,14 @@ The {storeName} Team`
             }
             
             closeModal('anniversaryEmail');
-            toast('Sending email...', 'success');
             
-            try {
-                await api('POST', {
-                    action: 'sendConfirmation',
-                    email: to,
-                    subject: subject,
-                    body: body
-                });
-                
+            sendEmailViaPreferredMethod(to, subject, body, () => {
                 // Track sent email
                 const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
                 sentEmails[`${clientId}-${new Date().getFullYear()}`] = today();
                 localStorage.setItem('estrelle_anniversary_sent', JSON.stringify(sentEmails));
-                
-                toast('Anniversary email sent! 💕', 'success');
                 renderAnniversaries();
-            } catch (e) {
-                toast('Failed to send email', 'error');
-            }
+            });
         }
         
         function openAnniversaryTemplateModal() {
@@ -11087,6 +11076,10 @@ The {storeName} Team`
             renderVisitHistory();
             showPage('consult', true); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
+            
+            // Scroll to top of page
+            window.scrollTo(0, 0);
+            $('page-consult')?.scrollTo(0, 0);
         }
         
         function hasUnsavedClientNotes() {
@@ -11321,6 +11314,7 @@ The {storeName} Team`
         }
 
         function renderClientAppts() {
+            if (!currentClient) return;
             const appts = data.appointments.filter(a => a.ClientID == currentClient.ID).sort((a,b) => (b.Date||'').localeCompare(a.Date||''));
             $('cAppts').innerHTML = appts.length ? appts.map(a => {
                 const photos = a.Photos ? (typeof a.Photos === 'string' ? JSON.parse(a.Photos || '[]') : a.Photos) : [];
@@ -11483,8 +11477,12 @@ The {storeName} Team`
         }
 
         async function deleteApptConfirm(id) {
+            console.log('deleteApptConfirm called with ID:', id, 'type:', typeof id);
+            
             // Store for undo before removing
-            const removedIdx = data.appointments.findIndex(a => a.ID == id);
+            const removedIdx = data.appointments.findIndex(a => String(a.ID) === String(id));
+            console.log('Found appointment at index:', removedIdx);
+            
             let removedAppt = null;
             if (removedIdx >= 0) {
                 removedAppt = { ...data.appointments[removedIdx] };
@@ -11493,17 +11491,21 @@ The {storeName} Team`
                 
                 // Add to undo stack
                 addUndo({ type: 'delete_appointment', record: removedAppt });
+                
+                // Update UI
+                renderClientAppts();
+                renderWeek();
+                renderAllAppointments();
+                renderDash();
+                toast('Appointment deleted', 'success', true);
+                
+                // Delete from server in background
+                api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(e => console.error('Delete API error:', e));
+            } else {
+                console.error('Appointment not found with ID:', id);
+                console.log('Available IDs:', data.appointments.map(a => a.ID));
+                toast('Could not find appointment', 'error');
             }
-            
-            // Update UI
-            renderClientAppts();
-            renderWeek();
-            renderAllAppointments();
-            renderDash();
-            toast('Appointment deleted', 'success', true);
-            
-            // Delete from server in background
-            api('POST', { action: 'delete', sheet: 'Appointments', id }).catch(() => {});
         }
 
         function populateOptionModal() {
@@ -12235,6 +12237,23 @@ The {storeName} Team`
             // Track client IDs created in this batch (by index)
             const batchClientIds = {};
             
+            // Track all appointments from Timely file (by ClientID + Date + Time)
+            const timelyApptKeys = new Set();
+            
+            // Track date range from Timely file
+            let minDate = null;
+            let maxDate = null;
+            
+            // First pass: collect all appointment keys and date range from Timely file
+            for (const item of timelyImportData) {
+                if (item.date) {
+                    if (!minDate || item.date < minDate) minDate = item.date;
+                    if (!maxDate || item.date > maxDate) maxDate = item.date;
+                }
+            }
+            
+            console.log('Timely date range:', minDate, 'to', maxDate);
+            
             try {
                 // Process each item sequentially to get correct server IDs
                 for (let idx = 0; idx < timelyImportData.length; idx++) {
@@ -12309,6 +12328,14 @@ The {storeName} Team`
                         
                         data.appointments.push(newAppt);
                         apptsCreated++;
+                        
+                        // Track this appointment key
+                        timelyApptKeys.add(`${clientId}|${item.date}|${item.time}`);
+                    }
+                    
+                    // Track existing appointments that are in Timely (shouldn't be deleted)
+                    if (item.existingApptId && item.existingClientId && item.date && item.time) {
+                        timelyApptKeys.add(`${item.existingClientId}|${item.date}|${item.time}`);
                     }
                     
                     // Handle no-show updates
@@ -12316,10 +12343,54 @@ The {storeName} Team`
                         await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, updates: { Status: 'no-show' } });
                         const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
                         if (appt) appt.Status = 'no-show';
+                        
+                        // Track this appointment too
+                        if (item.existingClientId && item.date && item.time) {
+                            timelyApptKeys.add(`${item.existingClientId}|${item.date}|${item.time}`);
+                        }
                     }
                 }
                 
-                console.log('Import complete - Clients:', clientsCreated, 'Appointments:', apptsCreated);
+                // AUTO-DELETE: Find appointments in app that are within Timely date range but not in Timely file
+                let apptsDeleted = 0;
+                const deletedAppts = [];
+                
+                if (minDate && maxDate) {
+                    const apptsToDelete = data.appointments.filter(a => {
+                        const apptDate = getDateStr(a.Date);
+                        // Only consider appointments within the Timely file's date range
+                        if (apptDate < minDate || apptDate > maxDate) return false;
+                        
+                        // Check if this appointment exists in Timely
+                        const key = `${a.ClientID}|${apptDate}|${a.Time}`;
+                        return !timelyApptKeys.has(key);
+                    });
+                    
+                    console.log('Appointments to delete (not in Timely):', apptsToDelete.length);
+                    
+                    for (const appt of apptsToDelete) {
+                        // Save for undo
+                        deletedAppts.push({ ...appt });
+                        
+                        // Remove from local data
+                        const idx = data.appointments.findIndex(a => String(a.ID) === String(appt.ID));
+                        if (idx >= 0) {
+                            data.appointments.splice(idx, 1);
+                        }
+                        
+                        // Delete from server
+                        api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID }).catch(() => {});
+                        
+                        apptsDeleted++;
+                    }
+                    
+                    // Add to undo stack if any were deleted
+                    if (deletedAppts.length > 0) {
+                        addUndo({ type: 'bulk_delete_appointments', records: deletedAppts });
+                    }
+                }
+                
+                console.log('Import complete - Clients:', clientsCreated, 'Appointments:', apptsCreated, 'Deleted:', apptsDeleted);
                 
                 // Save to cache
                 saveCachedData();
@@ -12329,7 +12400,13 @@ The {storeName} Team`
                 renderClients();
                 renderAllAppointments();
                 renderDash();
-                toast('Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments', 'success');
+                
+                // Show toast with results
+                let msg = 'Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments';
+                if (apptsDeleted > 0) {
+                    msg += '. ' + apptsDeleted + ' removed (not in Timely)';
+                }
+                toast(msg, 'success', apptsDeleted > 0); // Show undo if any were deleted
                 
             } catch (err) {
                 console.error('Import error:', err);
