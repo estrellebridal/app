@@ -11890,6 +11890,7 @@ The {storeName} Team`
 
         // ========== TIMELY IMPORT ==========
         let timelyImportData = [];
+        let timelyAllAppointments = []; // Track ALL appointments in file (including skipped) for delete logic
         
         const SERVICE_TYPE_MAP = {
             'signature bridal consultation': 'consultation',
@@ -11985,6 +11986,7 @@ The {storeName} Team`
                     }
                     
                     timelyImportData = [];
+                    timelyAllAppointments = []; // Reset tracking array
                     
                     // Track clients we're adding in this batch (by email)
                     const batchClients = {}; // email -> index in timelyImportData
@@ -12131,18 +12133,39 @@ The {storeName} Team`
                                 action = 'mark_noshow';
                             } else {
                                 action = 'skip'; // Already exists, no changes needed
+                                console.log('SKIP: Appointment already exists for', firstName, lastName, 'on', apptDate, 'at', apptTime, '- Existing appt ID:', existingAppt.ID);
                             }
                         } else if (existingClient) {
                             action = 'add_appt';
+                            console.log('ADD_APPT: Client exists, will add appointment for', firstName, lastName, 'on', apptDate, 'at', apptTime);
                         } else if (batchClientIdx !== null) {
                             // Client is being created in this batch - just add appointment
                             action = 'add_appt_to_batch';
+                            console.log('ADD_APPT_TO_BATCH: Will add appointment for', firstName, lastName, 'on', apptDate, 'at', apptTime);
+                        } else {
+                            console.log('NEW_CLIENT: Will create new client and appointment for', firstName, lastName, 'on', apptDate, 'at', apptTime);
                         }
                         
                         // Don't add skipped items to the import list
                         if (action === 'skip') {
-                            console.log('Skipping (already exists):', firstName, lastName, apptDate, apptTime);
+                            // But DO track it for delete logic - this appointment IS in Timely
+                            if (existingClient && apptDate && apptTime) {
+                                timelyAllAppointments.push({
+                                    clientId: existingClient.ID,
+                                    date: apptDate,
+                                    time: apptTime
+                                });
+                            }
                             continue;
+                        }
+                        
+                        // Track ALL appointments from Timely file for delete logic
+                        if (existingClient && apptDate && apptTime) {
+                            timelyAllAppointments.push({
+                                clientId: existingClient.ID,
+                                date: apptDate,
+                                time: apptTime
+                            });
                         }
                         
                         // Track this client for future rows in the batch
@@ -12237,14 +12260,23 @@ The {storeName} Team`
             // Track client IDs created in this batch (by index)
             const batchClientIds = {};
             
-            // Track all appointments from Timely file (by ClientID + Date + Time)
+            // Build set of ALL appointments from Timely file (including skipped)
             const timelyApptKeys = new Set();
             
-            // Track date range from Timely file
+            // Track date range from Timely file - use timelyAllAppointments which includes skipped
             let minDate = null;
             let maxDate = null;
             
-            // First pass: collect all appointment keys and date range from Timely file
+            // First pass: collect all appointment keys and date range from ALL appointments in Timely file
+            for (const appt of timelyAllAppointments) {
+                if (appt.date) {
+                    if (!minDate || appt.date < minDate) minDate = appt.date;
+                    if (!maxDate || appt.date > maxDate) maxDate = appt.date;
+                    // Add to tracking set
+                    timelyApptKeys.add(`${appt.clientId}|${appt.date}|${appt.time}`);
+                }
+            }
+            // Also add from timelyImportData (for new clients that don't have clientId yet)
             for (const item of timelyImportData) {
                 if (item.date) {
                     if (!minDate || item.date < minDate) minDate = item.date;
@@ -12253,6 +12285,8 @@ The {storeName} Team`
             }
             
             console.log('Timely date range:', minDate, 'to', maxDate);
+            console.log('Total appointments in Timely file (including skipped):', timelyAllAppointments.length);
+            console.log('Appointments to import:', timelyImportData.length);
             
             try {
                 // Process each item sequentially to get correct server IDs
@@ -12329,13 +12363,10 @@ The {storeName} Team`
                         data.appointments.push(newAppt);
                         apptsCreated++;
                         
-                        // Track this appointment key
-                        timelyApptKeys.add(`${clientId}|${item.date}|${item.time}`);
-                    }
-                    
-                    // Track existing appointments that are in Timely (shouldn't be deleted)
-                    if (item.existingApptId && item.existingClientId && item.date && item.time) {
-                        timelyApptKeys.add(`${item.existingClientId}|${item.date}|${item.time}`);
+                        // Track this appointment key for new clients (they weren't in timelyAllAppointments)
+                        if (item.action === 'new_client' || item.action === 'add_appt_to_batch') {
+                            timelyApptKeys.add(`${clientId}|${item.date}|${item.time}`);
+                        }
                     }
                     
                     // Handle no-show updates
@@ -12343,11 +12374,6 @@ The {storeName} Team`
                         await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, updates: { Status: 'no-show' } });
                         const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
                         if (appt) appt.Status = 'no-show';
-                        
-                        // Track this appointment too
-                        if (item.existingClientId && item.date && item.time) {
-                            timelyApptKeys.add(`${item.existingClientId}|${item.date}|${item.time}`);
-                        }
                     }
                 }
                 
@@ -12415,6 +12441,7 @@ The {storeName} Team`
             
             // Reset modal for next import
             timelyImportData = [];
+            timelyAllAppointments = [];
             $('importStep1').style.display = 'block';
             $('importStep2').style.display = 'none';
             $('btnConfirmImport').style.display = 'none';
