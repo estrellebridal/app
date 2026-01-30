@@ -140,6 +140,12 @@
         .form-input { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; font-family: inherit; background: var(--bg); transition: all 0.2s; }
         .form-input:focus { outline: none; border-color: var(--accent); background: var(--card); }
         textarea.form-input { min-height: 80px; resize: vertical; }
+        .rich-text-editor { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; background: var(--bg); }
+        .rich-text-editor:focus { outline: none; border-color: var(--accent); background: var(--card); }
+        .rich-text-editor b, .rich-text-editor strong { font-weight: 700; }
+        .rich-text-editor i, .rich-text-editor em { font-style: italic; }
+        .rich-text-editor u { text-decoration: underline; }
+        .email-toolbar button { min-width: 32px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
 
@@ -1921,6 +1927,37 @@
     </div>
 
     <!-- Confirmation Email -->
+    <!-- Email Preview Modal -->
+    <div class="modal-overlay" id="modal-emailPreview">
+        <div class="modal wide" style="max-width:700px;max-height:90vh">
+            <div class="modal-header">
+                <h2 class="modal-title">📧 Email Preview</h2>
+                <button class="modal-close" onclick="closeModal('emailPreview')">×</button>
+            </div>
+            <div class="modal-body" style="padding:0;max-height:calc(90vh - 140px);overflow-y:auto">
+                <div style="background:#f5f5f5;padding:16px;border-bottom:1px solid #e0e0e0">
+                    <div style="font-size:11px;color:#666;margin-bottom:4px">TO</div>
+                    <div style="font-size:14px;font-weight:500" id="previewTo">recipient@email.com</div>
+                </div>
+                <div style="background:#f5f5f5;padding:16px;border-bottom:1px solid #e0e0e0">
+                    <div style="font-size:11px;color:#666;margin-bottom:4px">SUBJECT</div>
+                    <div style="font-size:16px;font-weight:600" id="previewSubject">Email Subject</div>
+                </div>
+                <div style="padding:24px;background:white;min-height:200px">
+                    <div id="previewBody" style="font-size:14px;line-height:1.7;white-space:pre-wrap;font-family:Arial,sans-serif"></div>
+                </div>
+                <div style="background:var(--cream);padding:12px;border-top:1px solid #e0e0e0">
+                    <div style="font-size:11px;color:var(--taupe)">👆 This is how the email will appear to the recipient.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEmailPreview()">← Edit</button>
+                <button class="btn btn-secondary" onclick="openPreviewInGmail()">📧 Open in Gmail</button>
+                <button class="btn btn-primary" onclick="confirmSendFromPreview()">✓ Send Email</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="modal-confirmEmail">
         <div class="modal wide">
             <div class="modal-header">
@@ -1954,11 +1991,22 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email Body</label>
-                    <textarea class="form-input" id="confirmBody" style="min-height:350px;font-size:12px;line-height:1.5"></textarea>
+                    <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('bold')" title="Bold"><b>B</b></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('italic')" title="Italic"><i>I</i></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('underline')" title="Underline"><u>U</u></button>
+                        <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('heading')" title="Heading">H</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('bullet')" title="Bullet List">•</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmail('link')" title="Add Link">🔗</button>
+                    </div>
+                    <div id="confirmBodyEditor" contenteditable="true" class="form-input rich-text-editor" style="min-height:350px;font-size:12px;line-height:1.6;overflow-y:auto;white-space:pre-wrap"></div>
+                    <textarea class="form-input" id="confirmBody" style="display:none"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('confirmEmail')">Cancel</button>
+                <button class="btn btn-secondary" onclick="previewConfirmationEmail()" title="Preview before sending">👁 Preview</button>
                 <button class="btn btn-primary" onclick="sendConfirmationEmail()">Send Email</button>
             </div>
         </div>
@@ -1985,12 +2033,23 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">Email Body</label>
-                    <textarea class="form-input" id="annEmailBody" style="min-height:300px;font-size:12px;line-height:1.5"></textarea>
+                    <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bold', 'annEmailBodyEditor')" title="Bold"><b>B</b></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('italic', 'annEmailBodyEditor')" title="Italic"><i>I</i></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('underline', 'annEmailBodyEditor')" title="Underline"><u>U</u></button>
+                        <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('heading', 'annEmailBodyEditor')" title="Heading">H</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bullet', 'annEmailBodyEditor')" title="Bullet List">•</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('link', 'annEmailBodyEditor')" title="Add Link">🔗</button>
+                    </div>
+                    <div id="annEmailBodyEditor" contenteditable="true" class="form-input rich-text-editor" style="min-height:300px;font-size:12px;line-height:1.6;overflow-y:auto;white-space:pre-wrap"></div>
+                    <textarea class="form-input" id="annEmailBody" style="display:none"></textarea>
                 </div>
                 <p style="font-size:11px;color:var(--text-secondary);margin-top:8px">💡 Edit the anniversary template in Settings → Email Templates</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('sendAnnEmail')">Cancel</button>
+                <button class="btn btn-secondary" onclick="previewAnniversaryEmail()">👁 Preview</button>
                 <button class="btn btn-primary" onclick="sendAnniversaryEmail()">Send Email</button>
             </div>
         </div>
@@ -2140,20 +2199,28 @@ The {StoreName} Team
                 
                 <div class="form-group">
                     <label class="form-label">Message</label>
-                    <textarea class="form-input" id="clientEmailBody" style="min-height:200px;font-family:inherit" placeholder="Write your message..."></textarea>
+                    <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bold', 'clientEmailBodyEditor')" title="Bold"><b>B</b></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('italic', 'clientEmailBodyEditor')" title="Italic"><i>I</i></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('underline', 'clientEmailBodyEditor')" title="Underline"><u>U</u></button>
+                        <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('heading', 'clientEmailBodyEditor')" title="Heading">H</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bullet', 'clientEmailBodyEditor')" title="Bullet List">•</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('link', 'clientEmailBodyEditor')" title="Add Link">🔗</button>
+                    </div>
+                    <div id="clientEmailBodyEditor" contenteditable="true" class="form-input rich-text-editor" style="min-height:200px;font-size:13px;line-height:1.6;overflow-y:auto;white-space:pre-wrap" placeholder="Write your message..."></div>
+                    <textarea class="form-input" id="clientEmailBody" style="display:none"></textarea>
                 </div>
                 
                 <div style="background:var(--cream);padding:12px;border-radius:8px">
                     <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:4px">📤 HOW IT WORKS</div>
-                    <div style="font-size:11px;color:var(--text-secondary)">Clicking "Open in Email App" will open your default email app (Gmail, Outlook, etc.) with this message pre-filled. You can review and edit before sending.</div>
+                    <div style="font-size:11px;color:var(--text-secondary)">Preview to see exactly how your email will look, then send.</div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('clientEmail')">Cancel</button>
-                <button class="btn btn-secondary" onclick="openInGmail('clientEmailTo', 'clientEmailSubject', 'clientEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
-                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
-                </button>
-                <button class="btn btn-primary" onclick="openInEmailApp()">📤 Open in Email App</button>
+                <button class="btn btn-secondary" onclick="previewClientEmail()">👁 Preview</button>
+                <button class="btn btn-primary" onclick="sendClientEmail()">Send Email</button>
             </div>
         </div>
     </div>
@@ -2181,7 +2248,20 @@ The {StoreName} Team
                 </div>
                 <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="orderEmailTo" readonly style="background:var(--blush)"></div>
                 <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="orderEmailSubject"></div>
-                <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="orderEmailBody" style="min-height:200px;font-size:12px;line-height:1.6"></textarea></div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bold', 'orderEmailBodyEditor')" title="Bold"><b>B</b></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('italic', 'orderEmailBodyEditor')" title="Italic"><i>I</i></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('underline', 'orderEmailBodyEditor')" title="Underline"><u>U</u></button>
+                        <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('heading', 'orderEmailBodyEditor')" title="Heading">H</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bullet', 'orderEmailBodyEditor')" title="Bullet List">•</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('link', 'orderEmailBodyEditor')" title="Add Link">🔗</button>
+                    </div>
+                    <div id="orderEmailBodyEditor" contenteditable="true" class="form-input rich-text-editor" style="min-height:200px;font-size:12px;line-height:1.6;overflow-y:auto;white-space:pre-wrap"></div>
+                    <textarea class="form-input" id="orderEmailBody" style="display:none"></textarea>
+                </div>
                 <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
                     <input type="text" class="form-input" id="newTemplateName" placeholder="Template name..." style="flex:1;font-size:11px">
                     <button class="btn btn-sm btn-secondary" onclick="saveEmailTemplate()">💾 Save Template</button>
@@ -2189,34 +2269,43 @@ The {StoreName} Team
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('orderEmail')">Cancel</button>
-                <button class="btn btn-secondary" onclick="openInGmail('orderEmailTo', 'orderEmailSubject', 'orderEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
-                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
-                </button>
-                <button class="btn btn-primary" onclick="sendOrderEmail()">📧 Send Email</button>
+                <button class="btn btn-secondary" onclick="previewOrderEmail()">👁 Preview</button>
+                <button class="btn btn-primary" onclick="sendOrderEmail()">Send Email</button>
             </div>
         </div>
     </div>
     
-    <!-- Anniversary Email Modal -->
+    <!-- Anniversary Email Modal (from Dashboard) -->
     <div class="modal-overlay" id="modal-anniversaryEmail">
         <div class="modal">
             <div class="modal-header"><h2 class="modal-title">💕 Send Anniversary Email</h2><button class="modal-close" onclick="closeModal('anniversaryEmail')">×</button></div>
             <div class="modal-body">
-                <input type="hidden" id="annEmailClientId">
+                <input type="hidden" id="annEmail2ClientId">
                 <div style="background:var(--blush);padding:12px;border-radius:5px;margin-bottom:12px">
-                    <div style="font-weight:600" id="annEmailBrideName">Bride Name</div>
-                    <div style="font-size:11px;color:var(--taupe)" id="annEmailDetails">Celebrating 1st Anniversary</div>
+                    <div style="font-weight:600" id="annEmail2BrideName">Bride Name</div>
+                    <div style="font-size:11px;color:var(--taupe)" id="annEmail2Details">Celebrating 1st Anniversary</div>
                 </div>
-                <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="annEmailTo" readonly style="background:var(--cream)"></div>
-                <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="annEmailSubject"></div>
-                <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="annEmailBody" style="min-height:200px;font-size:12px;line-height:1.6"></textarea></div>
+                <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="annEmail2To" readonly style="background:var(--cream)"></div>
+                <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="annEmail2Subject"></div>
+                <div class="form-group">
+                    <label class="form-label">Message</label>
+                    <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bold', 'annEmail2BodyEditor')" title="Bold"><b>B</b></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('italic', 'annEmail2BodyEditor')" title="Italic"><i>I</i></button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('underline', 'annEmail2BodyEditor')" title="Underline"><u>U</u></button>
+                        <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('heading', 'annEmail2BodyEditor')" title="Heading">H</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bullet', 'annEmail2BodyEditor')" title="Bullet List">•</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('link', 'annEmail2BodyEditor')" title="Add Link">🔗</button>
+                    </div>
+                    <div id="annEmail2BodyEditor" contenteditable="true" class="form-input rich-text-editor" style="min-height:200px;font-size:12px;line-height:1.6;overflow-y:auto;white-space:pre-wrap"></div>
+                    <textarea class="form-input" id="annEmail2Body" style="display:none"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('anniversaryEmail')">Cancel</button>
-                <button class="btn btn-secondary" onclick="openInGmail('annEmailTo', 'annEmailSubject', 'annEmailBody')" style="background:#fff;border-color:#ea4335;color:#ea4335">
-                    <img src="https://www.gstatic.com/images/branding/product/1x/gmail_2020q4_16dp.png" style="height:14px;vertical-align:middle;margin-right:4px">Gmail
-                </button>
-                <button class="btn btn-primary" onclick="sendAnniversaryEmail()">📧 Send Email</button>
+                <button class="btn btn-secondary" onclick="previewAnniversaryEmail2()">👁 Preview</button>
+                <button class="btn btn-primary" onclick="sendAnniversaryEmail2()">Send Email</button>
             </div>
         </div>
     </div>
@@ -4358,9 +4447,16 @@ The {StoreName} Team
             $('annEmailClientId').value = clientId;
             
             openModal('sendAnnEmail');
+            
+            // Init rich text editor
+            setTimeout(() => {
+                initRichTextEditor('annEmailBodyEditor', 'annEmailBody');
+            }, 50);
         }
         
         async function sendAnniversaryEmail() {
+            syncRichTextEditor('annEmailBodyEditor', 'annEmailBody');
+            
             const clientId = $('annEmailClientId').value;
             const to = $('annEmailTo').value;
             const subject = $('annEmailSubject').value;
@@ -5241,15 +5337,31 @@ The Estrelle Bridal Team`;
 
         function getConfirmTemplate() {
             const saved = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
-            console.log('Loading template from localStorage:', saved ? 'Found (' + saved.length + ' chars)' : 'Not found, using default');
-            return saved || DEFAULT_CONFIRM_TEMPLATE;
+            if (!saved) {
+                console.log('No saved template, using default');
+                return { text: DEFAULT_CONFIRM_TEMPLATE, html: null };
+            }
+            
+            try {
+                const data = JSON.parse(saved);
+                if (data.version === 2 && data.html) {
+                    console.log('Loading HTML template');
+                    return { text: null, html: data.html };
+                }
+            } catch (e) {
+                // Old format - plain text
+                console.log('Loading legacy plain text template');
+                return { text: saved, html: null };
+            }
+            
+            return { text: DEFAULT_CONFIRM_TEMPLATE, html: null };
         }
 
         function saveConfirmTemplate() {
-            // Get the current text and reverse the replacements to create template
-            let template = $('confirmBody').value;
+            // Get the HTML content from the rich text editor (preserves formatting)
+            let template = $('confirmBodyEditor').innerHTML;
             
-            console.log('Saving template, length:', template.length);
+            console.log('Saving template with HTML, length:', template.length);
             
             // Get the values that were substituted
             const firstName = $('confirmFirstName').value;
@@ -5258,7 +5370,7 @@ The Estrelle Bridal Team`;
             const apptTime = $('confirmApptTime').value;
             const apptType = $('confirmApptType').value;
             
-            // Replace actual values back to placeholders
+            // Replace actual values back to placeholders (in HTML)
             if (firstName) {
                 template = template.split(firstName).join('{{firstName}}');
             }
@@ -5275,9 +5387,14 @@ The Estrelle Bridal Team`;
                 template = template.split(apptType).join('{{appointmentType}}');
             }
             
-            localStorage.setItem(CONFIRM_TEMPLATE_KEY, template);
-            console.log('Template saved to localStorage, key:', CONFIRM_TEMPLATE_KEY);
-            console.log('Saved template preview:', template.substring(0, 100));
+            // Save with a flag indicating it's HTML
+            const templateData = {
+                html: template,
+                version: 2
+            };
+            
+            localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
+            console.log('Template saved to localStorage with HTML formatting');
             toast('Template saved!', 'success');
         }
 
@@ -5401,18 +5518,37 @@ The Estrelle Bridal Team`;
             }
             const apptTime = fmtTime(appt.Time);
             
-            // Fill in template
-            let body = getConfirmTemplate();
-            body = body.replace(/\{\{firstName\}\}/g, client.FirstName || '');
-            body = body.replace(/\{\{lastName\}\}/g, client.LastName || '');
-            body = body.replace(/\{\{appointmentDate\}\}/g, apptDate);
-            body = body.replace(/\{\{appointmentTime\}\}/g, apptTime);
-            body = body.replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+            // Fill in template - handle both HTML and plain text
+            const template = getConfirmTemplate();
+            let bodyHtml = '';
+            let bodyText = '';
+            
+            if (template.html) {
+                // HTML template - replace placeholders in HTML
+                bodyHtml = template.html
+                    .replace(/\{\{firstName\}\}/g, client.FirstName || '')
+                    .replace(/\{\{lastName\}\}/g, client.LastName || '')
+                    .replace(/\{\{appointmentDate\}\}/g, apptDate)
+                    .replace(/\{\{appointmentTime\}\}/g, apptTime)
+                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+                // Extract plain text for hidden field
+                const temp = document.createElement('div');
+                temp.innerHTML = bodyHtml;
+                bodyText = temp.innerText;
+            } else {
+                // Plain text template
+                bodyText = template.text
+                    .replace(/\{\{firstName\}\}/g, client.FirstName || '')
+                    .replace(/\{\{lastName\}\}/g, client.LastName || '')
+                    .replace(/\{\{appointmentDate\}\}/g, apptDate)
+                    .replace(/\{\{appointmentTime\}\}/g, apptTime)
+                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+            }
             
             $('confirmApptId').value = apptId;
             $('confirmTo').value = client.Email;
             $('confirmSubject').value = `${getStoreInfo().name || 'Estrelle Bridal'} - Appointment Confirmation for ${client.FirstName}`;
-            $('confirmBody').value = body;
+            $('confirmBody').value = bodyText;
             
             // Store values for reverse replacement when saving template
             $('confirmFirstName').value = client.FirstName || '';
@@ -5426,9 +5562,331 @@ The Estrelle Bridal Team`;
             if (notesDiv) notesDiv.style.display = 'none';
             
             openModal('confirmEmail');
+            
+            // Sync content to rich text editor
+            setTimeout(() => {
+                const editor = $('confirmBodyEditor');
+                if (editor) {
+                    if (bodyHtml) {
+                        // Use HTML if available (preserves formatting)
+                        editor.innerHTML = bodyHtml;
+                    } else {
+                        // Fall back to plain text
+                        editor.innerText = bodyText;
+                    }
+                }
+            }, 50);
+        }
+        
+        // Rich text formatting functions - generic for any editor
+        let currentEditorId = 'confirmBodyEditor';
+        let currentTextareaId = 'confirmBody';
+        
+        function setCurrentEditor(editorId, textareaId) {
+            currentEditorId = editorId;
+            currentTextareaId = textareaId;
+        }
+        
+        function formatEmailText(format, editorId) {
+            const editor = $(editorId || currentEditorId);
+            if (!editor) return;
+            
+            // Focus editor first
+            editor.focus();
+            
+            const selection = window.getSelection();
+            
+            if (format === 'bold') {
+                document.execCommand('bold', false, null);
+            } else if (format === 'italic') {
+                document.execCommand('italic', false, null);
+            } else if (format === 'underline') {
+                document.execCommand('underline', false, null);
+            } else if (format === 'heading') {
+                const selectedText = selection.toString();
+                if (selectedText) {
+                    document.execCommand('insertHTML', false, `<b style="font-size:16px">${selectedText}</b>`);
+                }
+            } else if (format === 'bullet') {
+                document.execCommand('insertUnorderedList', false, null);
+            } else if (format === 'link') {
+                const url = prompt('Enter URL:');
+                if (url) {
+                    document.execCommand('createLink', false, url);
+                }
+            }
+        }
+        
+        function syncRichTextEditor(editorId, textareaId) {
+            const editor = $(editorId);
+            const textarea = $(textareaId);
+            if (editor && textarea) {
+                textarea.value = editor.innerText;
+            }
+        }
+        
+        function initRichTextEditor(editorId, textareaId) {
+            const editor = $(editorId);
+            const textarea = $(textareaId);
+            if (editor && textarea) {
+                editor.innerText = textarea.value;
+            }
+        }
+        
+        // ========== EMAIL PREVIEW ==========
+        let previewEmailData = null;
+        let previewSourceModal = null;
+        let previewEditorId = null;
+        let previewTextareaId = null;
+        let previewOnSend = null;
+        
+        function showEmailPreview(toId, subjectId, bodyId, editorId, sourceModal, onSend) {
+            // Sync editor first
+            if (editorId && $(editorId)) {
+                syncRichTextEditor(editorId, bodyId);
+            }
+            
+            const to = $(toId)?.value || $(toId)?.textContent || '';
+            const subject = $(subjectId)?.value || '';
+            const body = $(bodyId)?.value || '';
+            const formattedBody = $(editorId)?.innerHTML || '';
+            
+            console.log('Preview - body length:', body.length, 'formatted length:', formattedBody.length);
+            
+            if (!to) { toast('No email address', 'error'); return; }
+            
+            // Store for later
+            previewEmailData = { to, subject, body, formattedBody };
+            previewSourceModal = sourceModal;
+            previewEditorId = editorId;
+            previewTextareaId = bodyId;
+            previewOnSend = onSend;
+            
+            // Populate preview
+            $('previewTo').textContent = to;
+            $('previewSubject').textContent = subject;
+            
+            // Show formatted HTML if available, otherwise plain text
+            if (formattedBody && formattedBody.trim()) {
+                $('previewBody').innerHTML = formattedBody;
+            } else {
+                $('previewBody').innerText = body;
+            }
+            
+            // Hide source modal, show preview
+            if (sourceModal) {
+                $('modal-' + sourceModal)?.classList.remove('active');
+            }
+            openModal('emailPreview');
+            
+            // Scroll modal body to top
+            setTimeout(() => {
+                const modalBody = document.querySelector('#modal-emailPreview .modal-body');
+                if (modalBody) modalBody.scrollTop = 0;
+            }, 50);
+        }
+        
+        function closeEmailPreview() {
+            closeModal('emailPreview');
+            // Re-open source modal
+            if (previewSourceModal) {
+                openModal(previewSourceModal);
+            }
+        }
+        
+        function openPreviewInGmail() {
+            if (!previewEmailData) return;
+            
+            const { to, subject, body } = previewEmailData;
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(gmailUrl, '_blank');
+            
+            closeModal('emailPreview');
+            toast('Email opened in Gmail (plain text)', 'success');
+            
+            // Call onSend callback if provided
+            if (previewOnSend) previewOnSend();
+        }
+        
+        function confirmSendFromPreview() {
+            if (!previewEmailData) return;
+            
+            const { to, subject, body } = previewEmailData;
+            
+            closeModal('emailPreview');
+            
+            // Send via API
+            sendEmailViaPreferredMethod(to, subject, body, () => {
+                if (previewOnSend) previewOnSend();
+            });
+        }
+        
+        // Generic function to open any email in Gmail
+        function openEmailInGmail(toId, subjectId, bodyId, editorId, onSuccess) {
+            // Sync editor if exists
+            if (editorId && $(editorId)) {
+                syncRichTextEditor(editorId, bodyId);
+            }
+            
+            const to = $(toId)?.value || $(toId)?.textContent || '';
+            const subject = $(subjectId)?.value || '';
+            const body = $(bodyId)?.value || '';
+            
+            if (!to) { toast('No email address', 'error'); return; }
+            
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(gmailUrl, '_blank');
+            
+            toast('Email opened in Gmail', 'success');
+            if (onSuccess) onSuccess();
+        }
+        
+        // Generate email toolbar HTML
+        function getEmailToolbarHTML(editorId) {
+            return `
+                <div class="email-toolbar" style="display:flex;gap:4px;margin-bottom:8px;padding:8px;background:#f5f5f5;border-radius:5px;flex-wrap:wrap">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bold', '${editorId}')" title="Bold"><b>B</b></button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('italic', '${editorId}')" title="Italic"><i>I</i></button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('underline', '${editorId}')" title="Underline"><u>U</u></button>
+                    <span style="border-left:1px solid #ccc;margin:0 4px"></span>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('heading', '${editorId}')" title="Heading">H</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('bullet', '${editorId}')" title="Bullet List">•</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="formatEmailText('link', '${editorId}')" title="Add Link">🔗</button>
+                </div>
+            `;
+        }
+        
+        // Legacy support for confirmation email
+        function formatEmail(format) {
+            formatEmailText(format, 'confirmBodyEditor');
+        }
+        
+        function syncEmailEditor() {
+            syncRichTextEditor('confirmBodyEditor', 'confirmBody');
+        }
+        
+        function previewConfirmationEmail() {
+            const apptId = $('confirmApptId').value;
+            
+            showEmailPreview(
+                'confirmTo', 
+                'confirmSubject', 
+                'confirmBody', 
+                'confirmBodyEditor', 
+                'confirmEmail',
+                () => {
+                    // Mark appointment as confirmation sent
+                    updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
+                    const appt = data.appointments.find(a => a.ID == apptId);
+                    if (appt) appt.ConfirmationSent = new Date().toISOString();
+                    renderDash();
+                    renderWeek();
+                    renderAllAppointments();
+                }
+            );
+        }
+        
+        function openConfirmInGmail() {
+            syncEmailEditor();
+            
+            const apptId = $('confirmApptId').value;
+            const to = $('confirmTo').value;
+            const subject = $('confirmSubject').value;
+            const body = $('confirmBody').value;
+            
+            if (!to) { toast('No email address', 'error'); return; }
+            
+            // Open Gmail with pre-filled email
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(gmailUrl, '_blank');
+            
+            // Mark appointment as confirmation sent
+            updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
+            
+            // Update local data
+            const appt = data.appointments.find(a => a.ID == apptId);
+            if (appt) appt.ConfirmationSent = new Date().toISOString();
+            
+            closeModal('confirmEmail');
+            toast('Email opened in Gmail', 'success');
+            
+            // Re-render views
+            renderDash();
+            renderWeek();
+            renderAllAppointments();
+        }
+        
+        // Preview functions for all email modals
+        function previewAnniversaryEmail() {
+            const clientId = $('annEmailClientId').value;
+            showEmailPreview(
+                'annEmailTo', 
+                'annEmailSubject', 
+                'annEmailBody', 
+                'annEmailBodyEditor', 
+                'sendAnnEmail',
+                () => {
+                    saveAnniversaryEmail(clientId, 'sent', new Date().toISOString().split('T')[0]);
+                    renderAnniversariesView();
+                }
+            );
+        }
+        
+        function previewClientEmail() {
+            showEmailPreview(
+                'clientEmailTo', 
+                'clientEmailSubject', 
+                'clientEmailBody', 
+                'clientEmailBodyEditor', 
+                'clientEmail',
+                () => closeModal('clientEmail')
+            );
+        }
+        
+        function sendClientEmail() {
+            syncRichTextEditor('clientEmailBodyEditor', 'clientEmailBody');
+            const to = $('clientEmailTo')?.textContent || '';
+            const subject = $('clientEmailSubject')?.value || '';
+            const body = $('clientEmailBody')?.value || '';
+            
+            if (!to) { toast('No email address', 'error'); return; }
+            
+            closeModal('clientEmail');
+            sendEmailViaPreferredMethod(to, subject, body);
+        }
+        
+        function previewOrderEmail() {
+            showEmailPreview(
+                'orderEmailTo', 
+                'orderEmailSubject', 
+                'orderEmailBody', 
+                'orderEmailBodyEditor', 
+                'orderEmail',
+                null
+            );
+        }
+        
+        function previewAnniversaryEmail2() {
+            const clientId = $('annEmail2ClientId').value;
+            showEmailPreview(
+                'annEmail2To', 
+                'annEmail2Subject', 
+                'annEmail2Body', 
+                'annEmail2BodyEditor', 
+                'anniversaryEmail',
+                () => {
+                    const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
+                    sentEmails[`${clientId}-${new Date().getFullYear()}`] = today();
+                    localStorage.setItem('estrelle_anniversary_sent', JSON.stringify(sentEmails));
+                    renderAnniversaries();
+                }
+            );
         }
 
         async function sendConfirmationEmail() {
+            // Sync editor content first
+            syncEmailEditor();
+            
             const apptId = $('confirmApptId').value;
             const to = $('confirmTo').value;
             const subject = $('confirmSubject').value;
@@ -7673,6 +8131,11 @@ The Estrelle Bridal Team`;
             $('orderEmailTemplate').value = 'halfway';
             loadOrderEmailTemplate();
             openModal('orderEmail');
+            
+            // Init rich text editor after template loads
+            setTimeout(() => {
+                initRichTextEditor('orderEmailBodyEditor', 'orderEmailBody');
+            }, 100);
         }
         
         function loadOrderEmailTemplate() {
@@ -7766,6 +8229,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('orderEmailSubject').value = t.subject;
             $('orderEmailBody').value = t.body;
             
+            // Sync to rich text editor
+            setTimeout(() => initRichTextEditor('orderEmailBodyEditor', 'orderEmailBody'), 50);
+            
             // Load saved templates list
             loadSavedTemplatesList();
         }
@@ -7794,6 +8260,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 
                 $('orderEmailSubject').value = subject;
                 $('orderEmailBody').value = body;
+                
+                // Sync to rich text editor
+                setTimeout(() => initRichTextEditor('orderEmailBodyEditor', 'orderEmailBody'), 50);
             }
         }
         
@@ -8130,6 +8599,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         async function sendOrderEmail() {
+            syncRichTextEditor('orderEmailBodyEditor', 'orderEmailBody');
+            
             const email = $('orderEmailTo').value;
             if (!email) {
                 toast('No email address', 'error');
@@ -10827,21 +11298,28 @@ The {storeName} Team`
                 .replace(/\{\{years\}\}/g, annInfo.years)
                 .replace(/\{\{weddingDate\}\}/g, fmtDate(c.WeddingDate));
             
-            $('annEmailClientId').value = clientId;
-            $('annEmailBrideName').textContent = `${c.FirstName} ${c.LastName}`;
-            $('annEmailDetails').textContent = `Celebrating ${annInfo.ordinal} Anniversary • Wedding: ${fmtDate(c.WeddingDate)}`;
-            $('annEmailTo').value = c.Email || '';
-            $('annEmailSubject').value = subject;
-            $('annEmailBody').value = body;
+            $('annEmail2ClientId').value = clientId;
+            $('annEmail2BrideName').textContent = `${c.FirstName} ${c.LastName}`;
+            $('annEmail2Details').textContent = `Celebrating ${annInfo.ordinal} Anniversary • Wedding: ${fmtDate(c.WeddingDate)}`;
+            $('annEmail2To').value = c.Email || '';
+            $('annEmail2Subject').value = subject;
+            $('annEmail2Body').value = body;
             
             openModal('anniversaryEmail');
+            
+            // Init rich text editor
+            setTimeout(() => {
+                initRichTextEditor('annEmail2BodyEditor', 'annEmail2Body');
+            }, 50);
         }
         
-        async function sendAnniversaryEmail() {
-            const clientId = $('annEmailClientId').value;
-            const to = $('annEmailTo').value;
-            const subject = $('annEmailSubject').value;
-            const body = $('annEmailBody').value;
+        async function sendAnniversaryEmail2() {
+            syncRichTextEditor('annEmail2BodyEditor', 'annEmail2Body');
+            
+            const clientId = $('annEmail2ClientId').value;
+            const to = $('annEmail2To').value;
+            const subject = $('annEmail2Subject').value;
+            const body = $('annEmail2Body').value;
             
             if (!to) {
                 toast('No email address', 'error');
