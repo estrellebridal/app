@@ -350,6 +350,36 @@
             .card-body { padding: 12px; }
             .card-header { padding: 14px; }
             
+            /* Pull to refresh */
+            .pull-indicator { 
+                position: fixed; 
+                top: 0; 
+                left: 50%; 
+                transform: translateX(-50%) translateY(-60px); 
+                background: var(--accent); 
+                color: white; 
+                padding: 10px 20px; 
+                border-radius: 0 0 20px 20px; 
+                font-size: 13px; 
+                font-weight: 500;
+                z-index: 9999; 
+                transition: transform 0.2s ease;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .pull-indicator.visible { transform: translateX(-50%) translateY(0); }
+            .pull-indicator.refreshing { background: var(--sage); }
+            .pull-spinner { 
+                width: 16px; 
+                height: 16px; 
+                border: 2px solid rgba(255,255,255,0.3); 
+                border-top-color: white; 
+                border-radius: 50%; 
+                animation: spin 0.8s linear infinite; 
+            }
+            @keyframes spin { to { transform: rotate(360deg); } }
+            
             .modal { 
                 width: 95%; 
                 max-width: none; 
@@ -821,6 +851,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+    <!-- Pull to refresh indicator -->
+    <div id="pullIndicator" class="pull-indicator">
+        <span id="pullText">↓ Pull to refresh</span>
+    </div>
+    
     <div class="app">
         <aside class="sidebar">
             <div class="logo" onclick="showPage('dashboard')">
@@ -13416,6 +13451,71 @@ The {storeName} Team`
                     handlePhotoSelect({ target: { files: e.dataTransfer.files } });
                 });
             }
+            
+            // Pull to refresh for mobile
+            let touchStartY = 0;
+            let touchCurrentY = 0;
+            let isPulling = false;
+            let isRefreshing = false;
+            const pullThreshold = 80;
+            const indicator = $('pullIndicator');
+            const pullText = $('pullText');
+            
+            document.addEventListener('touchstart', (e) => {
+                if (window.scrollY === 0 && !isRefreshing) {
+                    touchStartY = e.touches[0].clientY;
+                    isPulling = true;
+                }
+            }, { passive: true });
+            
+            document.addEventListener('touchmove', (e) => {
+                if (!isPulling || isRefreshing) return;
+                
+                touchCurrentY = e.touches[0].clientY;
+                const pullDistance = touchCurrentY - touchStartY;
+                
+                if (pullDistance > 0 && window.scrollY === 0) {
+                    if (pullDistance > 20) {
+                        indicator.classList.add('visible');
+                        if (pullDistance > pullThreshold) {
+                            pullText.textContent = '↑ Release to refresh';
+                        } else {
+                            pullText.textContent = '↓ Pull to refresh';
+                        }
+                    }
+                }
+            }, { passive: true });
+            
+            document.addEventListener('touchend', async () => {
+                if (!isPulling || isRefreshing) return;
+                
+                const pullDistance = touchCurrentY - touchStartY;
+                
+                if (pullDistance > pullThreshold && window.scrollY === 0) {
+                    // Trigger refresh
+                    isRefreshing = true;
+                    pullText.innerHTML = '<div class="pull-spinner"></div> Syncing...';
+                    indicator.classList.add('refreshing');
+                    
+                    try {
+                        await syncData();
+                    } catch (e) {
+                        console.error('Refresh error:', e);
+                    }
+                    
+                    setTimeout(() => {
+                        indicator.classList.remove('visible', 'refreshing');
+                        pullText.textContent = '↓ Pull to refresh';
+                        isRefreshing = false;
+                    }, 500);
+                } else {
+                    indicator.classList.remove('visible');
+                }
+                
+                isPulling = false;
+                touchStartY = 0;
+                touchCurrentY = 0;
+            }, { passive: true });
         });
         
         function handlePhotoSelect(event) {
