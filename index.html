@@ -198,11 +198,12 @@
 
         /* Option cards */
         .option-card { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--sage); }
-        .option-card.favorite { border-left-color: var(--rose); background: rgba(212, 181, 176, 0.08); }
+        .option-card.favorite { border-left-color: #e74c3c; background: rgba(231, 76, 60, 0.05); }
         .option-designer { font-weight: 600; font-size: 14px; }
         .option-style { font-size: 13px; color: var(--text-secondary); }
         .option-notes { font-size: 12px; margin-top: 6px; color: var(--text-secondary); }
         .option-actions { display: flex; gap: 6px; margin-top: 10px; }
+        .action-btn.liked { background: rgba(231, 76, 60, 0.1); color: #e74c3c; }
 
         /* Order items */
         .order-item { display: flex; gap: 12px; padding: 12px; background: var(--bg); border-radius: 10px; margin-bottom: 8px; align-items: center; }
@@ -1580,7 +1581,7 @@
                             <div class="card-header"><h2 class="card-title">Quick Notes</h2><span id="autoSaveStatus" style="font-size:10px;color:var(--sage);display:none">✓ Saved</span></div>
                             <div class="card-body">
                                 <div class="form-group"><label class="form-label">Style Preferences</label><textarea class="form-input" id="cStyle" style="min-height:50px" oninput="scheduleAutoSave()"></textarea></div>
-                                <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="cBudget" placeholder="e.g. $5,000" oninput="formatBudget(this); scheduleAutoSave()"></div>
+                                <div class="form-group"><label class="form-label">Budget</label><input type="text" class="form-input" id="cBudget" placeholder="e.g. $5,000 or $5,000 - $8,000" onblur="formatBudget(this); scheduleAutoSave()" onchange="scheduleAutoSave()"></div>
                                 <div class="form-group"><label class="form-label">General Notes</label><textarea class="form-input" id="cNotes" style="min-height:50px" oninput="scheduleAutoSave()"></textarea></div>
                             </div>
                         </div>
@@ -1589,7 +1590,7 @@
                             <div class="card-body" id="cAppts"></div>
                         </div>
                         <div class="card">
-                            <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
+                            <div class="card-header"><h2 class="card-title">Dresses Tried</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
                             <div class="card-body" id="cOptions"></div>
                         </div>
                     </div>
@@ -1732,7 +1733,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label class="form-label">Budget Update</label>
-                            <input type="text" class="form-input" id="aLogBudget" placeholder="e.g. $6,000" oninput="formatBudget(this)">
+                            <input type="text" class="form-input" id="aLogBudget" placeholder="e.g. $6,000 or $5,000 - $8,000" onblur="formatBudget(this)">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Next Steps</label>
@@ -1899,7 +1900,7 @@
     <!-- Add Option -->
     <div class="modal-overlay" id="modal-addOption">
         <div class="modal">
-            <div class="modal-header"><h2 class="modal-title">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
+            <div class="modal-header"><h2 class="modal-title">Add Dress</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()">
@@ -1920,7 +1921,7 @@
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom" placeholder="e.g. Add sleeves, lower back"></textarea></div>
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom"></textarea></div>
                 <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="oOptionNotes"></textarea></div>
-                <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> Mark as top choice</label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> ❤️ Bride liked this one</label>
             </div>
             <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addOption')">Cancel</button><button class="btn btn-primary" onclick="saveOption()">Add</button></div>
         </div>
@@ -4676,19 +4677,20 @@ The {StoreName} Team
         function formatBudget(input) {
             let val = input.value;
             
-            // Check if it's a range (contains - or "to")
-            if (val.includes('-') || val.toLowerCase().includes('to')) {
-                // Split by - or "to"
-                const parts = val.split(/[-]|to/i).map(p => p.trim());
-                const formatted = parts.map(p => {
-                    const num = p.replace(/[^0-9]/g, '');
-                    return num ? '$' + parseInt(num).toLocaleString() : '';
-                }).filter(p => p).join(' - ');
-                input.value = formatted;
+            // Check if it's a range (contains - or "to" between numbers)
+            const rangeMatch = val.match(/(\d[\d,]*)\s*(?:-|to)\s*(\d[\d,]*)/i);
+            if (rangeMatch) {
+                // Format both parts of the range
+                const low = parseInt(rangeMatch[1].replace(/,/g, ''));
+                const high = parseInt(rangeMatch[2].replace(/,/g, ''));
+                input.value = '$' + low.toLocaleString() + ' - $' + high.toLocaleString();
             } else {
-                // Single value
+                // Single value - extract numbers
                 const num = val.replace(/[^0-9]/g, '');
-                input.value = num ? '$' + parseInt(num).toLocaleString() : '';
+                if (num) {
+                    input.value = '$' + parseInt(num).toLocaleString();
+                }
+                // If no numbers, leave as-is (allows typing)
             }
         }
 
@@ -5344,9 +5346,14 @@ The Estrelle Bridal Team`;
             
             try {
                 const data = JSON.parse(saved);
-                if (data.version === 2 && data.html) {
-                    console.log('Loading HTML template');
-                    return { text: null, html: data.html };
+                if (data.version === 2) {
+                    if (data.html) {
+                        console.log('Loading HTML template');
+                        return { text: data.text || null, html: data.html };
+                    } else if (data.text) {
+                        console.log('Loading text-only template');
+                        return { text: data.text, html: null };
+                    }
                 }
             } catch (e) {
                 // Old format - plain text
@@ -10394,7 +10401,9 @@ www.estrellebridal.com`;
             // Update counts
             $('consultantCount').textContent = `(${data.consultants.length})`;
             $('designerCount').textContent = `(${designerData.length})`;
-            const templateCount = data.emailtemplates ? data.emailtemplates.length : 0;
+            
+            // Count total email template types (4 system templates)
+            const templateCount = 4;
             $('templateCount').textContent = `(${templateCount})`;
             
             // Render consultants in settings
@@ -10777,7 +10786,16 @@ www.estrellebridal.com`;
             
             if (type === 'confirmation') {
                 $('templateEditorTitle').textContent = '📅 Edit Appointment Confirmation Template';
-                $('templateConfirmBody').value = getConfirmTemplate();
+                // Handle both new HTML format and legacy plain text
+                const template = getConfirmTemplate();
+                if (template.html) {
+                    // Convert HTML to plain text for editing (strip tags but keep line breaks)
+                    const temp = document.createElement('div');
+                    temp.innerHTML = template.html;
+                    $('templateConfirmBody').value = temp.innerText;
+                } else {
+                    $('templateConfirmBody').value = template.text || DEFAULT_CONFIRM_TEMPLATE;
+                }
                 $('templateConfirmation').style.display = 'block';
             } else if (type === 'anniversary') {
                 $('templateEditorTitle').textContent = '💍 Edit Anniversary Email Template';
@@ -10803,7 +10821,14 @@ www.estrellebridal.com`;
         function saveTemplate(type) {
             if (type === 'confirmation') {
                 const template = $('templateConfirmBody').value;
-                localStorage.setItem(CONFIRM_TEMPLATE_KEY, template);
+                // Save as plain text (Settings editor doesn't support rich text)
+                // This will be converted to new format when saved from email modal with formatting
+                const templateData = {
+                    html: null,
+                    text: template,
+                    version: 2
+                };
+                localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
                 toast('Confirmation template saved!', 'success');
             } else if (type === 'anniversary') {
                 const template = {
@@ -11908,9 +11933,12 @@ The {storeName} Team`
                 sheet = div;
             }
             
+            // Store actions globally so we can call them by index
+            window._actionSheetActions = actions;
+            
             const itemsContainer = sheet.querySelector('.action-sheet-items');
-            itemsContainer.innerHTML = actions.map(a => 
-                `<button class="action-sheet-item ${a.danger ? 'danger' : ''}" onclick="(${a.action.toString()})()">${a.label}</button>`
+            itemsContainer.innerHTML = actions.map((a, idx) => 
+                `<button class="action-sheet-item ${a.danger ? 'danger' : ''}" onclick="window._actionSheetActions[${idx}].action()">${a.label}</button>`
             ).join('');
             
             sheet.classList.add('active');
@@ -12020,15 +12048,15 @@ The {storeName} Team`
         function renderClientOptions() {
             const opts = data.topoptions.filter(o => o.ClientID == currentClient.ID);
             $('cOptions').innerHTML = opts.length ? opts.map(o => {
-                const isTop = o.IsFavorite === true || o.IsFavorite === 'TRUE';
+                const isLiked = o.IsFavorite === true || o.IsFavorite === 'TRUE';
                 return `
-                <div class="option-card ${isTop ? 'favorite' : ''}">
+                <div class="option-card ${isLiked ? 'favorite' : ''}">
                     <div class="option-designer">${o.Designer} — ${o.Style}</div>
                     <div class="option-style">${o.Size ? 'Size ' + o.Size : ''} ${o.Price ? '· ' + money(o.Price) : ''}</div>
                     ${o.Customizations ? `<div class="option-notes"><b>Custom:</b> ${o.Customizations}</div>` : ''}
                     ${o.Notes ? `<div class="option-notes">${o.Notes}</div>` : ''}
                     <div class="option-actions">
-                        <button class="action-btn" onclick="toggleFavorite(${o.ID})">${isTop ? '★ Top' : '⭐'}</button>
+                        <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleFavorite(${o.ID})">${isLiked ? '❤️ Liked' : '🤍 Like'}</button>
                         <button class="action-btn" onclick="deleteOptionConfirm(${o.ID})">Delete</button>
                     </div>
                 </div>`;
