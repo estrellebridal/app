@@ -159,7 +159,7 @@
         .modal-title { font-size: 18px; font-weight: 700; }
         .modal-close { width: 32px; height: 32px; border-radius: 8px; border: none; background: var(--bg); cursor: pointer; font-size: 16px; transition: all 0.15s; }
         .modal-close:hover { background: var(--accent-light); }
-        .modal-body { padding: 20px 24px; }
+        .modal-body { padding: 20px 24px; max-height: calc(100vh - 180px); overflow-y: auto; }
         .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px; border-top: 1px solid var(--border); background: var(--bg); position: sticky; bottom: 0; }
 
         /* Tables - Updated */
@@ -9927,6 +9927,7 @@ www.estrellebridal.com`;
             if (altPendingNextFitting) {
                 const fitDate = fmtDate(altPendingNextFitting.Date);
                 const fitTime = fmtTime12(altPendingNextFitting.Time);
+                $('altNextFittingDisplay').style.display = '';
                 $('altNextFittingDisplay').innerHTML = `
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #27ae60">
                         <div>
@@ -9942,6 +9943,7 @@ www.estrellebridal.com`;
             } else if (nextFitting) {
                 const fitDate = fmtDate(nextFitting.Date);
                 const fitTime = fmtTime12(nextFitting.Time);
+                $('altNextFittingDisplay').style.display = '';
                 $('altNextFittingDisplay').innerHTML = `
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid var(--sage)">
                         <div>
@@ -9954,11 +9956,12 @@ www.estrellebridal.com`;
                 $('altNextFittingStatus').style.color = '#27ae60';
                 $('altNextFittingForm').style.display = 'none';
             } else {
+                $('altNextFittingDisplay').style.display = '';
                 $('altNextFittingDisplay').innerHTML = `
                     <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #e74c3c">
                         <div style="font-size:13px;color:var(--taupe)">TBD — No fitting scheduled</div>
-                    </div>
-                    ${scheduleBtn}`;
+                        <button class="btn btn-sm btn-primary" onclick="showAltNextFittingForm()" style="font-size:11px">+ Add Appointment</button>
+                    </div>`;
                 $('altNextFittingStatus').textContent = 'TBD';
                 $('altNextFittingStatus').style.color = '#e74c3c';
                 $('altNextFittingForm').style.display = 'none';
