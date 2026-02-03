@@ -1922,6 +1922,44 @@
                     <label class="form-label">Seamstress Notes</label>
                     <textarea class="form-input" id="altNotes" style="min-height:60px" placeholder="Notes for seamstress..."></textarea>
                 </div>
+                
+                <!-- Schedule Next Fitting -->
+                <div style="background:var(--blush);padding:12px;border-radius:5px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <h3 style="font-size:12px;font-weight:600">📅 Next Fitting</h3>
+                        <span id="altNextFittingStatus" style="font-size:11px;color:var(--taupe)"></span>
+                    </div>
+                    <div id="altNextFittingDisplay"></div>
+                    <div id="altNextFittingForm" style="display:none">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label" style="font-size:10px">Date</label>
+                                <input type="date" class="form-input" id="altNextFitDate" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label" style="font-size:10px">Time</label>
+                                <input type="time" class="form-input" id="altNextFitTime" value="11:00" style="font-size:12px">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label" style="font-size:10px">Type</label>
+                                <select class="form-input" id="altNextFitType" style="font-size:12px">
+                                    <option value="fitting">Fitting</option>
+                                    <option value="final fitting">Final Fitting</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0">
+                                <label class="form-label" style="font-size:10px">Consultant</label>
+                                <select class="form-input" id="altNextFitConsultant" style="font-size:12px"></select>
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:8px;justify-content:flex-end">
+                            <button class="btn btn-sm btn-secondary" onclick="cancelAltNextFitting()">Cancel</button>
+                            <button class="btn btn-sm btn-primary" onclick="confirmAltNextFitting()">Confirm</button>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
                 <button class="btn btn-secondary" onclick="closeModal('alteration')">Close</button>
@@ -6757,7 +6795,7 @@ The Estrelle Bridal Team`;
                     ClientName: clientName,
                     OrderID: order ? order.ID : '',
                     Items: order ? (order.Dress || 'Dress') : 'Dress',
-                    Notes: `Synced from ${appt.Type} on ${appt.Date}`,
+                    Notes: '',
                     Status: 'in progress',
                     StartDate: today(),
                     DueDate: client.WeddingDate || '',
@@ -6823,7 +6861,7 @@ The Estrelle Bridal Team`;
         
         function renderOrders() {
             const searchTerm = ($('orderSearch')?.value || '').toLowerCase();
-            const statusFilter = $('orderStatusFilter')?.value || '';
+            const statusFilter = currentStatusFilter || '';
             const sortBy = orderSortBy;
             
             // Calculate 3 months from now for "Arriving Soon" filter
@@ -9130,46 +9168,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
             ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
             
-            if (fittings.length === 0) {
-                $('altFittingsList').innerHTML = '<div class="empty" style="font-size:11px">No fittings scheduled yet</div>';
-            } else {
-                $('altFittingsList').innerHTML = fittings.map((f, idx) => {
-                    const d = parseDate(f.Date);
-                    const todayStart = new Date();
-                    todayStart.setHours(0, 0, 0, 0);
-                    const isPast = d && d < todayStart;
-                    const isToday = d && d.toDateString() === new Date().toDateString();
-                    // Format time properly
-                    let timeStr = f.Time || '';
-                    if (timeStr.includes('T')) {
-                        // It's an ISO string, extract just the time part
-                        const timePart = timeStr.split('T')[1];
-                        if (timePart) {
-                            const [h, m] = timePart.split(':');
-                            const hour = parseInt(h);
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            const hour12 = hour % 12 || 12;
-                            timeStr = `${hour12}:${m} ${ampm}`;
-                        }
-                    } else if (timeStr.includes(':')) {
-                        // Already HH:MM format, convert to 12hr
-                        const [h, m] = timeStr.split(':');
-                        const hour = parseInt(h);
-                        const ampm = hour >= 12 ? 'PM' : 'AM';
-                        const hour12 = hour % 12 || 12;
-                        timeStr = `${hour12}:${m} ${ampm}`;
-                    }
-                    const bgColor = isToday ? '#e8f5e9' : (isPast ? 'var(--cream)' : 'var(--blush)');
-                    const circleColor = isToday ? '#27ae60' : (isPast ? 'var(--champagne)' : 'var(--dusty)');
-                    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${bgColor};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt(${f.ID})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
-                        <div style="width:24px;height:24px;background:${circleColor};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${idx + 1}</div>
-                        <div style="flex:1">
-                            <div style="font-size:11px;font-weight:500">${f.Type} - ${fmtDate(f.Date)}${isToday ? ' (TODAY)' : ''} @ ${timeStr}</div>
-                            ${f.Consultant ? `<div style="font-size:9px;color:var(--taupe)">with ${f.Consultant}</div>` : ''}
-                        </div>
-                    </div>`;
-                }).join('');
-            }
+            renderAltFittingsList(fittings);
             
             // Render alteration items
             renderAltItems();
@@ -9205,6 +9204,10 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             $('altDressNeededBy').value = neededBy || '';
             updateNeededByCountdown();
+            
+            // Render next fitting section
+            altPendingNextFitting = null;
+            renderAltNextFitting();
             
             openModal('alteration');
         }
@@ -9713,7 +9716,7 @@ ${store.phone || ''}`;
             );
             const pastFittings = fittings.filter(f => parseDate(f.Date) <= new Date());
             const fittingNum = pastFittings.length || 1;
-            const nextFitting = fittings.find(f => parseDate(f.Date) > new Date());
+            const nextFitting = getNextFittingForClient(currentAltClientId);
             
             // Build summary
             const doneItems = currentAltItems.filter(i => i.status === 'done').map(i => `  ✓ ${i.name}${i.details ? ' – ' + i.details : ''}`).join('\n');
@@ -9740,7 +9743,7 @@ ${'─'.repeat(30)}
             body += `\n${'─'.repeat(30)}`;
             
             if (nextFitting) {
-                body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}. We look forward to seeing you then!`;
+                body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)} at ${fmtTime12(nextFitting.Time)}. We look forward to seeing you then!`;
             } else {
                 body += `\n\nYour next fitting: TBD. Please contact us to schedule your next appointment.`;
             }
@@ -9774,12 +9777,8 @@ www.estrellebridal.com`;
             const weddingDate = c.WeddingDate ? parseDate(c.WeddingDate) : null;
             const daysUntil = weddingDate ? Math.ceil((weddingDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
             
-            // Get next fitting
-            const fittings = data.appointments.filter(a => 
-                a.ClientID == currentAltClientId && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
-            );
-            const nextFitting = fittings.find(f => parseDate(f.Date) > new Date());
+            // Get next fitting using helper (picks up just-scheduled fittings too)
+            const nextFitting = getNextFittingForClient(currentAltClientId);
             
             // Get dress needed by - calculate 2 weeks before wedding if not set
             let dressNeededBy = localStorage.getItem(`alts_neededby_${currentAltClientId}`);
@@ -9810,7 +9809,7 @@ www.estrellebridal.com`;
                 text += ` (${daysUntil} days)\n`;
             }
             if (nextFitting) {
-                text += `Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}\n`;
+                text += `Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime12(nextFitting.Time)}\n`;
             } else {
                 text += `Next fitting: TBD\n`;
             }
@@ -9865,6 +9864,205 @@ www.estrellebridal.com`;
                 document.body.removeChild(ta);
                 toast('Copied for seamstress!', 'success');
             });
+        }
+
+        // ========== NEXT FITTING (from alteration modal) ==========
+        let altPendingNextFitting = null; // Stores scheduled but not yet saved fitting
+        
+        // Convert 24hr time to 12hr (e.g. "18:00" -> "6:00 PM")
+        function fmtTime12(t) {
+            const raw = fmtTime(t);
+            if (!raw || !raw.includes(':')) return raw;
+            const [h, m] = raw.split(':');
+            const hr = parseInt(h);
+            return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+        }
+        
+        function renderAltNextFitting() {
+            const c = getClient(currentAltClientId);
+            if (!c) return;
+            
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            
+            // Check for existing upcoming fitting
+            const nextFitting = data.appointments.find(a => 
+                String(a.ClientID) === String(currentAltClientId) && 
+                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
+                parseDate(a.Date) >= todayStart
+            );
+            
+            const scheduleBtn = `<div style="margin-top:8px;text-align:center">
+                <button class="btn btn-sm btn-secondary" onclick="showAltNextFittingForm()" style="font-size:11px;width:100%">+ Add Appointment</button>
+            </div>`;
+            
+            if (altPendingNextFitting) {
+                const fitDate = fmtDate(altPendingNextFitting.Date);
+                const fitTime = fmtTime12(altPendingNextFitting.Time);
+                $('altNextFittingDisplay').innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #27ae60">
+                        <div>
+                            <div style="font-size:13px;font-weight:600">${fitDate} at ${fitTime}</div>
+                            <div style="font-size:10px;color:var(--taupe)">${altPendingNextFitting.Type}${altPendingNextFitting.Consultant ? ' · ' + altPendingNextFitting.Consultant : ''}</div>
+                        </div>
+                        <button class="btn btn-sm btn-secondary" onclick="removeAltNextFitting()" style="color:#e74c3c;font-size:11px">Remove</button>
+                    </div>
+                    ${scheduleBtn}`;
+                $('altNextFittingStatus').textContent = '✓ Scheduled';
+                $('altNextFittingStatus').style.color = '#27ae60';
+                $('altNextFittingForm').style.display = 'none';
+            } else if (nextFitting) {
+                const fitDate = fmtDate(nextFitting.Date);
+                const fitTime = fmtTime12(nextFitting.Time);
+                $('altNextFittingDisplay').innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid var(--sage)">
+                        <div>
+                            <div style="font-size:13px;font-weight:600">${fitDate} at ${fitTime}</div>
+                            <div style="font-size:10px;color:var(--taupe)">${nextFitting.Type}${nextFitting.Consultant ? ' · ' + nextFitting.Consultant : ''}</div>
+                        </div>
+                    </div>
+                    ${scheduleBtn}`;
+                $('altNextFittingStatus').textContent = '✓ Booked';
+                $('altNextFittingStatus').style.color = '#27ae60';
+                $('altNextFittingForm').style.display = 'none';
+            } else {
+                $('altNextFittingDisplay').innerHTML = `
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #e74c3c">
+                        <div style="font-size:13px;color:var(--taupe)">TBD — No fitting scheduled</div>
+                    </div>
+                    ${scheduleBtn}`;
+                $('altNextFittingStatus').textContent = 'TBD';
+                $('altNextFittingStatus').style.color = '#e74c3c';
+                $('altNextFittingForm').style.display = 'none';
+            }
+        }
+        
+        function showAltNextFittingForm() {
+            $('altNextFittingDisplay').style.display = 'none';
+            $('altNextFittingForm').style.display = 'block';
+            
+            // Default to 2 weeks from now
+            const twoWeeks = new Date();
+            twoWeeks.setDate(twoWeeks.getDate() + 14);
+            $('altNextFitDate').value = twoWeeks.toISOString().split('T')[0];
+            $('altNextFitTime').value = '11:00';
+            $('altNextFitType').value = 'fitting';
+            
+            // Populate consultants
+            const consultants = data.consultants || [];
+            $('altNextFitConsultant').innerHTML = '<option value="">—</option>' + 
+                consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+        }
+        
+        function cancelAltNextFitting() {
+            $('altNextFittingDisplay').style.display = '';
+            $('altNextFittingForm').style.display = 'none';
+        }
+        
+        async function confirmAltNextFitting() {
+            const date = $('altNextFitDate').value;
+            const time = $('altNextFitTime').value;
+            if (!date) { toast('Please select a date', 'error'); return; }
+            
+            const c = getClient(currentAltClientId);
+            if (!c) return;
+            
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            const type = $('altNextFitType').value;
+            const consultant = $('altNextFitConsultant').value;
+            
+            const newAppt = {
+                ClientID: currentAltClientId,
+                ClientName: clientName,
+                Date: date,
+                Time: time || '11:00',
+                Type: type,
+                Consultant: consultant,
+                Status: 'scheduled',
+                Source: 'estrelle'  // Mark as internally created — protected from Timely auto-delete
+            };
+            
+            // saveRecord adds to data.appointments and syncs to server
+            saveRecord('Appointments', newAppt);
+            
+            altPendingNextFitting = newAppt;
+            
+            // Re-render next fitting section
+            renderAltNextFitting();
+            
+            // Refresh the fitting list at top of modal
+            const fittings = data.appointments.filter(a => 
+                String(a.ClientID) === String(currentAltClientId) && 
+                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+            ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+            renderAltFittingsList(fittings);
+            
+            toast(`Fitting scheduled: ${fmtDate(date)} at ${fmtTime(time)}`, 'success');
+        }
+        
+        function removeAltNextFitting() {
+            if (!altPendingNextFitting) return;
+            if (!confirm('Remove this scheduled fitting?')) return;
+            
+            // Remove from data
+            const idx = data.appointments.findIndex(a => String(a.ID) === String(altPendingNextFitting.ID));
+            if (idx >= 0) {
+                const removed = data.appointments.splice(idx, 1)[0];
+                addUndo({ type: 'delete_appointment', record: removed });
+                api('POST', { action: 'delete', sheet: 'Appointments', id: altPendingNextFitting.ID }).catch(() => {});
+            }
+            
+            altPendingNextFitting = null;
+            saveCachedData();
+            renderAltNextFitting();
+            toast('Fitting removed', 'success', true);
+        }
+        
+        function renderAltFittingsList(fittings) {
+            if (!fittings || fittings.length === 0) {
+                $('altFittingsList').innerHTML = '<div class="empty" style="font-size:11px">No fittings scheduled yet</div>';
+                return;
+            }
+            $('altFittingsList').innerHTML = fittings.map((f, idx) => {
+                const d = parseDate(f.Date);
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                const isPast = d && d < todayStart;
+                const isToday = d && d.toDateString() === new Date().toDateString();
+                // Convert to 12hr
+                const raw = fmtTime(f.Time);
+                let timeStr = raw;
+                if (raw && raw.includes(':')) {
+                    const [h, m] = raw.split(':');
+                    const hr = parseInt(h);
+                    timeStr = `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`;
+                }
+                const bgColor = isToday ? '#e8f5e9' : (isPast ? 'var(--cream)' : 'var(--blush)');
+                const circleColor = isToday ? '#27ae60' : (isPast ? 'var(--champagne)' : 'var(--dusty)');
+                return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${bgColor};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt(${f.ID})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+                    <div style="width:24px;height:24px;background:${circleColor};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${idx + 1}</div>
+                    <div style="flex:1">
+                        <div style="font-size:11px;font-weight:500">${f.Type} - ${fmtDate(f.Date)}${isToday ? ' (TODAY)' : ''} @ ${timeStr}</div>
+                        ${f.Consultant ? `<div style="font-size:9px;color:var(--taupe)">with ${f.Consultant}</div>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        // Get next fitting for seamstress/email (checks both existing and pending)
+        function getNextFittingForClient(clientId) {
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            
+            const upcoming = data.appointments
+                .filter(a => 
+                    String(a.ClientID) === String(clientId) && 
+                    (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
+                    parseDate(a.Date) >= todayStart
+                )
+                .sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+            
+            return upcoming[0] || null;
         }
 
         // ========== DESIGNERS ==========
@@ -12768,6 +12966,11 @@ The {storeName} Team`
                                     time: apptTime
                                 });
                             }
+                            // If this was created internally, hand ownership to Timely now
+                            if (existingAppt && existingAppt.Source === 'estrelle') {
+                                existingAppt.Source = '';
+                                api('POST', { action: 'update', sheet: 'Appointments', id: existingAppt.ID, record: { Source: '' } }).catch(() => {});
+                            }
                             continue;
                         }
                         
@@ -12998,6 +13201,9 @@ The {storeName} Team`
                         const apptDate = getDateStr(a.Date);
                         // Only consider appointments within the Timely file's date range
                         if (apptDate < minDate || apptDate > maxDate) return false;
+                        
+                        // Never auto-delete appointments created internally (from alteration modal, etc.)
+                        if (a.Source === 'estrelle') return false;
                         
                         // Check if this appointment exists in Timely
                         const key = `${a.ClientID}|${apptDate}|${a.Time}`;
