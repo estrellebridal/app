@@ -1058,6 +1058,7 @@
                                 <option value="">Change Status...</option>
                                 <option value="pending submission">Pending Submission</option>
                                 <option value="in production">In Production</option>
+                                <option value="ready to ship">Ready to Ship</option>
                                 <option value="shipped">Shipped</option>
                                 <option value="arrived - pending QA">Arrived - Needs QA</option>
                                 <option value="QA complete">QA Complete</option>
@@ -2518,6 +2519,7 @@ The {StoreName} Team
                     <select class="form-input" id="newOrderStatus">
                         <option value="pending submission">Pending Submission</option>
                         <option value="in production">In Production</option>
+                        <option value="ready to ship">Ready to Ship</option>
                         <option value="shipped">Shipped</option>
                         <option value="arrived - pending QA">Arrived - Needs QA</option>
                     </select>
@@ -2617,6 +2619,7 @@ The {StoreName} Team
                         <select class="form-input" id="editOrderStatus">
                             <option value="pending submission">pending submission</option>
                             <option value="in production">in production</option>
+                            <option value="ready to ship">ready to ship</option>
                             <option value="shipped">shipped</option>
                             <option value="arrived - pending QA">arrived - needs QA</option>
                             <option value="QA complete">QA complete</option>
@@ -6872,7 +6875,7 @@ The Estrelle Bridal Team`;
             
             // Count stats (from all orders, not filtered)
             const allOrders = data.orders;
-            const inProduction = allOrders.filter(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped').length;
+            const inProduction = allOrders.filter(o => o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'ready to ship' || o.Status === 'shipped').length;
             const arrived = allOrders.filter(o => o.Status === 'arrived - pending QA' || o.Status === 'QA complete').length;
             const needsQA = allOrders.filter(o => o.Status === 'arrived - pending QA').length;
             const inAlterations = allOrders.filter(o => o.Status === 'in alterations').length;
@@ -6897,7 +6900,7 @@ The Estrelle Bridal Team`;
                 // Apply status filter
                 if (statusFilter) {
                     if (statusFilter === 'in production') {
-                        if (!(o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'shipped')) {
+                        if (!(o.Status === 'pending submission' || o.Status === 'ordered' || o.Status === 'in production' || o.Status === 'ready to ship' || o.Status === 'shipped')) {
                             return false;
                         }
                     } else if (statusFilter === 'arrived') {
