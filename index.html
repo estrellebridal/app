@@ -283,6 +283,35 @@
         input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
         .action-btn:hover { background: var(--accent-light); border-color: var(--accent); }
 
+        /* Pull to refresh - hidden on desktop, visible on mobile */
+        .pull-indicator { 
+            position: fixed; 
+            top: 0; 
+            left: 50%; 
+            transform: translateX(-50%) translateY(-60px); 
+            background: var(--accent); 
+            color: white; 
+            padding: 10px 20px; 
+            border-radius: 0 0 20px 20px; 
+            font-size: 13px; 
+            font-weight: 500;
+            z-index: 9999; 
+            transition: transform 0.2s ease;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .pull-indicator.visible { transform: translateX(-50%) translateY(0); }
+        .pull-indicator.refreshing { background: var(--sage); }
+        .pull-spinner { 
+            width: 16px; height: 16px; 
+            border: 2px solid rgba(255,255,255,0.3); 
+            border-top-color: white; 
+            border-radius: 50%; 
+            animation: spin 0.8s linear infinite; 
+        }
+
         /* Mobile Responsive */
         @media (max-width: 900px) {
             .sidebar { 
@@ -350,36 +379,9 @@
             .card-body { padding: 12px; }
             .card-header { padding: 14px; }
             
-            /* Pull to refresh */
-            .pull-indicator { 
-                position: fixed; 
-                top: 0; 
-                left: 50%; 
-                transform: translateX(-50%) translateY(-60px); 
-                background: var(--accent); 
-                color: white; 
-                padding: 10px 20px; 
-                border-radius: 0 0 20px 20px; 
-                font-size: 13px; 
-                font-weight: 500;
-                z-index: 9999; 
-                transition: transform 0.2s ease;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .pull-indicator.visible { transform: translateX(-50%) translateY(0); }
-            .pull-indicator.refreshing { background: var(--sage); }
-            .pull-spinner { 
-                width: 16px; 
-                height: 16px; 
-                border: 2px solid rgba(255,255,255,0.3); 
-                border-top-color: white; 
-                border-radius: 50%; 
-                animation: spin 0.8s linear infinite; 
-            }
-            @keyframes spin { to { transform: rotate(360deg); } }
-            
+            /* Pull to refresh - show on mobile */
+            .pull-indicator { display: flex; }
+
             .modal { 
                 width: 95%; 
                 max-width: none; 
@@ -1973,7 +1975,7 @@
             <div class="modal-body" style="padding:0;max-height:calc(90vh - 140px);overflow-y:auto">
                 <div style="background:#f5f5f5;padding:16px;border-bottom:1px solid #e0e0e0">
                     <div style="font-size:11px;color:#666;margin-bottom:4px">TO</div>
-                    <div style="font-size:14px;font-weight:500" id="previewTo">recipient@email.com</div>
+                    <div style="font-size:14px;font-weight:500" id="previewTo"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="fa889f99938a939f948eba9f979b9396d4999597">[email&#160;protected]</a></div>
                 </div>
                 <div style="background:#f5f5f5;padding:16px;border-bottom:1px solid #e0e0e0">
                     <div style="font-size:11px;color:#666;margin-bottom:4px">SUBJECT</div>
@@ -2424,7 +2426,7 @@ The {StoreName} Team
     
     <!-- Add Order Modal (Quick order for veils, jewelry, etc.) -->
     <div class="modal-overlay" id="modal-addOrder">
-        <div class="modal" style="max-width:550px">
+        <div class="modal" style="max-width:600px">
             <div class="modal-header"><h2 class="modal-title">+ Add Order</h2><button class="modal-close" onclick="closeModal('addOrder')">×</button></div>
             <div class="modal-body">
                 <!-- Client Search/Select -->
@@ -2448,35 +2450,15 @@ The {StoreName} Team
                 
                 <hr style="border:none;border-top:1px solid var(--champagne);margin:16px 0">
                 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="form-group">
-                        <label class="form-label">Item Type</label>
-                        <select class="form-input" id="newOrderItemType">
-                            <option value="Veil">Veil</option>
-                            <option value="Jewelry">Jewelry</option>
-                            <option value="Belt">Belt</option>
-                            <option value="Headpiece">Headpiece</option>
-                            <option value="Shoes">Shoes</option>
-                            <option value="Dress">Dress</option>
-                            <option value="Other">Other</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Item Name</label>
-                        <input type="text" class="form-input" id="newOrderItemName" placeholder="e.g., Cathedral Veil">
-                    </div>
+                <!-- Items List -->
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                    <label class="form-label" style="margin:0;font-size:14px;font-weight:600">Items</label>
+                    <button class="btn btn-sm btn-secondary" onclick="addNewOrderItem()">+ Add Item</button>
                 </div>
                 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                    <div class="form-group">
-                        <label class="form-label">Designer/Brand</label>
-                        <input type="text" class="form-input" id="newOrderDesigner">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Size (if applicable)</label>
-                        <input type="text" class="form-input" id="newOrderSize">
-                    </div>
-                </div>
+                <div id="newOrderItemsList"></div>
+                
+                <hr style="border:none;border-top:1px solid var(--champagne);margin:16px 0">
                 
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
                     <div class="form-group">
@@ -3156,7 +3138,7 @@ The {StoreName} Team
     
     <div class="toast" id="toast"></div>
 
-    <script>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
         // ========== CONFIG ==========
         const API_URL = 'https://script.google.com/macros/s/AKfycbxh6qeTRhQI047aN28it9f-BgKdUNkc1zW793oVrLuvuEs2yoJVScuvhp-xhKoVxCZbEA/exec';
 
@@ -7349,6 +7331,8 @@ The Estrelle Bridal Team`;
         }
         
         // ========== ADD NEW ORDER ==========
+        let newOrderItems = [];
+        
         function openAddOrder() {
             // Reset form
             $('newOrderClientSearch').value = '';
@@ -7356,17 +7340,66 @@ The Estrelle Bridal Team`;
             $('newOrderClientResults').innerHTML = '';
             $('newOrderPhone').value = '';
             $('newOrderEmail').value = '';
-            $('newOrderItemType').value = 'Veil';
-            $('newOrderItemName').value = '';
-            $('newOrderDesigner').value = '';
-            $('newOrderSize').value = '';
             $('newOrderPO').value = generateNextPO();
             $('newOrderDate').value = today();
             $('newOrderArrival').value = '';
             $('newOrderStatus').value = 'pending submission';
             $('newOrderNotes').value = '';
             
+            // Start with one empty item
+            newOrderItems = [];
+            addNewOrderItem();
+            
             openModal('addOrder');
+        }
+        
+        function addNewOrderItem() {
+            const id = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+            newOrderItems.push({ id, type: 'Veil', name: '', designer: '', size: '' });
+            renderNewOrderItems();
+        }
+        
+        function removeNewOrderItem(id) {
+            if (newOrderItems.length <= 1) {
+                toast('Need at least one item', 'error');
+                return;
+            }
+            newOrderItems = newOrderItems.filter(i => i.id !== id);
+            renderNewOrderItems();
+        }
+        
+        function renderNewOrderItems() {
+            const container = $('newOrderItemsList');
+            container.innerHTML = newOrderItems.map((item, idx) => `
+                <div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:10px;border-left:3px solid var(--sage);position:relative">
+                    ${newOrderItems.length > 1 ? `<button onclick="removeNewOrderItem('${item.id}')" style="position:absolute;top:8px;right:8px;background:none;border:none;color:var(--taupe);cursor:pointer;font-size:16px" title="Remove item">✕</button>` : ''}
+                    <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:8px">ITEM ${idx + 1}</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                        <div class="form-group" style="margin:0">
+                            <select class="form-input" style="font-size:12px" onchange="newOrderItems.find(i=>i.id==='${item.id}').type=this.value">
+                                <option value="Veil" ${item.type==='Veil'?'selected':''}>Veil</option>
+                                <option value="Jewelry" ${item.type==='Jewelry'?'selected':''}>Jewelry</option>
+                                <option value="Belt" ${item.type==='Belt'?'selected':''}>Belt</option>
+                                <option value="Headpiece" ${item.type==='Headpiece'?'selected':''}>Headpiece</option>
+                                <option value="Shoes" ${item.type==='Shoes'?'selected':''}>Shoes</option>
+                                <option value="Dress" ${item.type==='Dress'?'selected':''}>Dress</option>
+                                <option value="Other" ${item.type==='Other'?'selected':''}>Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <input type="text" class="form-input" style="font-size:12px" placeholder="Item name" value="${item.name || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').name=this.value">
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                        <div class="form-group" style="margin:0">
+                            <input type="text" class="form-input" style="font-size:12px" placeholder="Designer/Brand" value="${item.designer || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').designer=this.value">
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <input type="text" class="form-input" style="font-size:12px" placeholder="Size" value="${item.size || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').size=this.value">
+                        </div>
+                    </div>
+                </div>
+            `).join('');
         }
         
         function searchClientsForNewOrder(query) {
@@ -7415,20 +7448,45 @@ The Estrelle Bridal Team`;
         
         async function saveNewOrder() {
             const clientName = $('newOrderClientSearch').value.trim();
-            const itemName = $('newOrderItemName').value.trim();
             
             if (!clientName) {
                 toast('Please enter a client name', 'error');
                 return;
             }
             
-            if (!itemName) {
-                toast('Please enter an item name', 'error');
+            // Sync items from DOM inputs (in case onchange didn't fire)
+            const itemEls = $('newOrderItemsList').querySelectorAll('[style*="border-left"]');
+            itemEls.forEach((el, idx) => {
+                if (newOrderItems[idx]) {
+                    const inputs = el.querySelectorAll('input');
+                    const select = el.querySelector('select');
+                    if (select) newOrderItems[idx].type = select.value;
+                    if (inputs[0]) newOrderItems[idx].name = inputs[0].value;
+                    if (inputs[1]) newOrderItems[idx].designer = inputs[1].value;
+                    if (inputs[2]) newOrderItems[idx].size = inputs[2].value;
+                }
+            });
+            
+            // Check at least one item has a name
+            const validItems = newOrderItems.filter(i => i.name.trim());
+            if (validItems.length === 0) {
+                toast('Please enter at least one item name', 'error');
                 return;
             }
             
             const clientId = $('newOrderClientId').value;
-            const itemType = $('newOrderItemType').value;
+            
+            // Build items array for the order
+            const items = validItems.map(i => ({
+                type: i.type,
+                name: i.name.trim(),
+                designer: i.designer.trim(),
+                size: i.size.trim()
+            }));
+            
+            // Determine Dress and Accessories fields
+            const dressItems = items.filter(i => i.type === 'Dress');
+            const accessoryItems = items.filter(i => i.type !== 'Dress');
             
             const record = {
                 ClientID: clientId || '',
@@ -7437,10 +7495,11 @@ The Estrelle Bridal Team`;
                 Email: $('newOrderEmail').value,
                 PO: $('newOrderPO').value || generateNextPO(),
                 OrderDate: $('newOrderDate').value || today(),
-                Dress: itemType === 'Dress' ? itemName : '',
-                Accessories: itemType !== 'Dress' ? `${itemType}: ${itemName}` : '',
-                Designer: $('newOrderDesigner').value,
-                Size: $('newOrderSize').value,
+                Dress: dressItems.map(i => i.name).join(', '),
+                Designer: items.map(i => i.designer).filter(d => d).join(', '),
+                Size: items.map(i => i.size).filter(s => s).join(', '),
+                Accessories: accessoryItems.map(i => `${i.type}: ${i.name}`).join(', '),
+                Items: JSON.stringify(items),
                 Status: $('newOrderStatus').value,
                 ArrivalDate: $('newOrderArrival').value,
                 Notes: $('newOrderNotes').value,
@@ -7455,7 +7514,7 @@ The Estrelle Bridal Team`;
                 
                 closeModal('addOrder');
                 renderOrders();
-                toast(`Order added for ${clientName}!`, 'success');
+                toast(`Order added for ${clientName} (${validItems.length} item${validItems.length > 1 ? 's' : ''})!`, 'success');
             } catch (e) {
                 console.error('Failed to save order:', e);
                 toast('Failed to save order', 'error');
@@ -8786,8 +8845,19 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             console.log('Total altsClients after both sources:', altsClients.length);
             
-            // Sort by urgency (days to wedding)
-            altsClients.sort((a, b) => a.daysToWedding - b.daysToWedding);
+            // Sort by next upcoming fitting (soonest first), then by wedding date
+            altsClients.sort((a, b) => {
+                const aFitting = a.nextFitting ? parseDate(a.nextFitting.Date) : null;
+                const bFitting = b.nextFitting ? parseDate(b.nextFitting.Date) : null;
+                
+                // Both have fittings - sort by fitting date
+                if (aFitting && bFitting) return aFitting - bFitting;
+                // Only one has a fitting - that one goes first
+                if (aFitting && !bFitting) return -1;
+                if (!aFitting && bFitting) return 1;
+                // Neither has a fitting - sort by wedding date (most urgent first)
+                return a.daysToWedding - b.daysToWedding;
+            });
             
             // Calculate stats
             const active = altsClients.length;
@@ -9718,30 +9788,31 @@ www.estrellebridal.com`;
                 dressNeededBy = fmtDate(neededByDate);
             }
             
-            // Build text-friendly summary
-            let text = `📍 ${c.FirstName} ${c.LastName}\n`;
+            // Build clean text summary
+            let text = `${c.FirstName} ${c.LastName}\n`;
+            text += `${'—'.repeat(20)}\n`;
             
-            // Dress needed by - show prominently at top
+            // Dress needed by
             if (dressNeededBy) {
                 const neededByDate = parseDate(dressNeededBy);
                 const daysUntilNeeded = neededByDate ? Math.ceil((neededByDate - new Date()) / (1000 * 60 * 60 * 24)) : null;
-                text += `🎯 NEED BY: ${dressNeededBy}`;
+                text += `NEED BY: ${dressNeededBy}`;
                 if (daysUntilNeeded !== null) {
-                    if (daysUntilNeeded <= 7) text += ` ⚠️ ${daysUntilNeeded} days!`;
+                    if (daysUntilNeeded <= 7) text += ` ** ${daysUntilNeeded} days! **`;
                     else text += ` (${daysUntilNeeded} days)`;
                 }
                 text += `\n`;
             }
             
             if (weddingDate) {
-                text += `💒 Wedding: ${fmtDate(c.WeddingDate)}`;
-                if (daysUntil <= 30) text += ` ⚠️`;
+                text += `Wedding: ${fmtDate(c.WeddingDate)}`;
+                if (daysUntil <= 30) text += ` ** URGENT **`;
                 text += ` (${daysUntil} days)\n`;
             }
             if (nextFitting) {
-                text += `📅 Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}\n`;
+                text += `Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime(nextFitting.Time)}\n`;
             } else {
-                text += `📅 Next fitting: TBD\n`;
+                text += `Next fitting: TBD\n`;
             }
             text += `\n`;
             
@@ -9752,38 +9823,38 @@ www.estrellebridal.com`;
             const done = currentAltItems.filter(i => i.status === 'done');
             
             if (needsAdj.length > 0) {
-                text += `🔴 NEEDS ADJUSTMENT:\n`;
-                needsAdj.forEach(i => text += `• ${i.name}${i.details ? ' - ' + i.details : ''}\n`);
+                text += `NEEDS ADJUSTMENT:\n`;
+                needsAdj.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
             
             if (inProgress.length > 0) {
-                text += `🟡 IN PROGRESS:\n`;
-                inProgress.forEach(i => text += `• ${i.name}${i.details ? ' - ' + i.details : ''}\n`);
+                text += `IN PROGRESS:\n`;
+                inProgress.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
             
             if (pending.length > 0) {
-                text += `⚪ TO DO:\n`;
-                pending.forEach(i => text += `• ${i.name}${i.details ? ' - ' + i.details : ''}\n`);
+                text += `TO DO:\n`;
+                pending.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
             
             if (done.length > 0) {
-                text += `✅ DONE:\n`;
-                done.forEach(i => text += `• ${i.name}\n`);
+                text += `DONE:\n`;
+                done.forEach(i => text += `  - ${i.name}\n`);
                 text += `\n`;
             }
             
             // Notes
             const notes = $('altNotes').value;
             if (notes) {
-                text += `📝 Notes: ${notes}\n`;
+                text += `Notes: ${notes}\n`;
             }
             
             // Copy to clipboard
             navigator.clipboard.writeText(text).then(() => {
-                toast('Copied! Paste into text message 📱', 'success');
+                toast('Copied for seamstress!', 'success');
             }).catch(() => {
                 // Fallback for older browsers
                 const ta = document.createElement('textarea');
@@ -9792,7 +9863,7 @@ www.estrellebridal.com`;
                 ta.select();
                 document.execCommand('copy');
                 document.body.removeChild(ta);
-                toast('Copied! Paste into text message 📱', 'success');
+                toast('Copied for seamstress!', 'success');
             });
         }
 
@@ -14421,10 +14492,12 @@ ${store.name || 'Estrelle Bridal'}`;
         // ========== INIT ==========
         document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => { if (n.dataset.page) showPage(n.dataset.page); }));
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
-        // Init: load cached data immediately, then fetch fresh data in background
+        
+        // Load cached data first for instant UI, then fetch fresh from server
         loadCachedData();
+        showPage('dashboard');
         loadData();
-        setInterval(loadData, 30000); // Auto-refresh every 30 seconds
-    </script>
+
+        </script>
 </body>
 </html>
