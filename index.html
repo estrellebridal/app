@@ -1628,7 +1628,7 @@
                             <div class="card-body" id="cAppts"></div>
                         </div>
                         <div class="card">
-                            <div class="card-header"><h2 class="card-title">Dresses Tried</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
+                            <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
                             <div class="card-body" id="cOptions"></div>
                         </div>
                     </div>
@@ -1976,7 +1976,7 @@
     <!-- Add Option -->
     <div class="modal-overlay" id="modal-addOption">
         <div class="modal">
-            <div class="modal-header"><h2 class="modal-title">Add Dress</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
+            <div class="modal-header"><h2 class="modal-title">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()">
@@ -1995,7 +1995,7 @@
                     <input type="text" class="form-input" id="oCustomDesigner" placeholder="Enter designer name">
                 </div>
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom" placeholder="e.g. Add sleeves, lower back"></textarea></div>
-                <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom"></textarea></div>
+                <div class="form-group"><label class="form-label">Decision By</label><input type="date" class="form-input" id="oDecisionBy"></div>
                 <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="oOptionNotes"></textarea></div>
                 <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> ❤️ Bride liked this one</label>
             </div>
@@ -4155,7 +4155,7 @@ The {StoreName} Team
             // Follow-ups - ALL (due, overdue, and upcoming)
             const todayStr = today();
             const followUps = data.appointments
-                .filter(a => a.FollowUpDate && !a.FollowUpDone && getClient(a.ClientID))
+                .filter(a => a.FollowUpDate && a.FollowUpDone !== true && a.FollowUpDone !== 'TRUE' && getClient(a.ClientID))
                 .sort((a, b) => getDateStr(a.FollowUpDate).localeCompare(getDateStr(b.FollowUpDate)));
             
             $('dashFollowUps').innerHTML = followUps.length ? followUps.map(a => {
@@ -6353,7 +6353,7 @@ The Estrelle Bridal Team`;
             
             if (a.FollowUpDate) {
                 const isOverdue = getDateStr(a.FollowUpDate) < today();
-                const isDone = a.FollowUpDone;
+                const isDone = a.FollowUpDone === true || a.FollowUpDone === 'TRUE';
                 detailsHtml += `
                     <div style="background:${isDone ? 'var(--blush)' : isOverdue ? '#fff5f5' : 'var(--blush)'};padding:8px 12px;border-radius:5px;margin-bottom:12px">
                         <div style="font-size:11px;color:var(--taupe)">📅 Follow-up: ${fmtDate(a.FollowUpDate)} ${isDone ? '✓ Done' : isOverdue ? '⚠️ Overdue' : ''}</div>
@@ -11494,7 +11494,7 @@ It was so lovely meeting you at your {appointmentType} on {appointmentDate}! I w
 
 {topOptions}
 
-If you have any questions about any of the dresses you tried on, or if you'd like to schedule another appointment, please don't hesitate to reach out!
+If you have any questions about any of the options, or if you'd like to schedule another appointment, please don't hesitate to reach out!
 
 We're here to help you find THE dress.
 
@@ -12436,6 +12436,7 @@ The {storeName} Team`
                     <div class="option-designer">${o.Designer} — ${o.Style}</div>
                     <div class="option-style">${o.Size ? 'Size ' + o.Size : ''} ${o.Price ? '· ' + money(o.Price) : ''}</div>
                     ${o.Customizations ? `<div class="option-notes"><b>Custom:</b> ${o.Customizations}</div>` : ''}
+                    ${o.DecisionBy ? `<div class="option-notes"><b>Decision by:</b> ${fmtDate(o.DecisionBy)}</div>` : ''}
                     ${o.Notes ? `<div class="option-notes">${o.Notes}</div>` : ''}
                     <div class="option-actions">
                         <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleFavorite(${o.ID})">${isLiked ? '❤️ Liked' : '🤍 Like'}</button>
@@ -12453,7 +12454,7 @@ The {storeName} Team`
             }
             
             const clientName = `${currentClient.FirstName} ${currentClient.LastName}`;
-            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Customizations: $('oCustom').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
+            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Customizations: $('oCustom').value, DecisionBy: $('oDecisionBy').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
             if (!record.Designer) { toast('Select designer'); return; }
             
             closeModal('addOption');
@@ -12469,7 +12470,7 @@ The {storeName} Team`
             toast('Added!', 'success');
             
             // Clear form
-            ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner'].forEach(i => $(i).value = '');
+            ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner','oDecisionBy'].forEach(i => $(i).value = '');
             $('oFavorite').checked = false;
             $('customDesignerGroup').style.display = 'none';
             
