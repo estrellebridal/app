@@ -2509,20 +2509,53 @@ The {StoreName} Team
                         <input type="date" class="form-input" id="newOrderDate">
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Wedding Date</label>
+                        <input type="date" class="form-input" id="newOrderWedding">
+                    </div>
+                </div>
+                
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <div class="form-group">
                         <label class="form-label">Est. Arrival</label>
                         <input type="date" class="form-input" id="newOrderArrival">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-input" id="newOrderStatus">
+                            <option value="pending submission">Pending Submission</option>
+                            <option value="in production">In Production</option>
+                            <option value="ready to ship">Ready to Ship</option>
+                            <option value="shipped">Shipped</option>
+                            <option value="arrived - pending QA">Arrived - Needs QA</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Order Submitted Tracking -->
+                <div style="background:#f0f7ff;padding:12px;border-radius:5px;margin-bottom:16px;border-left:3px solid #3498db">
+                    <div style="font-weight:600;font-size:12px;margin-bottom:8px">Order Submitted to Designer</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label" style="font-size:11px">Submitted by</label>
+                            <select class="form-input" id="newOrderSubmittedBy" style="font-size:12px">
+                                <option value="">Not submitted yet</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label class="form-label" style="font-size:11px">Date submitted</label>
+                            <input type="date" class="form-input" id="newOrderSubmittedDate" style="font-size:12px">
+                        </div>
                     </div>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="form-input" id="newOrderStatus">
-                        <option value="pending submission">Pending Submission</option>
-                        <option value="in production">In Production</option>
-                        <option value="ready to ship">Ready to Ship</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="arrived - pending QA">Arrived - Needs QA</option>
-                    </select>
+                    <label class="form-label">Customization</label>
+                    <input type="text" class="form-input" id="newOrderCustomization" placeholder="e.g., Add beading, shorten straps">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Accessories</label>
+                    <input type="text" class="form-input" id="newOrderAccessories" placeholder="e.g., Veil, belt">
                 </div>
                 
                 <div class="form-group">
@@ -7407,9 +7440,19 @@ The Estrelle Bridal Team`;
             $('newOrderEmail').value = '';
             $('newOrderPO').value = generateNextPO();
             $('newOrderDate').value = today();
+            $('newOrderWedding').value = '';
             $('newOrderArrival').value = '';
             $('newOrderStatus').value = 'pending submission';
+            $('newOrderSubmittedBy').value = '';
+            $('newOrderSubmittedDate').value = '';
+            $('newOrderCustomization').value = '';
+            $('newOrderAccessories').value = '';
             $('newOrderNotes').value = '';
+            
+            // Populate consultant dropdown
+            const consultants = data.consultants || [];
+            $('newOrderSubmittedBy').innerHTML = '<option value="">Not submitted yet</option>' + 
+                consultants.map(c => `<option value="${c}">${c}</option>`).join('');
             
             // Start with one empty item
             newOrderItems = [];
@@ -7508,6 +7551,7 @@ The Estrelle Bridal Team`;
             $('newOrderClientSearch').value = `${client.FirstName} ${client.LastName}`;
             $('newOrderPhone').value = client.Phone || '';
             $('newOrderEmail').value = client.Email || '';
+            if (client.WeddingDate) $('newOrderWedding').value = getDateStr(client.WeddingDate);
             $('newOrderClientResults').innerHTML = `<div style="padding:8px;background:var(--blush);border-radius:4px;font-size:11px">✓ Linked to existing client: ${client.FirstName} ${client.LastName}</div>`;
         }
         
@@ -7563,18 +7607,21 @@ The Estrelle Bridal Team`;
                 Dress: dressItems.map(i => i.name).join(', '),
                 Designer: items.map(i => i.designer).filter(d => d).join(', '),
                 Size: items.map(i => i.size).filter(s => s).join(', '),
-                Accessories: accessoryItems.map(i => `${i.type}: ${i.name}`).join(', '),
+                Accessories: accessoryItems.map(i => `${i.type}: ${i.name}`).join(', ') || $('newOrderAccessories').value,
                 Items: JSON.stringify(items),
                 Status: $('newOrderStatus').value,
                 ArrivalDate: $('newOrderArrival').value,
-                Notes: $('newOrderNotes').value,
-                WeddingDate: clientId ? (getClient(clientId)?.WeddingDate || '') : ''
+                WeddingDate: $('newOrderWedding').value || (clientId ? (getClient(clientId)?.WeddingDate || '') : ''),
+                SubmittedBy: $('newOrderSubmittedBy').value,
+                SubmittedDate: $('newOrderSubmittedDate').value,
+                Customization: $('newOrderCustomization').value,
+                Notes: $('newOrderNotes').value
             };
             
             try {
                 const result = await saveRecord('Orders', record);
                 record.ID = result.id || Date.now();
-                data.orders.push(record);
+                // saveRecord already pushed to data.orders, just update the reference
                 saveCachedData();
                 
                 closeModal('addOrder');
