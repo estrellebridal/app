@@ -4164,7 +4164,7 @@ The {StoreName} Team
                 return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
-                        <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div>
+                        <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
                         <div class="item-meta">${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div>
                     </div>
                     <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
@@ -5020,7 +5020,7 @@ The {StoreName} Team
                                 <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
                                     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px;flex-shrink:0">${fmtTime(a.Time)}</div>
                                     <div class="avatar" style="flex-shrink:0">${initials(c.FirstName, c.LastName)}</div>
-                                    <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
+                                    <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo confirmation">✓</span>` : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;flex-shrink:0" onclick="event.stopPropagation()">
                                     <button class="btn btn-sm btn-secondary" onclick="editAppt('${a.ID}')">Edit</button>
@@ -5304,7 +5304,7 @@ The {StoreName} Team
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtTime(a.Time)}</td>
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
-                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}</td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</td>
                         <td style="text-align:right">
                             <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center">
                                 ${confirmButtons(a.ID, a.ConfirmationSent)}
@@ -5602,9 +5602,9 @@ The Estrelle Bridal Team`;
         function confirmButtons(apptId, isConfirmed, compact = false) {
             if (isConfirmed) {
                 return compact 
-                    ? `<span class="confirmed-badge">✓ Confirmed</span>`
+                    ? `<span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${apptId}')" style="cursor:pointer" title="Click to undo">✓ Confirmed</span>`
                     : `<div class="confirm-btns">
-                        <button class="btn btn-sm btn-confirmed" title="Already confirmed">✓</button>
+                        <button class="btn btn-sm btn-confirmed" onclick="event.stopPropagation();unmarkConfirmed('${apptId}')" title="Click to undo confirmation">✓</button>
                         <button class="btn btn-sm btn-email" onclick="event.stopPropagation();openConfirmEmailModal('${apptId}')" title="Resend confirmation">📧</button>
                     </div>`;
             }
@@ -5612,6 +5612,29 @@ The Estrelle Bridal Team`;
                 <button class="btn btn-sm btn-done" onclick="event.stopPropagation();markConfirmed('${apptId}')" title="Mark confirmed (no email)">✓</button>
                 <button class="btn btn-sm btn-email" onclick="event.stopPropagation();openConfirmEmailModal('${apptId}')" title="Send confirmation email">📧</button>
             </div>`;
+        }
+        
+        function unmarkConfirmed(apptId) {
+            const appt = data.appointments.find(a => String(a.ID) === String(apptId));
+            if (!appt) { 
+                toast('Appointment not found', 'error'); 
+                return; 
+            }
+            
+            const client = getClient(appt.ClientID);
+            const clientName = client ? `${client.FirstName} ${client.LastName}` : 'Unknown';
+            
+            if (!confirm(`Remove confirmation for ${clientName}'s appointment?`)) return;
+            
+            // Clear confirmation
+            appt.ConfirmationSent = '';
+            updateRecord('Appointments', apptId, { ConfirmationSent: '' });
+            saveCachedData();
+            
+            toast(`Confirmation removed for ${clientName}`, 'success');
+            renderDash();
+            renderWeek();
+            renderAllAppointments();
         }
         
         function openConfirmEmailModal(apptId) {
@@ -5746,18 +5769,45 @@ The Estrelle Bridal Team`;
             const editor = $(editorId);
             const textarea = $(textareaId);
             if (editor && textarea) {
-                // Clone the editor to manipulate without affecting display
-                const clone = editor.cloneNode(true);
+                // Get HTML content
+                let html = editor.innerHTML;
                 
-                // Get text content, preserving line breaks
-                // Use innerText which respects visual line breaks
-                let text = clone.innerText;
+                // Debug: log the raw HTML to understand structure
+                console.log('Raw HTML:', html);
                 
-                // Normalize: replace multiple consecutive newlines with double newline (paragraph break)
-                text = text.replace(/\n{2,}/g, '\n\n');
+                // Step 1: Normalize the HTML structure
+                // Empty div with just <br> = blank line
+                html = html.replace(/<div><br\s*\/?><\/div>/gi, '{{NEWLINE}}');
+                html = html.replace(/<p><br\s*\/?><\/p>/gi, '{{NEWLINE}}');
                 
-                // Trim leading/trailing whitespace
+                // Step 2: Add newline BEFORE each opening <div> (except first)
+                // This handles: text<div>more text</div>
+                html = html.replace(/([^>])(<div[^>]*>)/gi, '$1{{NEWLINE}}$2');
+                
+                // Step 3: Replace <br> tags with newlines
+                html = html.replace(/<br\s*\/?>/gi, '{{NEWLINE}}');
+                
+                // Step 4: Remove all HTML tags
+                html = html.replace(/<[^>]+>/g, '');
+                
+                // Step 5: Convert placeholders to actual newlines
+                html = html.replace(/\{\{NEWLINE\}\}/g, '\n');
+                
+                // Step 6: Decode HTML entities
+                const temp = document.createElement('textarea');
+                temp.innerHTML = html;
+                let text = temp.value;
+                
+                // Step 7: Replace non-breaking spaces
+                text = text.replace(/\u00A0/g, ' ');
+                
+                // Step 8: Normalize newlines - collapse 3+ to 2
+                text = text.replace(/\n{3,}/g, '\n\n');
+                
+                // Step 9: Trim
                 text = text.trim();
+                
+                console.log('Final text:', JSON.stringify(text));
                 
                 textarea.value = text;
             }
@@ -5913,10 +5963,7 @@ The Estrelle Bridal Team`;
                 'confirmBodyEditor', 
                 'confirmEmail',
                 () => {
-                    // Mark appointment as confirmation sent
-                    updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
-                    const appt = data.appointments.find(a => a.ID == apptId);
-                    if (appt) appt.ConfirmationSent = new Date().toISOString();
+                    // Don't auto-mark as sent - let user manually click done
                     renderDash();
                     renderWeek();
                     renderAllAppointments();
@@ -5938,12 +5985,7 @@ The Estrelle Bridal Team`;
             const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.open(gmailUrl, '_blank');
             
-            // Mark appointment as confirmation sent
-            updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
-            
-            // Update local data
-            const appt = data.appointments.find(a => a.ID == apptId);
-            if (appt) appt.ConfirmationSent = new Date().toISOString();
+            // Don't auto-mark as sent - let user manually click done
             
             closeModal('confirmEmail');
             toast('Email opened in Gmail', 'success');
@@ -6036,12 +6078,7 @@ The Estrelle Bridal Team`;
             
             // Send via preferred method (Gmail or direct)
             sendEmailViaPreferredMethod(to, subject, body, () => {
-                // Mark appointment as confirmation sent
-                updateRecord('Appointments', apptId, { ConfirmationSent: new Date().toISOString() });
-                
-                // Update local data
-                const appt = data.appointments.find(a => a.ID == apptId);
-                if (appt) appt.ConfirmationSent = new Date().toISOString();
+                // Don't auto-mark as sent - let user manually click done
                 
                 // Re-render views
                 renderDash();
@@ -10574,9 +10611,30 @@ www.estrellebridal.com`;
                 }
             }
             
-            // Replace placeholders with client data
-            $('clientEmailSubject').value = replacePlaceholders(subject, currentClient, null);
-            $('clientEmailBody').value = replacePlaceholders(body, currentClient, null);
+            // Auto-select the most recent appointment if available
+            const clientAppts = data.appointments
+                .filter(a => String(a.ClientID) === String(currentClient.ID))
+                .sort((a, b) => (b.Date || '').localeCompare(a.Date || ''));
+            
+            let selectedAppt = null;
+            if (clientAppts.length > 0) {
+                // Auto-select the first (most recent) appointment
+                $('clientEmailAppt').value = clientAppts[0].ID;
+                selectedAppt = clientAppts[0];
+            }
+            
+            // Replace placeholders with client and appointment data
+            const finalSubject = replacePlaceholders(subject, currentClient, selectedAppt);
+            const finalBody = replacePlaceholders(body, currentClient, selectedAppt);
+            
+            $('clientEmailSubject').value = finalSubject;
+            $('clientEmailBody').value = finalBody;
+            
+            // Also update the rich text editor
+            const editor = $('clientEmailBodyEditor');
+            if (editor) {
+                editor.innerText = finalBody;
+            }
         }
         
         function updateClientEmailPreview() {
@@ -10617,34 +10675,73 @@ www.estrellebridal.com`;
                 
                 $('clientEmailSubject').value = subject;
                 $('clientEmailBody').value = body;
+                
+                // Also update the rich text editor
+                const editor = $('clientEmailBodyEditor');
+                if (editor) {
+                    editor.innerText = body;
+                }
             }
         }
         
         function replacePlaceholders(text, client, appt) {
             const storeInfo = getStoreInfo();
             
-            // Client placeholders
-            text = text.replace(/\{FirstName\}/g, client.FirstName || '');
-            text = text.replace(/\{LastName\}/g, client.LastName || '');
-            text = text.replace(/\{WeddingDate\}/g, fmtDate(client.WeddingDate) || '');
-            text = text.replace(/\{Venue\}/g, client.Venue || '');
+            // Client placeholders (both cases)
+            text = text.replace(/\{FirstName\}/gi, client.FirstName || '');
+            text = text.replace(/\{firstName\}/g, client.FirstName || '');
+            text = text.replace(/\{LastName\}/gi, client.LastName || '');
+            text = text.replace(/\{lastName\}/g, client.LastName || '');
+            text = text.replace(/\{WeddingDate\}/gi, fmtDate(client.WeddingDate) || '');
+            text = text.replace(/\{weddingDate\}/g, fmtDate(client.WeddingDate) || '');
+            text = text.replace(/\{Venue\}/gi, client.Venue || '');
+            text = text.replace(/\{venue\}/g, client.Venue || '');
             
-            // Appointment placeholders
+            // Appointment placeholders (both cases)
             if (appt) {
-                text = text.replace(/\{AppointmentDate\}/g, fmtDate(appt.Date) || '');
-                text = text.replace(/\{AppointmentTime\}/g, fmtTime(appt.Time) || '');
-                text = text.replace(/\{Consultant\}/g, appt.Consultant || '');
+                text = text.replace(/\{AppointmentDate\}/gi, fmtDate(appt.Date) || '');
+                text = text.replace(/\{appointmentDate\}/g, fmtDate(appt.Date) || '');
+                text = text.replace(/\{AppointmentTime\}/gi, fmtTime(appt.Time) || '');
+                text = text.replace(/\{appointmentTime\}/g, fmtTime(appt.Time) || '');
+                text = text.replace(/\{AppointmentType\}/gi, appt.Type || 'consultation');
+                text = text.replace(/\{appointmentType\}/g, appt.Type || 'consultation');
+                text = text.replace(/\{Consultant\}/gi, appt.Consultant || '');
+                text = text.replace(/\{consultant\}/g, appt.Consultant || '');
             } else {
-                text = text.replace(/\{AppointmentDate\}/g, '');
-                text = text.replace(/\{AppointmentTime\}/g, '');
-                text = text.replace(/\{Consultant\}/g, '');
+                text = text.replace(/\{AppointmentDate\}/gi, '');
+                text = text.replace(/\{appointmentDate\}/g, '');
+                text = text.replace(/\{AppointmentTime\}/gi, '');
+                text = text.replace(/\{appointmentTime\}/g, '');
+                text = text.replace(/\{AppointmentType\}/gi, '');
+                text = text.replace(/\{appointmentType\}/g, '');
+                text = text.replace(/\{Consultant\}/gi, '');
+                text = text.replace(/\{consultant\}/g, '');
             }
             
-            // Store placeholders
-            text = text.replace(/\{StoreName\}/g, storeInfo.name || 'Estrelle Bridal');
-            text = text.replace(/\{StorePhone\}/g, storeInfo.phone || '');
-            text = text.replace(/\{StoreAddress\}/g, storeInfo.address || '');
-            text = text.replace(/\{StoreEmail\}/g, storeInfo.email || '');
+            // Store placeholders (both cases)
+            text = text.replace(/\{StoreName\}/gi, storeInfo.name || 'Estrelle Bridal');
+            text = text.replace(/\{storeName\}/g, storeInfo.name || 'Estrelle Bridal');
+            text = text.replace(/\{StorePhone\}/gi, storeInfo.phone || '');
+            text = text.replace(/\{storePhone\}/g, storeInfo.phone || '');
+            text = text.replace(/\{StoreAddress\}/gi, storeInfo.address || '');
+            text = text.replace(/\{storeAddress\}/g, storeInfo.address || '');
+            text = text.replace(/\{StoreEmail\}/gi, storeInfo.email || '');
+            text = text.replace(/\{storeEmail\}/g, storeInfo.email || '');
+            
+            // Top options placeholder
+            if (client && client.ID) {
+                const topOptionsList = (data.topoptions || [])
+                    .filter(o => String(o.ClientID) === String(client.ID) && (o.IsFavorite === true || o.IsFavorite === 'TRUE'))
+                    .map(o => `${o.Designer} - ${o.Style}`);
+                
+                const topOptionsText = topOptionsList.length 
+                    ? `You looked absolutely stunning in your top choices:\n• ${topOptionsList.join('\n• ')}`
+                    : '';
+                    
+                text = text.replace(/\{topOptions\}/gi, topOptionsText);
+            } else {
+                text = text.replace(/\{topOptions\}/gi, '');
+            }
             
             return text;
         }
@@ -11507,8 +11604,55 @@ www.estrellebridal.com`;
                 return;
             }
             
-            types[idx] = newName.trim();
+            const trimmedNewName = newName.trim();
+            types[idx] = trimmedNewName;
             localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            
+            // Migrate existing appointments with the old type name
+            const oldNameLower = oldName.toLowerCase();
+            const appointmentsToUpdate = data.appointments.filter(a => 
+                a.Type && a.Type.toLowerCase() === oldNameLower
+            );
+            
+            if (appointmentsToUpdate.length > 0) {
+                const doMigrate = confirm(`Found ${appointmentsToUpdate.length} appointment(s) with type "${oldName}".\n\nUpdate them to "${trimmedNewName}"?`);
+                
+                if (doMigrate) {
+                    toast(`Updating ${appointmentsToUpdate.length} appointments...`, '');
+                    
+                    // Update appointments with delay to avoid API overload
+                    let updated = 0;
+                    const updateNext = (index) => {
+                        if (index >= appointmentsToUpdate.length) {
+                            saveCachedData();
+                            toast(`Updated ${updated} appointment(s) to "${trimmedNewName}"`, 'success');
+                            renderServiceTypes();
+                            return;
+                        }
+                        
+                        const a = appointmentsToUpdate[index];
+                        // Update local data immediately
+                        a.Type = trimmedNewName;
+                        
+                        // Update in Google Sheets with delay
+                        api('POST', { action: 'update', sheet: 'Appointments', id: a.ID, record: { Type: trimmedNewName } })
+                            .then(() => {
+                                updated++;
+                                // Process next after 200ms delay
+                                setTimeout(() => updateNext(index + 1), 200);
+                            })
+                            .catch(e => {
+                                console.error('Failed to update appointment:', a.ID, e);
+                                // Continue anyway
+                                setTimeout(() => updateNext(index + 1), 200);
+                            });
+                    };
+                    
+                    updateNext(0);
+                    return; // Don't show toast yet, will show when done
+                }
+            }
+            
             renderServiceTypes();
             toast('Service type updated!', 'success');
         }
@@ -12288,7 +12432,7 @@ The {storeName} Team`
                                 ${fmtDate(a.Date)} at ${fmtTime(a.Time)}
                                 ${photoCount > 0 ? ` <span style="font-size:10px;color:var(--sage)">📷${photoCount}</span>` : ''}
                                 ${isNoShow ? ' <span style="font-size:10px;color:var(--red);font-weight:600">NO-SHOW</span>' : ''}
-                                ${a.ConfirmationSent ? ' <span class="confirmed-badge">✓</span>' : ''}
+                                ${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}
                             </div>
                             <div class="appt-meta">${a.Type||''} · ${a.Consultant||''}</div>
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
