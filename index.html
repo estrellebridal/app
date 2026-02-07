@@ -5682,6 +5682,10 @@ The Estrelle Bridal Team`;
             const notesDiv = $('followUpNotesReminder');
             if (notesDiv) notesDiv.style.display = 'none';
             
+            // Clear editor first before opening modal
+            const editor = $('confirmBodyEditor');
+            if (editor) editor.innerHTML = '';
+            
             openModal('confirmEmail');
             
             // Sync content to rich text editor
@@ -5742,22 +5746,15 @@ The Estrelle Bridal Team`;
             const editor = $(editorId);
             const textarea = $(textareaId);
             if (editor && textarea) {
-                // Get HTML and convert to clean plain text
-                let html = editor.innerHTML;
+                // Clone the editor to manipulate without affecting display
+                const clone = editor.cloneNode(true);
                 
-                // Replace block elements with single newlines
-                html = html.replace(/<\/?(div|p|br|li|h[1-6])[^>]*>/gi, '\n');
+                // Get text content, preserving line breaks
+                // Use innerText which respects visual line breaks
+                let text = clone.innerText;
                 
-                // Remove all other HTML tags
-                html = html.replace(/<[^>]+>/g, '');
-                
-                // Decode HTML entities
-                const temp = document.createElement('textarea');
-                temp.innerHTML = html;
-                let text = temp.value;
-                
-                // Normalize whitespace: collapse multiple newlines to max 2
-                text = text.replace(/\n{3,}/g, '\n\n');
+                // Normalize: replace multiple consecutive newlines with double newline (paragraph break)
+                text = text.replace(/\n{2,}/g, '\n\n');
                 
                 // Trim leading/trailing whitespace
                 text = text.trim();
@@ -6107,6 +6104,10 @@ The Estrelle Bridal Team`;
                     notesDiv.style.display = 'none';
                 }
             }
+            
+            // Clear and set editor content
+            const editor = $('confirmBodyEditor');
+            if (editor) editor.innerText = body;
             
             openModal('confirmEmail');
         }
@@ -9450,12 +9451,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
                         <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
                     </select>
-                    <div style="flex:1;cursor:pointer" onclick="editAltItem(${idx})">
+                    <div style="flex:1">
                         <div style="font-size:12px;font-weight:500">${item.name}</div>
-                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : '<div style="font-size:10px;color:var(--rose);font-style:italic">Click to add details</div>'}
+                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
                         <div style="font-size:9px;color:var(--taupe)">Added: Fitting ${item.addedAtFitting || 1}</div>
                     </div>
-                    <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})">×</button>
+                    <button class="action-btn" onclick="editAltItem(${idx})" title="Edit">✏️</button>
+                    <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
                 </div>`;
             }).join('');
         }
