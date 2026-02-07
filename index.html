@@ -9450,13 +9450,12 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
                         <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
                     </select>
-                    <div style="flex:1">
+                    <div style="flex:1;cursor:pointer" onclick="editAltItem(${idx})">
                         <div style="font-size:12px;font-weight:500">${item.name}</div>
-                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
+                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : '<div style="font-size:10px;color:var(--rose);font-style:italic">Click to add details</div>'}
                         <div style="font-size:9px;color:var(--taupe)">Added: Fitting ${item.addedAtFitting || 1}</div>
                     </div>
-                    <button class="action-btn" onclick="editAltItem(${idx})" title="Edit">✏️</button>
-                    <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
+                    <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})">×</button>
                 </div>`;
             }).join('');
         }
