@@ -3929,6 +3929,29 @@ The {StoreName} Team
             if (n === 'newConsultant') initConsultantSigPad();
         }
         function closeModal(n) { 
+            // Check for unsaved email drafts
+            if (n === 'clientEmail') {
+                const hasContent = $('clientEmailSubject')?.value?.trim() || 
+                                   $('clientEmailBodyEditor')?.innerText?.trim();
+                if (hasContent) {
+                    if (!confirm('You have an unsaved email draft. Are you sure you want to close?')) {
+                        return;
+                    }
+                }
+            }
+            
+            if (n === 'emailPreview') {
+                // If closing preview, ask if they want to go back to edit
+                if (previewEmailData && (previewEmailData.subject || previewEmailData.body)) {
+                    const choice = confirm('Go back to edit this email?\n\nClick OK to continue editing, or Cancel to discard.');
+                    if (choice && previewSourceModal) {
+                        $('modal-emailPreview')?.classList.remove('active');
+                        openModal(previewSourceModal);
+                        return;
+                    }
+                }
+            }
+            
             $('modal-' + n)?.classList.remove('active'); 
             // Re-enable client dropdown if it was disabled
             if (n === 'newAppt' && $('aClient')) {
@@ -5719,7 +5742,27 @@ The Estrelle Bridal Team`;
             const editor = $(editorId);
             const textarea = $(textareaId);
             if (editor && textarea) {
-                textarea.value = editor.innerText;
+                // Get HTML and convert to clean plain text
+                let html = editor.innerHTML;
+                
+                // Replace block elements with single newlines
+                html = html.replace(/<\/?(div|p|br|li|h[1-6])[^>]*>/gi, '\n');
+                
+                // Remove all other HTML tags
+                html = html.replace(/<[^>]+>/g, '');
+                
+                // Decode HTML entities
+                const temp = document.createElement('textarea');
+                temp.innerHTML = html;
+                let text = temp.value;
+                
+                // Normalize whitespace: collapse multiple newlines to max 2
+                text = text.replace(/\n{3,}/g, '\n\n');
+                
+                // Trim leading/trailing whitespace
+                text = text.trim();
+                
+                textarea.value = text;
             }
         }
         
@@ -10449,6 +10492,7 @@ www.estrellebridal.com`;
             $('clientEmailTo').textContent = `${currentClient.FirstName} ${currentClient.LastName} <${currentClient.Email}>`;
             $('clientEmailSubject').value = '';
             $('clientEmailBody').value = '';
+            $('clientEmailBodyEditor').innerHTML = ''; // Clear the rich text editor
             
             // Populate template dropdown with system + custom templates
             const customTemplates = data.emailtemplates || [];
@@ -10478,6 +10522,8 @@ www.estrellebridal.com`;
             `;
             
             $('clientEmailApptGroup').style.display = 'none';
+            $('clientEmailTemplate').value = ''; // Reset template selection
+            $('clientEmailAppt').value = ''; // Reset appointment selection
             openModal('clientEmail');
         }
         
