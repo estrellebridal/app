@@ -9397,8 +9397,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             
             $('altItemsList').innerHTML = currentAltItems.map((item, idx) => {
-                const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : 'var(--taupe)';
-                const statusBg = item.status === 'done' ? '#27ae6020' : item.status === 'in-progress' ? '#f39c1220' : 'var(--blush)';
+                const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : item.status === 'needs-adjustment' ? '#e67e22' : 'var(--taupe)';
+                const statusBg = item.status === 'done' ? '#27ae6020' : item.status === 'in-progress' ? '#f39c1220' : item.status === 'needs-adjustment' ? '#e67e2220' : 'var(--blush)';
                 
                 return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:${statusBg};border-radius:4px;margin-bottom:6px;border-left:3px solid ${statusColor}">
                     <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px" onchange="updateAltItemStatus(${idx}, this.value)">
@@ -9407,14 +9407,34 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
                         <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
                     </select>
-                    <div style="flex:1">
+                    <div style="flex:1;cursor:pointer" onclick="editAltItem(${idx})">
                         <div style="font-size:12px;font-weight:500">${item.name}</div>
-                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
+                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : '<div style="font-size:10px;color:var(--rose);font-style:italic">Click to add details</div>'}
                         <div style="font-size:9px;color:var(--taupe)">Added: Fitting ${item.addedAtFitting || 1}</div>
                     </div>
                     <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})">×</button>
                 </div>`;
             }).join('');
+        }
+        
+        function editAltItem(idx) {
+            const item = currentAltItems[idx];
+            if (!item) return;
+            
+            const newName = prompt('Item name:', item.name);
+            if (newName === null) return; // Cancelled
+            
+            if (newName.trim()) {
+                item.name = newName.trim();
+            }
+            
+            const newDetails = prompt('Details (optional):', item.details || '');
+            if (newDetails !== null) {
+                item.details = newDetails.trim();
+            }
+            
+            saveAltItemsLocal();
+            renderAltItems();
         }
         
         function addAlterationItem() {
@@ -9957,14 +9977,16 @@ www.estrellebridal.com`;
             const c = getClient(currentAltClientId);
             if (!c) return;
             
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
+            // Use tomorrow to exclude today's appointments (which may have already happened)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
             
             // Check for existing upcoming fitting
             const nextFitting = data.appointments.find(a => 
                 String(a.ClientID) === String(currentAltClientId) && 
                 (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
-                parseDate(a.Date) >= todayStart
+                parseDate(a.Date) >= tomorrow
             );
             
             const scheduleBtn = `<div style="margin-top:8px;text-align:center">
@@ -10129,14 +10151,16 @@ www.estrellebridal.com`;
         
         // Get next fitting for seamstress/email (checks both existing and pending)
         function getNextFittingForClient(clientId) {
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
+            // Get tomorrow's date to exclude today's appointments (which may have already happened)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
             
             const upcoming = data.appointments
                 .filter(a => 
                     String(a.ClientID) === String(clientId) && 
                     (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
-                    parseDate(a.Date) >= todayStart
+                    parseDate(a.Date) >= tomorrow
                 )
                 .sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
             
