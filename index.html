@@ -3080,12 +3080,13 @@ The {StoreName} Team
                             <div class="form-group">
                                 <label class="form-label">Item Type</label>
                                 <select class="form-input" id="oiType" onchange="toggleOrderItemFields()">
-                                    <option value="dress">👗 Dress (from designer)</option>
-                                    <option value="accessory">✨ Accessory (from designer)</option>
-                                    <option value="inhouse">🏠 In-House Item (veil, overskirt, etc.)</option>
-                                    <option value="customization">🔧 Customization (add to existing item)</option>
-                                    <option value="fee">💰 Fee (shipping, rush, etc.)</option>
-                                    <option value="discount">🏷️ Discount</option>
+                                    <option value="dress">Dress (from designer)</option>
+                                    <option value="accessory">Accessory (from designer)</option>
+                                    <option value="inhouse">In-House Item (veil, overskirt, etc.)</option>
+                                    <option value="customization">Customization (add to existing item)</option>
+                                    <option value="fee">Fee (shipping, rush, etc.)</option>
+                                    <option value="discount">Discount</option>
+                                    <option value="custom">Custom Item</option>
                                 </select>
                             </div>
                             
@@ -3167,7 +3168,19 @@ The {StoreName} Team
                                     <div class="form-group"><label class="form-label">Discount Reason</label><input type="text" class="form-input" id="oiDiscountName" placeholder="e.g. Sample sale, Loyalty discount"></div>
                                     <div class="form-group"><label class="form-label">Amount</label><input type="number" class="form-input" id="oiDiscountAmount" placeholder="Enter positive number"></div>
                                 </div>
-                                <div style="font-size:10px;color:var(--taupe);margin-top:-8px;margin-bottom:8px">💡 Enter the discount amount as a positive number (e.g. 200 for $200 off)</div>
+                                <div style="font-size:10px;color:var(--taupe);margin-top:-8px;margin-bottom:8px">Enter the discount amount as a positive number (e.g. 200 for $200 off)</div>
+                            </div>
+                            
+                            <!-- Custom Item -->
+                            <div id="oiCustomItemFields" style="display:none">
+                                <div class="form-row">
+                                    <div class="form-group"><label class="form-label">Item Name</label><input type="text" class="form-input" id="oiCustomItemName" placeholder="e.g. Alteration deposit, Special request"></div>
+                                    <div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oiCustomItemPrice"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Description (optional)</label>
+                                    <textarea class="form-input" id="oiCustomItemDesc" style="min-height:50px" placeholder="Any additional details..."></textarea>
+                                </div>
                             </div>
                             
                             <button class="btn btn-secondary" onclick="addOrderItem()" style="width:100%;margin-top:12px">+ Add Item</button>
@@ -3271,6 +3284,7 @@ The {StoreName} Team
                 <button class="btn btn-secondary" id="ySaveDraft" onclick="saveDraft()" title="Save progress and continue later">💾 Save Draft</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" id="yNext" onclick="yNext()">Next →</button>
+                <button class="btn btn-secondary" id="ySaveOnly" onclick="saveOrderOnly()" style="display:none">💾 Save Only</button>
                 <button class="btn btn-secondary" id="yDone" onclick="sendContractEmail()" style="display:none">📤 Send via App</button>
                 <button class="btn btn-success" id="yGmail" onclick="openContractInGmail()" style="display:none">📧 Open in Gmail</button>
             </div>
@@ -14357,6 +14371,7 @@ The {storeName} Team`
             $('yNext').style.display = yStep < 6 ? 'inline-flex' : 'none';
             $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
             $('yGmail').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            $('ySaveOnly').style.display = yStep === 6 ? 'inline-flex' : 'none';
             if (yStep === 4) genContract();
             if (yStep === 5) initSig();
             if (yStep === 6) prepareEmail();
@@ -14671,6 +14686,7 @@ The {storeName} Team`
             $('oiCustomFields').style.display = type === 'customization' ? 'block' : 'none';
             $('oiFeeFields').style.display = type === 'fee' ? 'block' : 'none';
             $('oiDiscountFields').style.display = type === 'discount' ? 'block' : 'none';
+            $('oiCustomItemFields').style.display = type === 'custom' ? 'block' : 'none';
             
             // Populate designer dropdown when showing designer fields
             if (type === 'dress' || type === 'accessory') {
@@ -14786,6 +14802,12 @@ The {storeName} Team`
                 item.price = -Math.abs(amount); // Store as negative
                 if (!amount) { toast('Enter discount amount'); return; }
                 ['oiDiscountName','oiDiscountAmount'].forEach(i => $(i).value = '');
+            } else if (type === 'custom') {
+                item.name = $('oiCustomItemName').value.trim();
+                item.price = +$('oiCustomItemPrice').value || 0;
+                item.notes = $('oiCustomItemDesc').value.trim();
+                if (!item.name) { toast('Enter item name'); return; }
+                ['oiCustomItemName','oiCustomItemPrice','oiCustomItemDesc'].forEach(i => $(i).value = '');
             }
             
             // Don't add customization as separate item (it's attached to parent)
@@ -15526,6 +15548,7 @@ The {storeName} Team`
             const c = currentClient;
             const consultant = currentOrder.consultant || $('yConsultant').value || '';
             const store = getStoreInfo();
+            const signDate = $('yDate').value ? fmtDate($('yDate').value) : fmtDate(today());
             
             $('emailTo').value = c.Email || '';
             $('emailSubject').value = `Your ${store.name || 'Estrelle Bridal'} Contract — ${c.FirstName} ${c.LastName}`;
@@ -15535,7 +15558,7 @@ Congratulations on finding your dream dress with us! We are so excited to be par
 
 Please find your signed sales contract attached. Feel free to reach out with any questions.
 
-We would greatly appreciate it if you could take a moment to share your experience with us on Google.
+We would greatly appreciate it if you could take a moment to share your experience with us on Google: https://g.page/r/CeGl9T2vSOuIEAE/review
 
 Your review means the world to us and helps future brides find their dream dress too.
 
@@ -15713,6 +15736,43 @@ ${store.name || 'Estrelle Bridal'}`;
             `;
         }
 
+        async function saveOrderOnly() {
+            const c = currentClient;
+            
+            // Upload photos first if any
+            if (pendingPhotos.length > 0) {
+                toast('Uploading photos...', 'success');
+                const photoUrls = await uploadPhotos();
+                if (photoUrls.length > 0) {
+                    const existingPhotos = c.Photos ? (typeof c.Photos === 'string' ? JSON.parse(c.Photos) : c.Photos) : [];
+                    const allPhotos = [...existingPhotos, ...photoUrls];
+                    updateRecord('Clients', c.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                    currentOrder.fittingPhotoUrls = photoUrls;
+                    toast(`${photoUrls.length} photo(s) uploaded!`, 'success');
+                }
+                pendingPhotos = [];
+                renderPhotoPreview();
+            }
+            
+            // Save order
+            const success = await completeOrder();
+            
+            if (success) {
+                // Delete draft since order is complete
+                deleteDraft(c.ID);
+                $('draftIndicator').style.display = 'none';
+                
+                closeModal('yes');
+                toast('Order saved! (No email sent)', 'success');
+                
+                // Render client profile to show photos
+                if (currentClient) renderClientPhotos();
+            } else {
+                toast('Failed to save order', 'error');
+            }
+        }
+
         async function openContractInGmail() {
             const c = currentClient;
             const brideEmail = $('emailTo').value;
@@ -15818,7 +15878,8 @@ ${store.name || 'Estrelle Bridal'}`;
                 signatureData: sigData,
                 consultantSignatureData: consultantSigData,
                 weddingDate: c.WeddingDate ? fmtDate(c.WeddingDate) : '',
-                phone: c.Phone || ''
+                phone: c.Phone || '',
+                signDate: $('yDate').value || today()
             };
             
             // Fire and forget - send in background
