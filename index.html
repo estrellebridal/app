@@ -2969,18 +2969,50 @@ The {StoreName} Team
         </div>
     </div>
 
+    <!-- Initial Signature Modal -->
+    <div class="modal-overlay" id="modal-initialSig" style="z-index:10001">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header"><h2 class="modal-title">✍️ Sign Initials</h2><button class="modal-close" onclick="closeModal('initialSig')">×</button></div>
+            <div class="modal-body" style="text-align:center">
+                <p style="font-size:12px;color:var(--taupe);margin-bottom:12px">Use your finger or stylus to sign your initials</p>
+                <canvas id="initialSigPad" width="300" height="150" style="border:2px solid var(--dusty);border-radius:8px;background:white;touch-action:none;cursor:crosshair"></canvas>
+                <div style="margin-top:8px">
+                    <button class="btn btn-sm btn-secondary" onclick="clearInitialSig()">Clear</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('initialSig')">Cancel</button>
+                <button class="btn btn-primary" onclick="applyInitialSig()">✓ Apply to All</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Choice Dialog -->
+    <div class="modal-overlay" id="modal-choice" style="z-index:10001">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header"><h2 class="modal-title" id="choiceTitle">Choose an option</h2><button class="modal-close" onclick="closeModal('choice'); if(window._choiceReject) window._choiceReject();">×</button></div>
+            <div class="modal-body">
+                <p id="choiceMessage" style="margin-bottom:16px"></p>
+                <div id="choiceInput" style="display:none;margin-bottom:16px">
+                    <input type="text" class="form-input" id="choiceInputField" style="width:100%">
+                </div>
+                <div id="choiceButtons" style="display:flex;flex-direction:column;gap:10px"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- She Said Yes -->
     <div class="modal-overlay" id="modal-yes">
         <div class="modal full">
             <div class="modal-header"><h2 class="modal-title">💍 She Said Yes!</h2><button class="modal-close" onclick="closeYesModal()">×</button></div>
             <div class="modal-body">
                 <div class="steps">
-                    <div class="step active" id="ys1"><span class="step-num">1</span><div class="step-label">Measurements</div></div>
-                    <div class="step" id="ys2"><span class="step-num">2</span><div class="step-label">Order</div></div>
-                    <div class="step" id="ys3"><span class="step-num">3</span><div class="step-label">Photos</div></div>
-                    <div class="step" id="ys4"><span class="step-num">4</span><div class="step-label">Contract</div></div>
-                    <div class="step" id="ys5"><span class="step-num">5</span><div class="step-label">Signature</div></div>
-                    <div class="step" id="ys6"><span class="step-num">6</span><div class="step-label">Email</div></div>
+                    <div class="step active" id="ys1" onclick="goToStep(1)" style="cursor:pointer"><span class="step-num">1</span><div class="step-label">Measurements</div></div>
+                    <div class="step" id="ys2" onclick="goToStep(2)" style="cursor:pointer"><span class="step-num">2</span><div class="step-label">Order</div></div>
+                    <div class="step" id="ys3" onclick="goToStep(3)" style="cursor:pointer"><span class="step-num">3</span><div class="step-label">Photos</div></div>
+                    <div class="step" id="ys4" onclick="goToStep(4)" style="cursor:pointer"><span class="step-num">4</span><div class="step-label">Contract</div></div>
+                    <div class="step" id="ys5" onclick="goToStep(5)" style="cursor:pointer"><span class="step-num">5</span><div class="step-label">Signature</div></div>
+                    <div class="step" id="ys6" onclick="goToStep(6)" style="cursor:pointer"><span class="step-num">6</span><div class="step-label">Email</div></div>
                 </div>
                 <div id="yStep1">
                     <div id="savedMeasurementsSelector" style="display:none;margin-bottom:12px;padding:12px;background:var(--blush);border-radius:5px">
@@ -4696,7 +4728,8 @@ The {StoreName} Team
             const count = checkboxes.length;
             if (count === 0) return;
             
-            if (!confirm('Delete ' + count + ' client(s) and all their appointments/orders?')) return;
+            const confirmed = await appConfirmDanger(`Delete ${count} client(s) and all their appointments/orders?`, 'Delete Clients');
+            if (!confirmed) return;
             
             // Collect IDs and store records for undo
             const ids = [];
@@ -4878,7 +4911,8 @@ The {StoreName} Team
         async function archiveCurrentClient() {
             if (!currentClient) return;
             const name = `${currentClient.FirstName} ${currentClient.LastName}`;
-            if (!confirm(`Archive "${name}"?\n\nThis will hide them from the active clients list.`)) return;
+            const confirmed = await appConfirm(`This will hide "${name}" from the active clients list.`, 'Archive Client');
+            if (!confirmed) return;
             
             updateRecord('Clients', currentClient.ID, { Status: 'archived', ArchivedAt: new Date().toISOString() });
             toast(`${name} archived`, 'success');
@@ -5366,7 +5400,8 @@ The {StoreName} Team
             const count = checkboxes.length;
             if (count === 0) return;
             
-            if (!confirm('Delete ' + count + ' appointment(s)?')) return;
+            const confirmed = await appConfirmDanger(`Delete ${count} appointment(s)?`, 'Delete Appointments');
+            if (!confirmed) return;
             
             // Collect IDs and store records for undo
             const ids = [];
@@ -5641,7 +5676,7 @@ The Estrelle Bridal Team`;
             </div>`;
         }
         
-        function unmarkConfirmed(apptId) {
+        async function unmarkConfirmed(apptId) {
             const appt = data.appointments.find(a => String(a.ID) === String(apptId));
             if (!appt) { 
                 toast('Appointment not found', 'error'); 
@@ -5651,7 +5686,8 @@ The Estrelle Bridal Team`;
             const client = getClient(appt.ClientID);
             const clientName = client ? `${client.FirstName} ${client.LastName}` : 'Unknown';
             
-            if (!confirm(`Remove confirmation for ${clientName}'s appointment?`)) return;
+            const confirmed = await appConfirm(`Remove confirmation for ${clientName}'s appointment?`, 'Remove Confirmation');
+            if (!confirmed) return;
             
             // Clear confirmation
             appt.ConfirmationSent = '';
@@ -8092,7 +8128,8 @@ The Estrelle Bridal Team`;
                 return;
             }
             
-            if (!confirm(`Delete ${orderIds.length} orders? This cannot be undone.`)) return;
+            const confirmed = await appConfirmDanger(`Delete ${orderIds.length} orders? This cannot be undone.`, 'Delete Orders');
+            if (!confirmed) return;
             
             for (const id of orderIds) {
                 await deleteRecord('Orders', id);
@@ -9526,18 +9563,18 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }).join('');
         }
         
-        function editAltItem(idx) {
+        async function editAltItem(idx) {
             const item = currentAltItems[idx];
             if (!item) return;
             
-            const newName = prompt('Item name:', item.name);
+            const newName = await appPrompt('Item name:', item.name, 'Edit Alteration Item');
             if (newName === null) return; // Cancelled
             
             if (newName.trim()) {
                 item.name = newName.trim();
             }
             
-            const newDetails = prompt('Details (optional):', item.details || '');
+            const newDetails = await appPrompt('Details (optional):', item.details || '', 'Edit Alteration Item');
             if (newDetails !== null) {
                 item.details = newDetails.trim();
             }
@@ -9703,8 +9740,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
         }
         
-        function removeAltItem(idx) {
-            if (confirm('Remove this alteration item?')) {
+        async function removeAltItem(idx) {
+            const confirmed = await appConfirmDanger('Remove this alteration item?', 'Remove Item');
+            if (confirmed) {
                 currentAltItems.splice(idx, 1);
                 renderAltItems();
             }
@@ -10323,8 +10361,9 @@ www.estrellebridal.com`;
         
         // Alias for backward compatibility
         function openEditDesignerModal(idx) { editDesignerByIdx(idx); }
-        function deleteDesignerFromList(idx) {
-            if (!confirm('Delete this designer?')) return;
+        async function deleteDesignerFromList(idx) {
+            const confirmed = await appConfirmDanger('Delete this designer?', 'Delete Designer');
+            if (!confirmed) return;
             designerData.splice(idx, 1);
             saveDesignerData();
             renderDesigners();
@@ -11604,23 +11643,24 @@ www.estrellebridal.com`;
             toast('Service type added!', 'success');
         }
         
-        function removeServiceType(idx) {
+        async function removeServiceType(idx) {
             const types = getServiceTypes();
             if (types.length <= 1) {
                 toast('Need at least one service type', 'error');
                 return;
             }
-            if (!confirm(`Delete "${types[idx]}"?`)) return;
+            const confirmed = await appConfirmDanger(`Delete "${types[idx]}"?`, 'Delete Service Type');
+            if (!confirmed) return;
             types.splice(idx, 1);
             localStorage.setItem('estrelle_service_types', JSON.stringify(types));
             renderServiceTypes();
             toast('Service type removed', 'success');
         }
         
-        function editServiceType(idx) {
+        async function editServiceType(idx) {
             const types = getServiceTypes();
             const oldName = types[idx];
-            const newName = prompt('Edit service type name:', oldName);
+            const newName = await appPrompt('Edit service type name:', oldName, 'Edit Service Type');
             
             if (!newName || newName.trim() === '') return;
             if (newName.trim() === oldName) return;
@@ -11642,7 +11682,7 @@ www.estrellebridal.com`;
             );
             
             if (appointmentsToUpdate.length > 0) {
-                const doMigrate = confirm(`Found ${appointmentsToUpdate.length} appointment(s) with type "${oldName}".\n\nUpdate them to "${trimmedNewName}"?`);
+                const doMigrate = await appConfirm(`Found ${appointmentsToUpdate.length} appointment(s) with type "${oldName}". Update them to "${trimmedNewName}"?`, 'Update Appointments');
                 
                 if (doMigrate) {
                     toast(`Updating ${appointmentsToUpdate.length} appointments...`, '');
@@ -12130,7 +12170,8 @@ The {storeName} Team`
         }
         
         async function deleteConsultant(id) {
-            if (!confirm('Delete this consultant?')) return;
+            const confirmed = await appConfirmDanger('Delete this consultant?', 'Delete Consultant');
+            if (!confirmed) return;
             deleteRecord('Consultants', id);
             renderConsultants();
             toast('Deleted', 'success');
@@ -12793,7 +12834,8 @@ The {storeName} Team`
         }
         
         async function deleteClientPhoto(idx) {
-            if (!confirm('Delete this photo?')) return;
+            const confirmed = await appConfirmDanger('Delete this photo?', 'Delete Photo');
+            if (!confirmed) return;
             
             let photos = [];
             try {
@@ -13063,9 +13105,10 @@ The {storeName} Team`
             ].filter(Boolean).join(', ');
             
             const action = editingMeasurementIdx !== null ? 'update' : 'save';
-            const confirmMsg = `Please confirm ${action === 'update' ? 'updating' : 'saving'} these measurements:\n\n${summary}\n\nTaken by: ${measurement.takenBy}\nDate: ${fmtDate(measurement.date)}`;
+            const confirmMsg = `${summary}\n\nTaken by: ${measurement.takenBy}\nDate: ${fmtDate(measurement.date)}`;
             
-            if (!confirm(confirmMsg)) return;
+            const confirmed = await appConfirm(confirmMsg, action === 'update' ? 'Confirm Update' : 'Confirm Save');
+            if (!confirmed) return;
             
             // Get existing measurements (sorted by date desc)
             const measurements = getClientMeasurements();
@@ -13091,7 +13134,8 @@ The {storeName} Team`
         }
         
         async function deleteMeasurement(idx) {
-            if (!confirm('Delete this measurement record?')) return;
+            const confirmed = await appConfirmDanger('Delete this measurement record?', 'Delete Measurement');
+            if (!confirmed) return;
             
             const measurements = getClientMeasurements();
             measurements.splice(idx, 1);
@@ -13937,18 +13981,87 @@ The {storeName} Team`
             const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value;
             
             if (hasItems || hasMeasurements) {
-                const action = prompt('You have unsaved work.\n\nType:\n  "save" to save as draft\n  "discard" to close without saving\n  Or press Cancel to go back', 'save');
-                
-                if (action === 'save') {
-                    saveDraft();
-                    return;
-                } else if (action === 'discard') {
-                    closeModal('yes');
-                }
-                // If cancelled, do nothing (stay in modal)
+                showChoiceDialog(
+                    'Unsaved Work',
+                    'You have unsaved work. What would you like to do?',
+                    [
+                        { label: '💾 Save Draft', style: 'primary', action: () => { closeModal('choice'); saveDraft(); } },
+                        { label: '🗑️ Discard', style: 'danger', action: () => { closeModal('choice'); closeModal('yes'); } },
+                        { label: '← Go Back', style: 'secondary', action: () => { closeModal('choice'); } }
+                    ]
+                );
             } else {
                 closeModal('yes');
             }
+        }
+        
+        function showChoiceDialog(title, message, buttons) {
+            $('choiceTitle').textContent = title;
+            $('choiceMessage').textContent = message;
+            $('choiceInput').style.display = 'none';
+            $('choiceButtons').innerHTML = buttons.map(btn => {
+                const btnClass = btn.style === 'primary' ? 'btn btn-primary' : 
+                                 btn.style === 'danger' ? 'btn btn-secondary' : 'btn btn-secondary';
+                const extraStyle = btn.style === 'danger' ? 'background:#e74c3c;color:white;border-color:#e74c3c' : '';
+                return `<button class="${btnClass}" style="width:100%;padding:12px;${extraStyle}" onclick="(${btn.action.toString()})()">${btn.label}</button>`;
+            }).join('');
+            openModal('choice');
+        }
+        
+        // Promise-based confirm dialog
+        function appConfirm(message, title = 'Confirm') {
+            return new Promise((resolve) => {
+                $('choiceTitle').textContent = title;
+                $('choiceMessage').textContent = message;
+                $('choiceInput').style.display = 'none';
+                window._choiceReject = () => resolve(false);
+                $('choiceButtons').innerHTML = `
+                    <div style="display:flex;gap:10px">
+                        <button class="btn btn-secondary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve(false)">Cancel</button>
+                        <button class="btn btn-primary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve(true)">OK</button>
+                    </div>
+                `;
+                window._choiceResolve = resolve;
+                openModal('choice');
+            });
+        }
+        
+        // Promise-based prompt dialog
+        function appPrompt(message, defaultValue = '', title = 'Input') {
+            return new Promise((resolve) => {
+                $('choiceTitle').textContent = title;
+                $('choiceMessage').textContent = message;
+                $('choiceInput').style.display = 'block';
+                $('choiceInputField').value = defaultValue;
+                window._choiceReject = () => resolve(null);
+                $('choiceButtons').innerHTML = `
+                    <div style="display:flex;gap:10px">
+                        <button class="btn btn-secondary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve(null)">Cancel</button>
+                        <button class="btn btn-primary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve($('choiceInputField').value)">OK</button>
+                    </div>
+                `;
+                window._choiceResolve = resolve;
+                openModal('choice');
+                setTimeout(() => $('choiceInputField').focus(), 100);
+            });
+        }
+        
+        // Danger confirm (for deletes)
+        function appConfirmDanger(message, title = 'Are you sure?') {
+            return new Promise((resolve) => {
+                $('choiceTitle').textContent = title;
+                $('choiceMessage').textContent = message;
+                $('choiceInput').style.display = 'none';
+                window._choiceReject = () => resolve(false);
+                $('choiceButtons').innerHTML = `
+                    <div style="display:flex;gap:10px">
+                        <button class="btn btn-secondary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve(false)">Cancel</button>
+                        <button class="btn" style="flex:1;padding:12px;background:#e74c3c;color:white;border-color:#e74c3c" onclick="closeModal('choice'); window._choiceResolve(true)">Delete</button>
+                    </div>
+                `;
+                window._choiceResolve = resolve;
+                openModal('choice');
+            });
         }
         
         function saveDraft() {
@@ -13963,6 +14076,7 @@ The {storeName} Team`
                 heels: $('mHeels').value, 
                 notes: $('mNotes').value,
                 unit: measUnit,
+                takenBy: $('mTakenBy').value,
                 custom: [...customMeasurements]
             };
             
@@ -13971,6 +14085,7 @@ The {storeName} Team`
                 clientName: `${currentClient.FirstName} ${currentClient.LastName}`,
                 step: yStep,
                 measurements: measurements,
+                selectedMeasurementIdx: $('selectSavedMeasurement').value,
                 items: [...currentOrder.items],
                 hst: $('addHst').checked,
                 date: $('yDate').value,
@@ -13998,16 +14113,22 @@ The {storeName} Team`
             if (draft) {
                 const savedDate = new Date(draft.savedAt).toLocaleDateString();
                 const itemCount = draft.items?.length || 0;
-                const action = prompt(`Found saved draft from ${savedDate} with ${itemCount} item(s).\n\nType:\n  "load" to continue where you left off\n  "delete" to start fresh\n  Or press Cancel to keep draft and start fresh this time`, 'load');
                 
-                if (action === 'load') {
-                    loadDraft(draft);
-                } else if (action === 'delete') {
-                    delete drafts[currentClient.ID];
-                    localStorage.setItem('estrelle_drafts', JSON.stringify(drafts));
-                    toast('Draft deleted', 'success');
-                }
-                // If cancelled or anything else, just continue without loading or deleting
+                showChoiceDialog(
+                    'Draft Found',
+                    `Found saved draft from ${savedDate} with ${itemCount} item(s). What would you like to do?`,
+                    [
+                        { label: '📂 Load Draft', style: 'primary', action: () => { closeModal('choice'); loadDraft(drafts[currentClient.ID]); } },
+                        { label: '🗑️ Delete Draft', style: 'danger', action: () => { 
+                            const d = JSON.parse(localStorage.getItem('estrelle_drafts') || '{}');
+                            delete d[currentClient.ID]; 
+                            localStorage.setItem('estrelle_drafts', JSON.stringify(d)); 
+                            closeModal('choice'); 
+                            toast('Draft deleted', 'success'); 
+                        } },
+                        { label: '✨ Start Fresh (keep draft)', style: 'secondary', action: () => { closeModal('choice'); } }
+                    ]
+                );
             }
         }
         
@@ -14022,6 +14143,7 @@ The {storeName} Team`
                 $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
                 $('mHeels').value = draft.measurements.heels || '';
                 $('mNotes').value = draft.measurements.notes || '';
+                $('mTakenBy').value = draft.measurements.takenBy || '';
                 
                 if (draft.measurements.unit) {
                     measUnit = draft.measurements.unit;
@@ -14034,14 +14156,21 @@ The {storeName} Team`
                 }
             }
             
+            // Restore selected measurement from dropdown
+            if (draft.selectedMeasurementIdx) {
+                $('selectSavedMeasurement').value = draft.selectedMeasurementIdx;
+            }
+            
+            // Restore HST BEFORE rendering items so total is correct
+            $('addHst').checked = !!draft.hst;
+            
             // Restore order items
             if (draft.items && draft.items.length > 0) {
                 currentOrder.items = [...draft.items];
-                renderOrderItems();
+                renderOrderItems(); // Now HST checkbox is already set
             }
             
-            // Restore HST and date
-            $('addHst').checked = !!draft.hst;
+            // Restore date
             if (draft.date) $('yDate').value = draft.date;
             
             // Restore PO and arrival date if saved
@@ -14180,6 +14309,42 @@ The {storeName} Team`
         }
         
         function yPrev() { if (yStep > 1) { yStep--; updateYSteps(); } }
+        
+        function goToStep(step) {
+            // Save current step data before navigating
+            if (yStep === 1) {
+                // Save measurements when leaving step 1
+                currentOrder.measurements = { 
+                    bust: $('mBust').value,
+                    cup: $('mCup').value,
+                    waist: $('mWaist').value, 
+                    hip: $('mHip').value, 
+                    height: $('mHeight').value, 
+                    waistToFloor: $('mWaistToFloor').value,
+                    heels: $('mHeels').value, 
+                    notes: $('mNotes').value,
+                    unit: measUnit,
+                    custom: [...customMeasurements],
+                    takenBy: $('mTakenBy').value
+                };
+            }
+            
+            // Allow going back to any previous step, or forward only if validation passes
+            if (step < yStep) {
+                // Going back - always allowed
+                yStep = step;
+                updateYSteps();
+            } else if (step > yStep) {
+                // Going forward - need to validate each step
+                // For now, just use yNext logic by calling it multiple times
+                while (yStep < step) {
+                    const prevStep = yStep;
+                    yNext();
+                    // If yNext didn't advance (validation failed), stop
+                    if (yStep === prevStep) break;
+                }
+            }
+        }
 
         // ========== PHOTO UPLOAD ==========
         let pendingPhotos = [];
@@ -14480,30 +14645,31 @@ The {storeName} Team`
             toast('Item added', 'success');
         }
 
-        function removeOrderItem(index) {
+        async function removeOrderItem(index) {
             const item = currentOrder.items[index];
             const itemName = item.designer ? `${item.designer} — ${item.name}` : item.name;
-            if (confirm(`Remove "${itemName}" from order?`)) {
+            const confirmed = await appConfirmDanger(`Remove "${itemName}" from order?`, 'Remove Item');
+            if (confirmed) {
                 currentOrder.items.splice(index, 1);
                 renderOrderItems();
             }
         }
         
-        function editOrderItem(index) {
+        async function editOrderItem(index) {
             const item = currentOrder.items[index];
             if (!item) return;
             
             if (item.type === 'dress' || item.type === 'accessory') {
-                const newName = prompt('Style/Name:', item.name);
+                const newName = await appPrompt('Style/Name:', item.name, 'Edit Item');
                 if (newName === null) return;
                 
-                const newSize = prompt('Size:', item.size || '');
+                const newSize = await appPrompt('Size:', item.size || '', 'Edit Item');
                 if (newSize === null) return;
                 
-                const newColor = prompt('Color:', item.color || '');
+                const newColor = await appPrompt('Color:', item.color || '', 'Edit Item');
                 if (newColor === null) return;
                 
-                const newPrice = prompt('Price:', item.price || 0);
+                const newPrice = await appPrompt('Price:', String(item.price || 0), 'Edit Item');
                 if (newPrice === null) return;
                 
                 item.name = newName.trim() || item.name;
@@ -14512,13 +14678,13 @@ The {storeName} Team`
                 item.price = parseFloat(newPrice) || item.price;
                 
             } else if (item.type === 'inhouse') {
-                const newName = prompt('Item Name:', item.name);
+                const newName = await appPrompt('Item Name:', item.name, 'Edit Item');
                 if (newName === null) return;
                 
-                const newPrice = prompt('Price:', item.price || 0);
+                const newPrice = await appPrompt('Price:', String(item.price || 0), 'Edit Item');
                 if (newPrice === null) return;
                 
-                const newNotes = prompt('Notes:', item.notes || '');
+                const newNotes = await appPrompt('Notes:', item.notes || '', 'Edit Item');
                 if (newNotes === null) return;
                 
                 item.name = newName.trim() || item.name;
@@ -14831,7 +14997,7 @@ The {storeName} Team`
                     <tr><td>Waist</td><td>${o.measurements.waist||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Hip</td><td>${o.measurements.hip||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Height</td><td>${o.measurements.height||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Waist to Floor</td><td>${o.measurements.waistToFloor||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
+                    ${o.measurements.waistToFloor ? `<tr><td>Waist to Floor</td><td>${o.measurements.waistToFloor} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     <tr><td>Heels</td><td>${o.measurements.heels||'—'}"</td><td style="border:1px solid #ccc"></td></tr>
                     ${customMeasRows}
                 </table>
@@ -14912,13 +15078,13 @@ The {storeName} Team`
             
             const otherWithValues = otherMeasurements.filter(m => m.value);
             
-            let html = '<div style="font-size:10px;color:var(--rose);margin-bottom:8px">* Required initials</div>';
+            let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:10px;color:var(--rose)">* Required initials</div><button class="btn btn-sm btn-secondary" onclick="initialAll()" style="font-size:10px">✍️ Initial All</button></div>';
             
             // Core measurements with individual initials
             coreMeasurements.filter(m => m.value).forEach(m => {
                 html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--champagne)">
                     <span style="font-size:12px;font-weight:500">${m.label}: ${m.value} ${m.unit}</span>
-                    <input type="text" class="form-input" style="width:60px;padding:4px;text-align:center;font-size:12px;border:2px solid var(--dusty)" placeholder="Initial *" id="init_${m.key}" maxlength="4" required>
+                    <input type="text" class="form-input init-field" style="width:60px;padding:4px;text-align:center;font-size:12px;border:2px solid var(--dusty)" placeholder="Initial *" id="init_${m.key}" maxlength="4" required>
                 </div>`;
             });
             
@@ -14928,7 +15094,7 @@ The {storeName} Team`
                     <div style="font-size:10px;color:var(--taupe);margin-bottom:6px">Other Measurements:</div>
                     <div style="display:flex;align-items:center;justify-content:space-between">
                         <span style="font-size:11px">${otherWithValues.map(m => `${m.label}: ${m.value}${m.unit}`).join(', ')}</span>
-                        <input type="text" class="form-input" style="width:60px;padding:4px;text-align:center;font-size:12px;border:2px solid var(--dusty)" placeholder="Initial *" id="init_other" maxlength="4" required>
+                        <input type="text" class="form-input init-field" style="width:60px;padding:4px;text-align:center;font-size:12px;border:2px solid var(--dusty)" placeholder="Initial *" id="init_other" maxlength="4" required>
                     </div>
                 </div>`;
             }
@@ -14982,6 +15148,112 @@ The {storeName} Team`
                 initials[el.id.replace('init_', '')] = el.value;
             });
             return initials;
+        }
+        
+        let initialSigPad = null;
+        let drawingInitial = false;
+        
+        function initialAll() {
+            // Open signature modal
+            openModal('initialSig');
+            
+            // Initialize canvas
+            const canvas = $('initialSigPad');
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#2C2825';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            const getPos = e => {
+                const r = canvas.getBoundingClientRect();
+                const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0]?.clientY);
+                return { 
+                    x: (clientX - r.left) * (canvas.width / r.width), 
+                    y: (clientY - r.top) * (canvas.height / r.height) 
+                };
+            };
+            
+            canvas.onmousedown = canvas.ontouchstart = e => {
+                e.preventDefault();
+                drawingInitial = true;
+                const p = getPos(e);
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+            };
+            
+            canvas.onmousemove = canvas.ontouchmove = e => {
+                if (!drawingInitial) return;
+                e.preventDefault();
+                const p = getPos(e);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+            };
+            
+            canvas.onmouseup = canvas.ontouchend = canvas.onmouseleave = () => {
+                drawingInitial = false;
+            };
+            
+            initialSigPad = { canvas, ctx };
+        }
+        
+        function clearInitialSig() {
+            if (initialSigPad) {
+                initialSigPad.ctx.fillStyle = 'white';
+                initialSigPad.ctx.fillRect(0, 0, initialSigPad.canvas.width, initialSigPad.canvas.height);
+            }
+        }
+        
+        function isInitialSigBlank() {
+            if (!initialSigPad) return true;
+            const canvas = initialSigPad.canvas;
+            const ctx = canvas.getContext('2d');
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i] !== 255 || data[i+1] !== 255 || data[i+2] !== 255) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        
+        function applyInitialSig() {
+            if (isInitialSigBlank()) {
+                toast('Please sign your initials first', 'error');
+                return;
+            }
+            
+            // Get signature as image
+            const sigData = initialSigPad.canvas.toDataURL('image/png');
+            
+            // Apply to all init fields as small images
+            document.querySelectorAll('.init-field').forEach(el => {
+                // Create a container if not exists
+                const container = el.parentElement;
+                
+                // Hide the input and show image instead
+                el.style.display = 'none';
+                el.value = '✓'; // Mark as signed
+                
+                // Check if image already exists
+                let img = container.querySelector('.init-sig-img');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.className = 'init-sig-img';
+                    img.style.cssText = 'width:60px;height:30px;object-fit:contain;border:1px solid var(--champagne);border-radius:4px;background:white';
+                    container.appendChild(img);
+                }
+                img.src = sigData;
+            });
+            
+            // Store signature data for PDF
+            currentOrder.initialSignature = sigData;
+            
+            closeModal('initialSig');
+            toast('Initials applied to all measurements', 'success');
         }
 
         async function completeOrder() {
