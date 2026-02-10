@@ -3105,7 +3105,7 @@ The {StoreName} Team
                                 <div class="form-row-3">
                                     <div class="form-group"><label class="form-label">Size</label><input type="text" class="form-input" id="oiSize"></div>
                                     <div class="form-group"><label class="form-label">Color</label><input type="text" class="form-input" id="oiColor"></div>
-                                    <div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oiPrice"></div>
+                                    <div class="form-group"><label class="form-label">Price</label><input type="text" class="form-input" id="oiPrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
                             </div>
                             
@@ -3113,7 +3113,7 @@ The {StoreName} Team
                             <div id="oiInhouseFields" style="display:none">
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Item Name</label><input type="text" class="form-input" id="oiInhouseName" placeholder="e.g. Cathedral Veil, Overskirt"></div>
-                                    <div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oiInhousePrice"></div>
+                                    <div class="form-group"><label class="form-label">Price</label><input type="text" class="form-input" id="oiInhousePrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Production Notes</label>
@@ -3131,7 +3131,7 @@ The {StoreName} Team
                                 </div>
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Customization</label><input type="text" class="form-input" id="oiCustomName" placeholder="e.g. Add beading to bodice"></div>
-                                    <div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oiCustomPrice"></div>
+                                    <div class="form-group"><label class="form-label">Price</label><input type="text" class="form-input" id="oiCustomPrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Delivery</label>
@@ -3157,7 +3157,7 @@ The {StoreName} Team
                                             <option value="other">Other</option>
                                         </select>
                                     </div>
-                                    <div class="form-group"><label class="form-label">Amount</label><input type="number" class="form-input" id="oiFeePrice"></div>
+                                    <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="oiFeePrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
                                 <div class="form-group"><label class="form-label">Note</label><input type="text" class="form-input" id="oiFeeNote" placeholder="e.g. Express shipping from Italy"></div>
                             </div>
@@ -3166,16 +3166,16 @@ The {StoreName} Team
                             <div id="oiDiscountFields" style="display:none">
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Discount Reason</label><input type="text" class="form-input" id="oiDiscountName" placeholder="e.g. Sample sale, Loyalty discount"></div>
-                                    <div class="form-group"><label class="form-label">Amount</label><input type="number" class="form-input" id="oiDiscountAmount" placeholder="Enter positive number"></div>
+                                    <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="oiDiscountAmount" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
-                                <div style="font-size:10px;color:var(--taupe);margin-top:-8px;margin-bottom:8px">Enter the discount amount as a positive number (e.g. 200 for $200 off)</div>
+                                <div style="font-size:10px;color:var(--taupe);margin-top:-8px;margin-bottom:8px">Enter the discount amount as a positive number (e.g. $200 for $200 off)</div>
                             </div>
                             
                             <!-- Custom Item -->
                             <div id="oiCustomItemFields" style="display:none">
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Item Name</label><input type="text" class="form-input" id="oiCustomItemName" placeholder="e.g. Alteration deposit, Special request"></div>
-                                    <div class="form-group"><label class="form-label">Price</label><input type="number" class="form-input" id="oiCustomItemPrice"></div>
+                                    <div class="form-group"><label class="form-label">Price</label><input type="text" class="form-input" id="oiCustomItemPrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Description (optional)</label>
@@ -3232,7 +3232,10 @@ The {StoreName} Team
                     <p style="font-size:10px;color:var(--taupe)">💡 These photos will be saved to the client profile and order details for easy reference when working with the designer.</p>
                 </div>
                 <div id="yStep4" style="display:none">
-                    <div class="contract" id="contractPreview" style="max-height:65vh;overflow-y:auto;font-size:12px;padding:20px"></div>
+                    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+                        <button class="btn btn-secondary" onclick="downloadContractPdf()" style="font-size:11px">📄 Download PDF</button>
+                    </div>
+                    <div class="contract" id="contractPreview" style="max-height:60vh;overflow-y:auto;font-size:12px;padding:20px"></div>
                 </div>
                 <div id="yStep5" style="display:none">
                     <div class="grid-2">
@@ -3460,6 +3463,10 @@ The {StoreName} Team
                     
                     renderAlts();
                     toast('Alteration restored!', 'success');
+                    
+                } else if (action.type === 'delete_measurement') {
+                    // Restore deleted measurement
+                    await undoDeleteMeasurement(action.clientId, action.measurement, action.idx);
                 }
                 
                 saveCachedData();
@@ -3582,6 +3589,36 @@ The {StoreName} Team
         const fmtDateLong = d => new Date(d+'T00:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
         const initials = (f,l) => (f?.[0]||'') + (l?.[0]||'');
         const money = n => '$' + Number(n||0).toLocaleString();
+        
+        // Format price input as user types (e.g., $12,020)
+        function formatPriceInput(input) {
+            // Get cursor position
+            const cursorPos = input.selectionStart;
+            const oldLength = input.value.length;
+            
+            // Remove all non-digits
+            let value = input.value.replace(/[^\d]/g, '');
+            
+            // Format with commas
+            if (value) {
+                value = '$' + Number(value).toLocaleString();
+            }
+            
+            input.value = value;
+            
+            // Restore cursor position (accounting for added/removed chars)
+            const newLength = input.value.length;
+            const newPos = cursorPos + (newLength - oldLength);
+            input.setSelectionRange(newPos, newPos);
+        }
+        
+        // Parse formatted price back to number
+        function parsePriceInput(value) {
+            if (!value) return 0;
+            // Remove $ and commas, parse as number
+            return parseFloat(value.replace(/[$,]/g, '')) || 0;
+        }
+        
         const getClient = function(id) {
             return data.clients.find(function(c) { return String(c.ID) === String(id); });
         };
@@ -4738,16 +4775,21 @@ The {StoreName} Team
             $('clientCount').textContent = activeClients.length + ' clients';
             $('selectAllClients').checked = false;
             $('btnDeleteClients').style.display = 'none';
-            $('clientsTable').innerHTML = activeClients.length ? activeClients.map(c => `
+            $('clientsTable').innerHTML = activeClients.length ? activeClients.map(c => {
+                // Check if client said yes OR has orders
+                const hasOrders = data.orders.some(o => String(o.ClientID) === String(c.ID));
+                const saidYes = c.SaidYes === 'TRUE' || c.SaidYes === true || hasOrders;
+                const saidYesIcon = saidYes ? ' 💍' : '';
+                return `
                 <tr>
                     <td onclick="event.stopPropagation()"><input type="checkbox" class="client-checkbox" data-id="${c.ID}" onchange="updateClientSelection()"></td>
-                    <td onclick="openClient('${c.ID}')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
+                    <td onclick="openClient('${c.ID}')" style="cursor:pointer"><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:28px;height:28px;font-size:11px">${initials(c.FirstName,c.LastName)}</div><div><div style="font-weight:500">${c.FirstName} ${c.LastName}${saidYesIcon}</div><div style="font-size:9px;color:var(--rose)">${c.Email||''}</div></div></div></td>
                     <td onclick="openClient('${c.ID}')" style="cursor:pointer">${fmtDate(c.WeddingDate)}</td>
                     <td onclick="openClient('${c.ID}')" style="cursor:pointer"><span class="status status-${c.Status||'new'}">${c.Status||'new'}</span></td>
                     <td onclick="openClient('${c.ID}')" style="cursor:pointer">${fmtDate(c.LastVisit)}</td>
                     <td><button class="action-btn" onclick="event.stopPropagation();editClient('${c.ID}')">Edit</button></td>
                 </tr>
-            `).join('') : '<tr><td colspan="6" class="empty">No clients</td></tr>';
+            `}).join('') : '<tr><td colspan="6" class="empty">No clients</td></tr>';
             
             updateClientSortArrows();
         }
@@ -12273,7 +12315,12 @@ The {storeName} Team`
             if (!c) return;
             currentClient = c;
             $('cAvatar').textContent = initials(c.FirstName, c.LastName);
-            $('cName').textContent = c.FirstName + ' ' + c.LastName;
+            
+            // Show Said Yes icon if client said yes OR has orders
+            const hasOrders = data.orders.some(o => String(o.ClientID) === String(c.ID));
+            const saidYes = c.SaidYes === 'TRUE' || c.SaidYes === true || hasOrders;
+            const saidYesIcon = saidYes ? ' 💍' : '';
+            $('cName').textContent = c.FirstName + ' ' + c.LastName + saidYesIcon;
             
             let metaText = `Wedding: ${fmtDate(c.WeddingDate)} · ${c.Venue || 'Venue TBD'}`;
             if (c.DestinationWedding === true || c.DestinationWedding === 'TRUE') {
@@ -13205,13 +13252,49 @@ The {storeName} Team`
             if (!confirmed) return;
             
             const measurements = getClientMeasurements();
+            const deletedMeasurement = measurements[idx];
+            const deletedIdx = idx;
+            
             measurements.splice(idx, 1);
             
             await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
             currentClient.MeasurementHistory = JSON.stringify(measurements);
             
             renderClientMeasurements();
-            toast('Measurement deleted', 'success');
+            toast('Measurement deleted', 'success', true);
+            
+            // Add undo
+            addUndo({
+                type: 'delete_measurement',
+                clientId: currentClient.ID,
+                measurement: deletedMeasurement,
+                idx: deletedIdx
+            });
+        }
+        
+        async function undoDeleteMeasurement(clientId, measurement, idx) {
+            const client = data.clients.find(c => c.ID == clientId);
+            if (!client) return;
+            
+            let measurements = [];
+            try {
+                measurements = client.MeasurementHistory ? JSON.parse(client.MeasurementHistory) : [];
+            } catch (e) {
+                measurements = [];
+            }
+            
+            // Insert back at original position
+            measurements.splice(idx, 0, measurement);
+            
+            await updateRecord('Clients', clientId, { MeasurementHistory: JSON.stringify(measurements) });
+            client.MeasurementHistory = JSON.stringify(measurements);
+            
+            if (currentClient && currentClient.ID == clientId) {
+                currentClient.MeasurementHistory = JSON.stringify(measurements);
+                renderClientMeasurements();
+            }
+            
+            toast('Measurement restored', 'success');
         }
 
         // ========== TIMELY IMPORT ==========
@@ -14171,16 +14254,26 @@ The {storeName} Team`
                 custom: [...customMeasurements]
             };
             
+            // Collect initials if on step 5
+            let initials = {};
+            if ($('init_bust')) initials.bust = $('init_bust').value || '';
+            if ($('init_waist')) initials.waist = $('init_waist').value || '';
+            if ($('init_hip')) initials.hip = $('init_hip').value || '';
+            if ($('init_other')) initials.other = $('init_other').value || '';
+            
             const draft = {
                 step: yStep,
                 measurements: measurements,
                 selectedMeasurementIdx: $('selectSavedMeasurement').value,
                 items: [...currentOrder.items],
-                taxType: $('taxHst').checked ? 'hst' : ($('taxCustom').checked ? 'custom' : 'none'),
-                customTaxRate: $('customTaxRate').value,
-                date: $('yDate').value,
-                po: $('oiPO').value,
-                arrivalDate: $('oiArrivalDate').value,
+                taxType: $('taxHst')?.checked ? 'hst' : ($('taxCustom')?.checked ? 'custom' : 'none'),
+                customTaxRate: $('customTaxRate')?.value || '',
+                date: $('yDate')?.value || '',
+                po: $('oiPO')?.value || '',
+                arrivalDate: $('oiArrivalDate')?.value || '',
+                orderDetails: $('oiDetails')?.value || '',
+                consultant: $('yConsultantSelect')?.value || '',
+                initials: initials,
                 savedAt: new Date().toISOString()
             };
             
@@ -14246,6 +14339,9 @@ The {storeName} Team`
                     customMeasurements = [...draft.measurements.custom];
                     renderCustomMeas();
                 }
+                
+                // Also store in currentOrder so it persists through navigation
+                currentOrder.measurements = { ...draft.measurements };
             }
             
             // Restore selected measurement from dropdown
@@ -14284,6 +14380,19 @@ The {storeName} Team`
             // Restore PO and arrival date if saved
             if (draft.po) $('oiPO').value = draft.po;
             if (draft.arrivalDate) $('oiArrivalDate').value = draft.arrivalDate;
+            
+            // Restore order details
+            if (draft.orderDetails) $('oiDetails').value = draft.orderDetails;
+            
+            // Restore consultant selection
+            if (draft.consultant) {
+                currentOrder.consultantId = draft.consultant;
+            }
+            
+            // Restore initials
+            if (draft.initials) {
+                currentOrder.draftInitials = draft.initials;
+            }
             
             // Go to the step they were on (but not past step 2 to review items)
             yStep = Math.min(draft.step || 1, 2);
@@ -14372,8 +14481,57 @@ The {storeName} Team`
             $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
             $('yGmail').style.display = yStep === 6 ? 'inline-flex' : 'none';
             $('ySaveOnly').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            
+            // Restore data when navigating to specific steps
+            if (yStep === 1 && currentOrder.measurements) {
+                // Restore measurements from currentOrder when going back to step 1
+                const m = currentOrder.measurements;
+                $('mBust').value = m.bust || '';
+                $('mCup').value = m.cup || '';
+                $('mWaist').value = m.waist || '';
+                $('mHip').value = m.hip || '';
+                $('mHeight').value = m.height || '';
+                $('mWaistToFloor').value = m.waistToFloor || '';
+                $('mHeels').value = m.heels || '';
+                $('mNotes').value = m.notes || '';
+                $('mTakenBy').value = m.takenBy || '';
+                if (m.unit) {
+                    measUnit = m.unit;
+                    setMeasUnit(m.unit);
+                }
+                if (m.custom) {
+                    customMeasurements = [...m.custom];
+                    renderCustomMeas();
+                }
+            }
+            
+            if (yStep === 2) {
+                // Ensure items are rendered
+                renderOrderItems();
+            }
+            
             if (yStep === 4) genContract();
-            if (yStep === 5) initSig();
+            
+            if (yStep === 5) {
+                initSig();
+                // Restore consultant selection if saved
+                if (currentOrder.consultantId) {
+                    setTimeout(() => {
+                        $('yConsultantSelect').value = currentOrder.consultantId;
+                        loadConsultantSig();
+                    }, 100);
+                }
+                // Restore initials if saved from draft
+                if (currentOrder.draftInitials) {
+                    setTimeout(() => {
+                        if ($('init_bust') && currentOrder.draftInitials.bust) $('init_bust').value = currentOrder.draftInitials.bust;
+                        if ($('init_waist') && currentOrder.draftInitials.waist) $('init_waist').value = currentOrder.draftInitials.waist;
+                        if ($('init_hip') && currentOrder.draftInitials.hip) $('init_hip').value = currentOrder.draftInitials.hip;
+                        if ($('init_other') && currentOrder.draftInitials.other) $('init_other').value = currentOrder.draftInitials.other;
+                    }, 100);
+                }
+            }
+            
             if (yStep === 6) prepareEmail();
         }
 
@@ -14475,10 +14633,13 @@ The {storeName} Team`
             return pixelBuffer.every(color => color === 0xFFFFFFFF || color === 0);
         }
         
-        function yPrev() { if (yStep > 1) { yStep--; updateYSteps(); } }
+        function yPrev() { 
+            // Save current step data before going back
+            saveCurrentStepData();
+            if (yStep > 1) { yStep--; updateYSteps(); } 
+        }
         
-        function goToStep(step) {
-            // Save current step data before navigating
+        function saveCurrentStepData() {
             if (yStep === 1) {
                 // Save measurements when leaving step 1
                 currentOrder.measurements = { 
@@ -14495,6 +14656,28 @@ The {storeName} Team`
                     takenBy: $('mTakenBy').value
                 };
             }
+            if (yStep === 2) {
+                // Items are already saved in currentOrder.items via addOrderItem
+                // Save order details and tax settings
+                currentOrder.orderDetails = $('oiDetails')?.value || '';
+                currentOrder.taxType = $('taxHst')?.checked ? 'hst' : ($('taxCustom')?.checked ? 'custom' : 'none');
+                currentOrder.customTaxRate = $('customTaxRate')?.value || '';
+            }
+            if (yStep === 5) {
+                // Save consultant and initials
+                currentOrder.consultantId = $('yConsultantSelect')?.value || '';
+                currentOrder.draftInitials = {
+                    bust: $('init_bust')?.value || '',
+                    waist: $('init_waist')?.value || '',
+                    hip: $('init_hip')?.value || '',
+                    other: $('init_other')?.value || ''
+                };
+            }
+        }
+        
+        function goToStep(step) {
+            // Save current step data before navigating
+            saveCurrentStepData();
             
             // Allow going back to any previous step, or forward only if validation passes
             if (step < yStep) {
@@ -14754,7 +14937,7 @@ The {storeName} Team`
                 item.name = $('oiStyle').value.trim();
                 item.size = $('oiSize').value.trim();
                 item.color = $('oiColor').value.trim();
-                item.price = +$('oiPrice').value || 0;
+                item.price = parsePriceInput($('oiPrice').value);
                 item.customizations = [];
                 item.qaChecked = false;
                 item.arrived = false;
@@ -14766,7 +14949,7 @@ The {storeName} Team`
                 $('oiDesigner').style.display = 'none';
             } else if (type === 'inhouse') {
                 item.name = $('oiInhouseName').value.trim();
-                item.price = +$('oiInhousePrice').value || 0;
+                item.price = parsePriceInput($('oiInhousePrice').value);
                 item.notes = $('oiInhouseNotes').value.trim();
                 item.status = 'pending';
                 if (!item.name) { toast('Enter item name'); return; }
@@ -14775,7 +14958,7 @@ The {storeName} Team`
                 const parentId = $('oiCustomParent').value;
                 item.parentId = parentId;
                 item.name = $('oiCustomName').value.trim();
-                item.price = +$('oiCustomPrice').value || 0;
+                item.price = parsePriceInput($('oiCustomPrice').value);
                 item.delivery = document.querySelector('input[name="oiCustomDelivery"]:checked')?.value || 'ondress';
                 item.qaChecked = false;
                 if (!item.name) { toast('Enter customization name'); return; }
@@ -14792,19 +14975,19 @@ The {storeName} Team`
             } else if (type === 'fee') {
                 item.feeType = $('oiFeeType').value;
                 item.name = item.feeType === 'shipping' ? 'Shipping' : item.feeType === 'rush' ? 'Rush Fee' : $('oiFeeNote').value || 'Other Fee';
-                item.price = +$('oiFeePrice').value || 0;
+                item.price = parsePriceInput($('oiFeePrice').value);
                 item.note = $('oiFeeNote').value.trim();
                 if (!item.price) { toast('Enter fee amount'); return; }
                 ['oiFeePrice','oiFeeNote'].forEach(i => $(i).value = '');
             } else if (type === 'discount') {
                 item.name = $('oiDiscountName').value.trim() || 'Discount';
-                const amount = +$('oiDiscountAmount').value || 0;
+                const amount = parsePriceInput($('oiDiscountAmount').value);
                 item.price = -Math.abs(amount); // Store as negative
                 if (!amount) { toast('Enter discount amount'); return; }
                 ['oiDiscountName','oiDiscountAmount'].forEach(i => $(i).value = '');
             } else if (type === 'custom') {
                 item.name = $('oiCustomItemName').value.trim();
-                item.price = +$('oiCustomItemPrice').value || 0;
+                item.price = parsePriceInput($('oiCustomItemPrice').value);
                 item.notes = $('oiCustomItemDesc').value.trim();
                 if (!item.name) { toast('Enter item name'); return; }
                 ['oiCustomItemName','oiCustomItemPrice','oiCustomItemDesc'].forEach(i => $(i).value = '');
@@ -15533,10 +15716,14 @@ The {storeName} Team`
                     Measurements: JSON.stringify(o.measurements), 
                     MeasurementHistory: JSON.stringify(existingMeasurements),
                     OrderDraft: '', // Clear draft after successful order
+                    SaidYes: 'TRUE',
+                    SaidYesDate: today(),
                     LastVisit: today() 
                 });
                 currentClient.MeasurementHistory = JSON.stringify(existingMeasurements);
                 currentClient.OrderDraft = '';
+                currentClient.SaidYes = 'TRUE';
+                currentClient.SaidYesDate = today();
                 return true;
             } catch (e) { 
                 console.error('Error saving order:', e);
@@ -15565,6 +15752,40 @@ Your review means the world to us and helps future brides find their dream dress
 With love,
 ${consultant}
 ${store.name || 'Estrelle Bridal'}`;
+        }
+
+        function downloadContractPdf() {
+            const c = currentClient;
+            const contractHtml = getContractHtml();
+            const signDate = $('yDate').value || today();
+            
+            // Create full HTML document for PDF
+            const fullHtml = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Georgia,serif;font-size:11px;line-height:1.5;padding:30px;max-width:800px;margin:0 auto;}
+h1{font-size:18px;text-align:center;margin-bottom:20px;}
+h2{font-size:13px;margin-top:18px;margin-bottom:8px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+table{width:100%;border-collapse:collapse;margin:12px 0;}
+th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;font-size:10px;}
+th{background:#f5f5f5;font-weight:bold;}
+p{margin:6px 0;}
+</style></head><body>${contractHtml}</body></html>`;
+            
+            // Create blob and download
+            const blob = new Blob([fullHtml], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const a = document.createElement('a');
+            const safeName = `${c.FirstName}_${c.LastName}`.replace(/[^a-zA-Z0-9]/g, '_');
+            a.href = url;
+            a.download = `${safeName}_Bridal_Contract_${signDate}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            toast('Contract downloaded! Open in browser and print to PDF.', 'success');
         }
 
         function getContractHtml() {
@@ -15654,14 +15875,20 @@ ${store.name || 'Estrelle Bridal'}`;
                 });
             }
             
-            const coreRows = coreMeas.filter(m => m.value).map(m => 
-                `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center;font-weight:bold">${initials[m.key] || ''}</td></tr>`
-            ).join('');
+            const coreRows = coreMeas.filter(m => m.value).map(m => {
+                const initialHtml = o.initialSignature ? 
+                    `<img src="${o.initialSignature}" style="width:50px;height:25px;object-fit:contain">` : 
+                    (initials[m.key] || '');
+                return `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center">${initialHtml}</td></tr>`;
+            }).join('');
             
             const otherWithValues = otherMeas.filter(m => m.value);
             let otherRow = '';
             if (otherWithValues.length > 0) {
-                otherRow = `<tr><td>Other</td><td>${otherWithValues.map(m => `${m.label}: ${m.value}${m.u}`).join(', ')}</td><td style="text-align:center;font-weight:bold">${initials['other'] || ''}</td></tr>`;
+                const otherInitialHtml = o.initialSignature ? 
+                    `<img src="${o.initialSignature}" style="width:50px;height:25px;object-fit:contain">` : 
+                    (initials['other'] || '');
+                otherRow = `<tr><td>Other</td><td>${otherWithValues.map(m => `${m.label}: ${m.value}${m.u}`).join(', ')}</td><td style="text-align:center">${otherInitialHtml}</td></tr>`;
             }
             
             return `
@@ -15764,10 +15991,37 @@ ${store.name || 'Estrelle Bridal'}`;
                 $('draftIndicator').style.display = 'none';
                 
                 closeModal('yes');
-                toast('Order saved! (No email sent)', 'success');
+                toast('Order saved! Saving contract to Drive...', 'success');
                 
-                // Render client profile to show photos
-                if (currentClient) renderClientPhotos();
+                // Save contract to Google Drive (no email)
+                let sigData = currentOrder.signatureData;
+                let consultantSigData = currentOrder.consultantSignatureData;
+                if (sigData && sigData.length > 500000) sigData = null;
+                if (consultantSigData && consultantSigData.length > 500000) consultantSigData = null;
+                
+                const contractData = {
+                    brideName: `${c.FirstName} ${c.LastName}`,
+                    contractHtml: getContractHtml(),
+                    signatureData: sigData,
+                    consultantSignatureData: consultantSigData,
+                    signDate: $('yDate').value || today(),
+                    skipEmail: true
+                };
+                
+                api('POST', { action: 'sendContract', contractData })
+                    .then(res => {
+                        if (res.driveLink) {
+                            toast('Contract saved to Drive!', 'success');
+                        }
+                    })
+                    .catch(e => console.error('Drive save failed:', e));
+                
+                // Render client profile and clients list to show 💍 icon
+                if (currentClient) {
+                    renderClientProfile();
+                    renderClientPhotos();
+                }
+                renderClients();
             } else {
                 toast('Failed to save order', 'error');
             }
@@ -15815,8 +16069,12 @@ ${store.name || 'Estrelle Bridal'}`;
             const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(brideEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
             window.open(gmailUrl, '_blank');
             
-            // Render client profile to show photos
-            if (currentClient) renderClientPhotos();
+            // Render client profile and clients list to show 💍 icon
+            if (currentClient) {
+                renderClientProfile();
+                renderClientPhotos();
+            }
+            renderClients();
         }
 
         async function sendContractEmail() {
@@ -15890,8 +16148,12 @@ ${store.name || 'Estrelle Bridal'}`;
                     toast('Email failed. Try "Open in Gmail" instead.', 'error');
                 });
                 
-            // Render client profile to show photos
-            if (currentClient) renderClientPhotos();
+            // Render client profile and clients list to show 💍 icon
+            if (currentClient) {
+                renderClientProfile();
+                renderClientPhotos();
+            }
+            renderClients();
         }
 
         // ========== INIT ==========
