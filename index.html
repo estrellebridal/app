@@ -3176,9 +3176,18 @@ The {StoreName} Team
                             <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Order Summary</div>
                             <div id="orderItems" style="max-height:300px;overflow-y:auto"></div>
                             <div style="margin:10px 0">
-                                <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer">
-                                    <input type="checkbox" id="addHst" onchange="renderOrderItems()"> Add 13% HST
-                                </label>
+                                <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                        <input type="radio" name="taxOption" value="hst" id="taxHst" onchange="updateTaxOption()" checked> 13% HST
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                        <input type="radio" name="taxOption" value="custom" id="taxCustom" onchange="updateTaxOption()"> 
+                                        <input type="number" class="form-input" id="customTaxRate" style="width:50px;padding:2px 4px;font-size:11px" placeholder="%" oninput="updateTaxOption()" onclick="$('taxCustom').checked=true;updateTaxOption()">%
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+                                        <input type="radio" name="taxOption" value="none" id="taxNone" onchange="updateTaxOption()"> No Tax
+                                    </label>
+                                </div>
                             </div>
                             <div id="orderSubtotal" style="display:none;font-size:11px;padding:6px 0;border-top:1px solid var(--champagne)"></div>
                             <div id="orderHstRow" style="display:none;font-size:11px;padding:6px 0"></div>
@@ -3222,7 +3231,7 @@ The {StoreName} Team
                         <div>
                             <p style="font-size:11px;font-weight:600;margin-bottom:8px">Consultant</p>
                             <div class="form-group"><label class="form-label">Select Consultant</label><select class="form-input" id="yConsultantSelect" onchange="loadConsultantSignature()"><option value="">Select...</option></select></div>
-                            <div class="form-group"><label class="form-label">Date</label><input type="text" class="form-input" id="yDate" readonly></div>
+                            <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="yDate"></div>
                         </div>
                     </div>
                     
@@ -3253,7 +3262,7 @@ The {StoreName} Team
                     <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="emailSubject"></div>
                     <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="emailBody" style="min-height:180px;font-size:12px;line-height:1.6"></textarea></div>
                     <div style="background:var(--blush);padding:10px;border-radius:5px;font-size:10px;color:var(--taupe)">
-                        📎 Signed contract PDF will be attached automatically
+                        📎 Note: If using "Open in Gmail", you'll need to manually attach the PDF contract
                     </div>
                 </div>
             </div>
@@ -3262,7 +3271,8 @@ The {StoreName} Team
                 <button class="btn btn-secondary" id="ySaveDraft" onclick="saveDraft()" title="Save progress and continue later">💾 Save Draft</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" id="yNext" onclick="yNext()">Next →</button>
-                <button class="btn btn-success" id="yDone" onclick="sendContractEmail()" style="display:none">📧 Send Contract</button>
+                <button class="btn btn-secondary" id="yDone" onclick="sendContractEmail()" style="display:none">📤 Send via App</button>
+                <button class="btn btn-success" id="yGmail" onclick="openContractInGmail()" style="display:none">📧 Open in Gmail</button>
             </div>
         </div>
     </div>
@@ -13879,7 +13889,7 @@ The {storeName} Team`
             `).join('');
         }
 
-        function sheSaidYes() {
+        function sheSaidYes(autoLoadDraft = false) {
             yStep = 1;
             currentOrder = { items: [], measurements: {}, hst: false };
             customMeasurements = [];
@@ -13907,10 +13917,14 @@ The {storeName} Team`
             
             $('orderItems').innerHTML = '';
             $('orderTotal').textContent = '$0';
-            $('addHst').checked = false;
+            // Default to 13% HST
+            $('taxHst').checked = true;
+            $('taxCustom').checked = false;
+            $('taxNone').checked = false;
+            $('customTaxRate').value = '';
             $('orderSubtotal').style.display = 'none';
             $('orderHstRow').style.display = 'none';
-            $('yDate').value = fmtDate(today());
+            $('yDate').value = today();
             
             // Clear PO - consultant will enter
             $('oiPO').value = '';
@@ -13928,7 +13942,27 @@ The {storeName} Team`
             openModal('yes');
             
             // Check if there's a draft for this client
-            checkForDraft();
+            if (autoLoadDraft) {
+                // Auto-load draft without asking (from dashboard Continue button)
+                console.log('Auto-loading draft for client:', currentClient.ID);
+                console.log('OrderDraft field:', currentClient.OrderDraft);
+                let draft = null;
+                try {
+                    draft = currentClient.OrderDraft ? JSON.parse(currentClient.OrderDraft) : null;
+                    console.log('Parsed draft:', draft);
+                } catch (e) {
+                    console.error('Failed to parse draft:', e);
+                    draft = null;
+                }
+                if (draft && draft.savedAt) {
+                    loadDraft(draft);
+                } else {
+                    console.log('No valid draft found');
+                }
+            } else {
+                // Show dialog asking if they want to load
+                checkForDraft();
+            }
         }
         
         function generateNextPO() {
@@ -14128,7 +14162,8 @@ The {storeName} Team`
                 measurements: measurements,
                 selectedMeasurementIdx: $('selectSavedMeasurement').value,
                 items: [...currentOrder.items],
-                hst: $('addHst').checked,
+                taxType: $('taxHst').checked ? 'hst' : ($('taxCustom').checked ? 'custom' : 'none'),
+                customTaxRate: $('customTaxRate').value,
                 date: $('yDate').value,
                 po: $('oiPO').value,
                 arrivalDate: $('oiArrivalDate').value,
@@ -14136,16 +14171,11 @@ The {storeName} Team`
             };
             
             // Save to Google Sheets (syncs across devices)
-            try {
-                await updateRecord('Clients', currentClient.ID, { OrderDraft: JSON.stringify(draft) });
-                currentClient.OrderDraft = JSON.stringify(draft);
-                closeModal('yes');
-                toast('Draft saved! Available on all devices.', 'success');
-                renderClientProfile();
-            } catch (e) {
-                console.error('Failed to save draft:', e);
-                toast('Failed to save draft', 'error');
-            }
+            await updateRecord('Clients', currentClient.ID, { OrderDraft: JSON.stringify(draft) });
+            currentClient.OrderDraft = JSON.stringify(draft);
+            closeModal('yes');
+            toast('Draft saved! Available on all devices.', 'success');
+            renderClientProfile();
         }
         
         function checkForDraft() {
@@ -14179,6 +14209,8 @@ The {storeName} Team`
         }
         
         function loadDraft(draft) {
+            console.log('Loading draft:', draft);
+            
             // Restore measurements
             if (draft.measurements) {
                 $('mBust').value = draft.measurements.bust || '';
@@ -14207,15 +14239,29 @@ The {storeName} Team`
                 $('selectSavedMeasurement').value = draft.selectedMeasurementIdx;
             }
             
-            // Restore HST BEFORE rendering items so total is correct
-            const hstCheckbox = $('addHst');
-            if (hstCheckbox) {
-                hstCheckbox.checked = !!draft.hst;
+            // Restore tax settings BEFORE rendering items so total is correct
+            if (draft.taxType === 'custom') {
+                $('taxCustom').checked = true;
+                $('taxHst').checked = false;
+                $('taxNone').checked = false;
+                $('customTaxRate').value = draft.customTaxRate || '';
+            } else if (draft.taxType === 'none') {
+                $('taxNone').checked = true;
+                $('taxHst').checked = false;
+                $('taxCustom').checked = false;
+                $('customTaxRate').value = '';
+            } else {
+                // Default to HST (or legacy drafts with hst: true)
+                $('taxHst').checked = true;
+                $('taxCustom').checked = false;
+                $('taxNone').checked = false;
+                $('customTaxRate').value = '';
             }
             
             // Restore order items
             if (draft.items && draft.items.length > 0) {
                 currentOrder.items = [...draft.items];
+                console.log('Restored items:', currentOrder.items);
             }
             
             // Restore date
@@ -14275,9 +14321,18 @@ The {storeName} Team`
         }
         
         async function openClientAndSayYes(clientId) {
-            await openClient(clientId);
-            // Small delay to ensure client is loaded
-            setTimeout(() => sheSaidYes(), 100);
+            // Get fresh client data from the array (which should have OrderDraft)
+            const client = data.clients.find(c => c.ID == clientId);
+            if (!client) {
+                toast('Client not found', 'error');
+                return;
+            }
+            
+            // Open the client profile
+            openClient(clientId);
+            
+            // Small delay to ensure UI is ready, then open Say Yes with auto-load draft
+            setTimeout(() => sheSaidYes(true), 150);
         }
         
         async function deleteDraftFromDash(clientId) {
@@ -14301,6 +14356,7 @@ The {storeName} Team`
             $('yPrev').style.display = yStep > 1 ? 'inline-flex' : 'none';
             $('yNext').style.display = yStep < 6 ? 'inline-flex' : 'none';
             $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            $('yGmail').style.display = yStep === 6 ? 'inline-flex' : 'none';
             if (yStep === 4) genContract();
             if (yStep === 5) initSig();
             if (yStep === 6) prepareEmail();
@@ -14922,21 +14978,26 @@ The {storeName} Team`
                 }
             });
             
-            const addHst = $('addHst').checked;
-            const hst = addHst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
-            const total = subtotal + hst;
+            // Get tax rate from radio selection
+            const taxInfo = getTaxInfo();
+            const taxAmount = Math.round(subtotal * taxInfo.rate * 100) / 100;
+            const total = subtotal + taxAmount;
             
-            currentOrder.hst = addHst;
-            currentOrder.hstAmount = hst;
+            currentOrder.taxType = taxInfo.type;
+            currentOrder.taxRate = taxInfo.rate;
+            currentOrder.taxAmount = taxAmount;
             currentOrder.subtotal = subtotal;
             currentOrder.total = total;
+            // Keep hst for backwards compatibility
+            currentOrder.hst = taxInfo.rate > 0;
+            currentOrder.hstAmount = taxAmount;
             
-            if (addHst) {
+            if (taxInfo.rate > 0) {
                 $('orderSubtotal').style.display = 'flex';
                 $('orderSubtotal').innerHTML = `<span>Subtotal</span><span>${money(subtotal)}</span>`;
                 $('orderSubtotal').style.justifyContent = 'space-between';
                 $('orderHstRow').style.display = 'flex';
-                $('orderHstRow').innerHTML = `<span>HST (13%)</span><span>${money(hst)}</span>`;
+                $('orderHstRow').innerHTML = `<span>${taxInfo.label}</span><span>${money(taxAmount)}</span>`;
                 $('orderHstRow').style.justifyContent = 'space-between';
             } else {
                 $('orderSubtotal').style.display = 'none';
@@ -14944,6 +15005,21 @@ The {storeName} Team`
             }
             
             $('orderTotal').textContent = money(total);
+        }
+        
+        function getTaxInfo() {
+            if ($('taxHst').checked) {
+                return { type: 'hst', rate: 0.13, label: 'HST (13%)' };
+            } else if ($('taxCustom').checked) {
+                const rate = parseFloat($('customTaxRate').value) || 0;
+                return { type: 'custom', rate: rate / 100, label: `Tax (${rate}%)` };
+            } else {
+                return { type: 'none', rate: 0, label: '' };
+            }
+        }
+        
+        function updateTaxOption() {
+            renderOrderItems();
         }
         
         function openQuickEditClient() {
@@ -15637,6 +15713,52 @@ ${store.name || 'Estrelle Bridal'}`;
             `;
         }
 
+        async function openContractInGmail() {
+            const c = currentClient;
+            const brideEmail = $('emailTo').value;
+            const subject = $('emailSubject').value;
+            const body = $('emailBody').value;
+            
+            if (!brideEmail) {
+                toast('No email address for this client', 'error');
+                return;
+            }
+            
+            // Upload photos first if any
+            if (pendingPhotos.length > 0) {
+                toast('Uploading photos...', 'success');
+                const photoUrls = await uploadPhotos();
+                if (photoUrls.length > 0) {
+                    const existingPhotos = c.Photos ? (typeof c.Photos === 'string' ? JSON.parse(c.Photos) : c.Photos) : [];
+                    const allPhotos = [...existingPhotos, ...photoUrls];
+                    updateRecord('Clients', c.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                    currentOrder.fittingPhotoUrls = photoUrls;
+                    toast(`${photoUrls.length} photo(s) uploaded!`, 'success');
+                }
+                pendingPhotos = [];
+                renderPhotoPreview();
+            }
+            
+            // Save order first
+            await completeOrder();
+            
+            // Delete draft since order is complete
+            deleteDraft(c.ID);
+            $('draftIndicator').style.display = 'none';
+            
+            // Close modal
+            closeModal('yes');
+            toast('Order saved! Opening Gmail...', 'success');
+            
+            // Open Gmail compose
+            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(brideEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            window.open(gmailUrl, '_blank');
+            
+            // Render client profile to show photos
+            if (currentClient) renderClientPhotos();
+        }
+
         async function sendContractEmail() {
             const c = currentClient;
             const brideEmail = $('emailTo').value;
@@ -15702,7 +15824,10 @@ ${store.name || 'Estrelle Bridal'}`;
             // Fire and forget - send in background
             api('POST', { action: 'sendContract', contractData })
                 .then(() => toast('Email sent to ' + brideEmail, 'success'))
-                .catch(e => toast('Email failed: ' + (e.message || 'Unknown error'), 'error'));
+                .catch(e => {
+                    console.error('Email send failed:', e);
+                    toast('Email failed. Try "Open in Gmail" instead.', 'error');
+                });
                 
             // Render client profile to show photos
             if (currentClient) renderClientPhotos();
