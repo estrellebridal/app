@@ -2972,7 +2972,7 @@ The {StoreName} Team
     <!-- She Said Yes -->
     <div class="modal-overlay" id="modal-yes">
         <div class="modal full">
-            <div class="modal-header"><h2 class="modal-title">💍 She Said Yes!</h2><button class="modal-close" onclick="closeModal('yes')">×</button></div>
+            <div class="modal-header"><h2 class="modal-title">💍 She Said Yes!</h2><button class="modal-close" onclick="closeYesModal()">×</button></div>
             <div class="modal-body">
                 <div class="steps">
                     <div class="step active" id="ys1"><span class="step-num">1</span><div class="step-label">Measurements</div></div>
@@ -13808,6 +13808,9 @@ The {storeName} Team`
             $('mTakenBy').innerHTML = '<option value="">Select consultant...</option>' + 
                 data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
             
+            // Populate designer dropdown for step 2
+            populateDesignerDropdown();
+            
             // Clear measurement fields
             ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
             $('mNotes').value = '';
@@ -13829,6 +13832,10 @@ The {storeName} Team`
             $('oiArrivalDate').value = '';
             $('arrivalDateHint').textContent = 'Enter expected arrival date';
             $('arrivalDateHint').style.color = 'var(--taupe)';
+            
+            // Reset item type to dress
+            $('oiType').value = 'dress';
+            toggleOrderItemFields();
             
             updateYSteps();
             openModal('yes');
@@ -13922,6 +13929,26 @@ The {storeName} Team`
             renderCustomMeas();
             
             toast('Measurements loaded!', 'success');
+        }
+        
+        function closeYesModal() {
+            // Check if there's any data entered
+            const hasItems = currentOrder.items && currentOrder.items.length > 0;
+            const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value;
+            
+            if (hasItems || hasMeasurements) {
+                const action = prompt('You have unsaved work.\n\nType:\n  "save" to save as draft\n  "discard" to close without saving\n  Or press Cancel to go back', 'save');
+                
+                if (action === 'save') {
+                    saveDraft();
+                    return;
+                } else if (action === 'discard') {
+                    closeModal('yes');
+                }
+                // If cancelled, do nothing (stay in modal)
+            } else {
+                closeModal('yes');
+            }
         }
         
         function saveDraft() {
@@ -14346,7 +14373,15 @@ The {storeName} Team`
         
         function populateDesignerDropdown() {
             // Get designers from designerData (localStorage)
+            console.log('populateDesignerDropdown called, designerData:', designerData);
+            
+            // Ensure designerData is loaded
+            if (!designerData || designerData.length === 0) {
+                loadDesignerData();
+            }
+            
             const designerNames = (designerData || []).map(d => d.name).filter(Boolean).sort();
+            console.log('Designer names:', designerNames);
             
             $('oiDesignerSelect').innerHTML = '<option value="">Select designer...</option>' +
                 designerNames.map(name => `<option value="${name}">${name}</option>`).join('') +
