@@ -2761,9 +2761,9 @@ The {StoreName} Team
                     <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="measCup" placeholder="e.g. 34C"></div>
                     <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="measWaist"><div class="meas-unit" data-meas-unit>in</div></div>
                     <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="measHip"><div class="meas-unit" data-meas-unit>in</div></div>
-                    <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="measHeight"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="measHeight"><div class="meas-unit">in</div></div>
                     <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="measHeels"><div class="meas-unit">in</div></div>
-                    <div class="meas-item"><div class="meas-label">Waist to Floor</div><input type="text" class="meas-input" id="measWaistToFloor"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="measWaistToFloor"><div class="meas-unit" data-meas-unit>in</div></div>
                 </div>
                 <div style="margin-top:12px">
                     <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
@@ -3009,7 +3009,7 @@ The {StoreName} Team
                         <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight"><div class="meas-unit">in</div></div>
                         <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="mHeels"><div class="meas-unit">in</div></div>
-                        <div class="meas-item"><div class="meas-label">Waist to Floor</div><input type="text" class="meas-input" id="mWaistToFloor"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="mWaistToFloor"><div class="meas-unit" data-unit>in</div></div>
                     </div>
                     <div style="margin-top:12px">
                         <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
@@ -12896,10 +12896,11 @@ The {storeName} Team`
                         ${m.custom.map(c => `<div><span style="color:var(--taupe)">${c.name}:</span> ${c.value}</div>`).join('')}
                     </div>` : '';
                 return `
-                <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative">
+                <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative;cursor:pointer" onclick="editMeasurement(${idx})">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}${m.takenBy ? ` <span style="font-weight:400;color:var(--taupe)">by ${m.takenBy}</span>` : ''}</div>
-                        <div style="display:flex;gap:4px">
+                        <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+                            <button class="action-btn" onclick="editMeasurement(${idx})" title="Edit">✏️</button>
                             <button class="action-btn" onclick="deleteMeasurement(${idx})" title="Delete">×</button>
                         </div>
                     </div>
@@ -12908,7 +12909,7 @@ The {storeName} Team`
                         <div><span style="color:var(--taupe)">Cup:</span> ${m.cup || '—'}</div>
                         <div><span style="color:var(--taupe)">Waist:</span> ${m.waist || '—'} ${m.waist ? unit : ''}</div>
                         <div><span style="color:var(--taupe)">Hip:</span> ${m.hip || '—'} ${m.hip ? unit : ''}</div>
-                        <div><span style="color:var(--taupe)">Height:</span> ${m.height || '—'} ${m.height ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">Height:</span> ${m.height || '—'} ${m.height ? 'in' : ''}</div>
                         <div><span style="color:var(--taupe)">Heels:</span> ${m.heels || '—'} ${m.heels ? 'in' : ''}</div>
                         <div><span style="color:var(--taupe)">WtF:</span> ${m.waistToFloor || '—'} ${m.waistToFloor ? unit : ''}</div>
                     </div>
@@ -12918,7 +12919,10 @@ The {storeName} Team`
             }).join('');
         }
         
+        let editingMeasurementIdx = null;
+        
         function openAddMeasurementModal() {
+            editingMeasurementIdx = null;
             $('measDate').value = today();
             $('measBust').value = '';
             $('measCup').value = '';
@@ -12939,6 +12943,48 @@ The {storeName} Team`
             $('measTakenBy').innerHTML = '<option value="">Select...</option>' +
                 data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
             $('measTakenBy').value = '';
+            
+            // Update modal title
+            document.querySelector('#modal-addMeasurement .modal-title').textContent = '📏 Add Measurements';
+            
+            openModal('addMeasurement');
+        }
+        
+        function editMeasurement(idx) {
+            const measurements = getClientMeasurements();
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const m = measurements[idx];
+            if (!m) return;
+            
+            editingMeasurementIdx = idx;
+            
+            // Populate fields with existing data
+            $('measDate').value = m.date || today();
+            $('measBust').value = m.bust || '';
+            $('measCup').value = m.cup || '';
+            $('measWaist').value = m.waist || '';
+            $('measHip').value = m.hip || '';
+            $('measHeight').value = m.height || '';
+            $('measHeels').value = m.heels || '';
+            $('measWaistToFloor').value = m.waistToFloor || '';
+            $('measNotes').value = m.notes || '';
+            
+            // Set unit
+            measModalUnit = m.unit || 'in';
+            updateMeasModalUnitDisplay();
+            
+            // Load custom measurements
+            modalCustomMeasurements = m.custom ? [...m.custom] : [];
+            renderModalCustomMeas();
+            
+            // Populate and set Taken By dropdown
+            $('measTakenBy').innerHTML = '<option value="">Select...</option>' +
+                data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            $('measTakenBy').value = m.takenBy || '';
+            
+            // Update modal title
+            document.querySelector('#modal-addMeasurement .modal-title').textContent = '📏 Edit Measurements';
+            
             openModal('addMeasurement');
         }
         
@@ -13006,17 +13052,42 @@ The {storeName} Team`
                 custom: [...modalCustomMeasurements]
             };
             
-            // Get existing measurements
+            // Build summary for confirmation
+            const summary = [
+                measurement.bust ? `Bust: ${measurement.bust}` : '',
+                measurement.waist ? `Waist: ${measurement.waist}` : '',
+                measurement.hip ? `Hip: ${measurement.hip}` : '',
+                measurement.height ? `Height: ${measurement.height}` : '',
+                measurement.waistToFloor ? `WtF: ${measurement.waistToFloor}` : '',
+                measurement.heels ? `Heels: ${measurement.heels}` : ''
+            ].filter(Boolean).join(', ');
+            
+            const action = editingMeasurementIdx !== null ? 'update' : 'save';
+            const confirmMsg = `Please confirm ${action === 'update' ? 'updating' : 'saving'} these measurements:\n\n${summary}\n\nTaken by: ${measurement.takenBy}\nDate: ${fmtDate(measurement.date)}`;
+            
+            if (!confirm(confirmMsg)) return;
+            
+            // Get existing measurements (sorted by date desc)
             const measurements = getClientMeasurements();
-            measurements.push(measurement);
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            
+            if (editingMeasurementIdx !== null) {
+                // Update existing measurement
+                measurements[editingMeasurementIdx] = measurement;
+                toast('Measurements updated!', 'success');
+            } else {
+                // Add new measurement
+                measurements.push(measurement);
+                toast('Measurements saved!', 'success');
+            }
             
             // Save to client
             await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
             currentClient.MeasurementHistory = JSON.stringify(measurements);
             
+            editingMeasurementIdx = null;
             closeModal('addMeasurement');
             renderClientMeasurements();
-            toast('Measurements saved!', 'success');
         }
         
         async function deleteMeasurement(idx) {
