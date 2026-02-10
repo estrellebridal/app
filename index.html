@@ -2747,8 +2747,9 @@ The {StoreName} Team
         <div class="modal" style="max-width:500px">
             <div class="modal-header"><h2 class="modal-title">📏 Add Measurements</h2><button class="modal-close" onclick="closeModal('addMeasurement')">×</button></div>
             <div class="modal-body">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <div class="form-group" style="margin:0"><label class="form-label">Date</label><input type="date" class="form-input" id="measDate" style="width:150px"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                    <div class="form-group" style="margin:0"><label class="form-label">Date</label><input type="date" class="form-input" id="measDate" style="width:140px"></div>
+                    <div class="form-group" style="margin:0"><label class="form-label">Taken By <span style="color:#e74c3c">*</span></label><select class="form-input" id="measTakenBy" style="width:140px"><option value="">Select...</option></select></div>
                     <div style="display:flex;align-items:center;gap:6px;font-size:11px">
                         <span>Unit:</span>
                         <button class="btn btn-sm" id="measUnitCm" onclick="setMeasModalUnit('cm')">CM</button>
@@ -2762,7 +2763,7 @@ The {StoreName} Team
                     <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="measHip"><div class="meas-unit" data-meas-unit>in</div></div>
                     <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="measHeight"><div class="meas-unit" data-meas-unit>in</div></div>
                     <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="measHeels"><div class="meas-unit">in</div></div>
-                    <div class="meas-item"><div class="meas-label">Hollow to Hem</div><input type="text" class="meas-input" id="measHollow"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Waist to Floor</div><input type="text" class="meas-input" id="measWaistToFloor"><div class="meas-unit" data-meas-unit>in</div></div>
                 </div>
                 <div style="margin-top:12px">
                     <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
@@ -2988,7 +2989,13 @@ The {StoreName} Team
                             <option value="">— Enter manually —</option>
                         </select>
                     </div>
-                    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                        <div class="form-group" style="margin:0;flex:1;max-width:200px">
+                            <label class="form-label" style="font-size:10px">Measured by <span style="color:#e74c3c">*</span></label>
+                            <select class="form-input" id="mTakenBy" style="padding:6px 8px;font-size:11px">
+                                <option value="">Select consultant...</option>
+                            </select>
+                        </div>
                         <div style="display:flex;align-items:center;gap:6px;font-size:11px">
                             <span>Unit:</span>
                             <button class="btn btn-sm btn-secondary" id="unitCm" onclick="setMeasUnit('cm')">CM</button>
@@ -3002,7 +3009,7 @@ The {StoreName} Team
                         <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight"><div class="meas-unit">in</div></div>
                         <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="mHeels"><div class="meas-unit">in</div></div>
-                        <div class="meas-item"><div class="meas-label">Hollow to Hem</div><input type="text" class="meas-input" id="mHollow"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Waist to Floor</div><input type="text" class="meas-input" id="mWaistToFloor"><div class="meas-unit" data-unit>in</div></div>
                     </div>
                     <div style="margin-top:12px">
                         <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
@@ -12891,7 +12898,7 @@ The {storeName} Team`
                 return `
                 <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-                        <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}</div>
+                        <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}${m.takenBy ? ` <span style="font-weight:400;color:var(--taupe)">by ${m.takenBy}</span>` : ''}</div>
                         <div style="display:flex;gap:4px">
                             <button class="action-btn" onclick="deleteMeasurement(${idx})" title="Delete">×</button>
                         </div>
@@ -12903,7 +12910,7 @@ The {storeName} Team`
                         <div><span style="color:var(--taupe)">Hip:</span> ${m.hip || '—'} ${m.hip ? unit : ''}</div>
                         <div><span style="color:var(--taupe)">Height:</span> ${m.height || '—'} ${m.height ? unit : ''}</div>
                         <div><span style="color:var(--taupe)">Heels:</span> ${m.heels || '—'} ${m.heels ? 'in' : ''}</div>
-                        <div><span style="color:var(--taupe)">HtH:</span> ${m.hollow || '—'} ${m.hollow ? unit : ''}</div>
+                        <div><span style="color:var(--taupe)">WtF:</span> ${m.waistToFloor || '—'} ${m.waistToFloor ? unit : ''}</div>
                     </div>
                     ${customHtml}
                     ${m.notes ? `<div style="font-size:10px;color:var(--taupe);margin-top:6px;font-style:italic">${m.notes}</div>` : ''}
@@ -12919,7 +12926,7 @@ The {storeName} Team`
             $('measHip').value = '';
             $('measHeight').value = '';
             $('measHeels').value = '';
-            $('measHollow').value = '';
+            $('measWaistToFloor').value = '';
             $('measNotes').value = '';
             $('modalCustomMeasName').value = '';
             $('modalCustomMeasValue').value = '';
@@ -12927,6 +12934,11 @@ The {storeName} Team`
             renderModalCustomMeas();
             measModalUnit = 'in';
             updateMeasModalUnitDisplay();
+            
+            // Populate Taken By dropdown
+            $('measTakenBy').innerHTML = '<option value="">Select...</option>' +
+                data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            $('measTakenBy').value = '';
             openModal('addMeasurement');
         }
         
@@ -12973,15 +12985,22 @@ The {storeName} Team`
         }
         
         async function saveMeasurement() {
+            // Validate Taken By is required
+            if (!$('measTakenBy').value) {
+                toast('Please select who took the measurements', 'error');
+                return;
+            }
+            
             const measurement = {
                 date: $('measDate').value || today(),
+                takenBy: $('measTakenBy').value,
                 bust: $('measBust').value.trim(),
                 cup: $('measCup').value.trim(),
                 waist: $('measWaist').value.trim(),
                 hip: $('measHip').value.trim(),
                 height: $('measHeight').value.trim(),
                 heels: $('measHeels').value.trim(),
-                hollow: $('measHollow').value.trim(),
+                waistToFloor: $('measWaistToFloor').value.trim(),
                 notes: $('measNotes').value.trim(),
                 unit: measModalUnit,
                 custom: [...modalCustomMeasurements]
@@ -13714,11 +13733,16 @@ The {storeName} Team`
             // Populate saved measurements dropdown
             populateSavedMeasurementsDropdown();
             
+            // Populate "measured by" consultant dropdown
+            $('mTakenBy').innerHTML = '<option value="">Select consultant...</option>' + 
+                data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            
             // Clear measurement fields
-            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = '');
+            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
             $('mNotes').value = '';
             $('customMeasList').innerHTML = '';
             $('selectSavedMeasurement').value = '';
+            $('mTakenBy').value = '';
             
             $('orderItems').innerHTML = '';
             $('orderTotal').textContent = '$0';
@@ -13727,9 +13751,8 @@ The {storeName} Team`
             $('orderHstRow').style.display = 'none';
             $('yDate').value = fmtDate(today());
             
-            // Auto-generate PO number
-            const nextPO = generateNextPO();
-            $('oiPO').value = nextPO;
+            // Clear PO - consultant will enter
+            $('oiPO').value = '';
             
             // Clear arrival date
             $('oiArrivalDate').value = '';
@@ -13744,6 +13767,11 @@ The {storeName} Team`
         }
         
         function generateNextPO() {
+            // Return placeholder - consultant will enter actual PO
+            return '';
+        }
+        
+        function getNextPONumber() {
             // Get all existing PO numbers from orders
             const existingPOs = (data.orders || [])
                 .map(o => o.PO)
@@ -13777,7 +13805,8 @@ The {storeName} Team`
                         m.waist ? `W:${m.waist}` : '',
                         m.hip ? `H:${m.hip}` : ''
                     ].filter(Boolean).join(' / ') || 'No measurements';
-                    return `<option value="${idx}">${fmtDate(m.date)} — ${summary} (${unit})</option>`;
+                    const takenBy = m.takenBy ? ` by ${m.takenBy}` : '';
+                    return `<option value="${idx}">${fmtDate(m.date)}${takenBy} — ${summary} (${unit})</option>`;
                 }).join('');
             
             $('savedMeasurementsSelector').style.display = 'block';
@@ -13788,8 +13817,9 @@ The {storeName} Team`
             
             if (idx === '') {
                 // Clear fields for manual entry
-                ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mHollow'].forEach(id => $(id).value = '');
+                ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
                 $('mNotes').value = '';
+                $('mTakenBy').value = '';
                 customMeasurements = [];
                 renderCustomMeas();
                 return;
@@ -13812,8 +13842,9 @@ The {storeName} Team`
             $('mHip').value = m.hip || '';
             $('mHeight').value = m.height || '';
             $('mHeels').value = m.heels || '';
-            $('mHollow').value = m.hollow || '';
+            $('mWaistToFloor').value = m.waistToFloor || '';
             $('mNotes').value = m.notes || '';
+            $('mTakenBy').value = m.takenBy || '';
             
             // Load custom measurements
             customMeasurements = m.custom ? [...m.custom] : [];
@@ -13830,7 +13861,7 @@ The {storeName} Team`
                 waist: $('mWaist').value, 
                 hip: $('mHip').value, 
                 height: $('mHeight').value, 
-                hollow: $('mHollow').value,
+                waistToFloor: $('mWaistToFloor').value,
                 heels: $('mHeels').value, 
                 notes: $('mNotes').value,
                 unit: measUnit,
@@ -13842,9 +13873,11 @@ The {storeName} Team`
                 clientName: `${currentClient.FirstName} ${currentClient.LastName}`,
                 step: yStep,
                 measurements: measurements,
-                items: currentOrder.items,
+                items: [...currentOrder.items],
                 hst: $('addHst').checked,
                 date: $('yDate').value,
+                po: $('oiPO').value,
+                arrivalDate: $('oiArrivalDate').value,
                 savedAt: new Date().toISOString()
             };
             
@@ -13867,13 +13900,16 @@ The {storeName} Team`
             if (draft) {
                 const savedDate = new Date(draft.savedAt).toLocaleDateString();
                 const itemCount = draft.items?.length || 0;
-                if (confirm(`Found saved draft from ${savedDate} with ${itemCount} item(s).\n\nLoad draft and continue where you left off?`)) {
+                const action = prompt(`Found saved draft from ${savedDate} with ${itemCount} item(s).\n\nType:\n  "load" to continue where you left off\n  "delete" to start fresh\n  Or press Cancel to keep draft and start fresh this time`, 'load');
+                
+                if (action === 'load') {
                     loadDraft(draft);
-                } else {
-                    // User chose to start fresh - delete the draft
+                } else if (action === 'delete') {
                     delete drafts[currentClient.ID];
                     localStorage.setItem('estrelle_drafts', JSON.stringify(drafts));
+                    toast('Draft deleted', 'success');
                 }
+                // If cancelled or anything else, just continue without loading or deleting
             }
         }
         
@@ -13885,29 +13921,34 @@ The {storeName} Team`
                 $('mWaist').value = draft.measurements.waist || '';
                 $('mHip').value = draft.measurements.hip || '';
                 $('mHeight').value = draft.measurements.height || '';
-                $('mHollow').value = draft.measurements.hollow || '';
+                $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
                 $('mHeels').value = draft.measurements.heels || '';
                 $('mNotes').value = draft.measurements.notes || '';
                 
                 if (draft.measurements.unit) {
+                    measUnit = draft.measurements.unit;
                     setMeasUnit(draft.measurements.unit);
                 }
                 
                 if (draft.measurements.custom) {
-                    customMeasurements = draft.measurements.custom;
+                    customMeasurements = [...draft.measurements.custom];
                     renderCustomMeas();
                 }
             }
             
             // Restore order items
-            if (draft.items) {
-                currentOrder.items = draft.items;
+            if (draft.items && draft.items.length > 0) {
+                currentOrder.items = [...draft.items];
                 renderOrderItems();
             }
             
             // Restore HST and date
-            if (draft.hst) $('addHst').checked = true;
+            $('addHst').checked = !!draft.hst;
             if (draft.date) $('yDate').value = draft.date;
+            
+            // Restore PO and arrival date if saved
+            if (draft.po) $('oiPO').value = draft.po;
+            if (draft.arrivalDate) $('oiArrivalDate').value = draft.arrivalDate;
             
             // Go to the step they were on (but not past step 2 to review items)
             yStep = Math.min(draft.step || 1, 2);
@@ -13944,17 +13985,24 @@ The {storeName} Team`
 
         function yNext() {
             if (yStep === 1) {
+                // Validate Taken By is required
+                if (!$('mTakenBy').value) {
+                    toast('Please select who took the measurements', 'error');
+                    return;
+                }
+                
                 currentOrder.measurements = { 
                     bust: $('mBust').value,
                     cup: $('mCup').value,
                     waist: $('mWaist').value, 
                     hip: $('mHip').value, 
                     height: $('mHeight').value, 
-                    hollow: $('mHollow').value,
+                    waistToFloor: $('mWaistToFloor').value,
                     heels: $('mHeels').value, 
                     notes: $('mNotes').value,
                     unit: measUnit,
-                    custom: [...customMeasurements]
+                    custom: [...customMeasurements],
+                    takenBy: $('mTakenBy').value
                 };
             }
             if (yStep === 2) {
@@ -13979,7 +14027,7 @@ The {storeName} Team`
                 
                 // Check other measurements - if any have values, init_other is required
                 const hasOtherMeasurements = o.measurements.cup || o.measurements.height || 
-                    o.measurements.hollow || o.measurements.heels || 
+                    o.measurements.waistToFloor || o.measurements.heels || 
                     (o.measurements.custom && o.measurements.custom.length > 0);
                 
                 if (hasOtherMeasurements && !$('init_other')?.value?.trim()) {
@@ -14226,9 +14274,8 @@ The {storeName} Team`
         }
         
         function populateDesignerDropdown() {
-            // Get designers from settings
-            const designers = data.designers || [];
-            const designerNames = designers.map(d => d.Name).filter(Boolean).sort();
+            // Get designers from designerData (localStorage)
+            const designerNames = (designerData || []).map(d => d.name).filter(Boolean).sort();
             
             $('oiDesignerSelect').innerHTML = '<option value="">Select designer...</option>' +
                 designerNames.map(name => `<option value="${name}">${name}</option>`).join('') +
@@ -14670,6 +14717,7 @@ The {storeName} Team`
                 ${$('oiDetails').value ? `<p><b>Important ordering details:</b> ${$('oiDetails').value}</p>` : ''}
                 
                 <h3>MEASUREMENTS</h3>
+                ${o.measurements.takenBy ? `<p style="font-size:11px;margin-bottom:8px"><b>Measured by:</b> ${o.measurements.takenBy}</p>` : ''}
                 <table>
                     <tr><th>Item</th><th>Measurement</th><th style="width:80px">Client's Initial</th></tr>
                     <tr><td>Bust</td><td>${o.measurements.bust||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
@@ -14677,7 +14725,7 @@ The {storeName} Team`
                     <tr><td>Waist</td><td>${o.measurements.waist||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Hip</td><td>${o.measurements.hip||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Height</td><td>${o.measurements.height||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Hollow to Hem</td><td>${o.measurements.hollow||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
+                    <tr><td>Waist to Floor</td><td>${o.measurements.waistToFloor||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
                     <tr><td>Heels</td><td>${o.measurements.heels||'—'}"</td><td style="border:1px solid #ccc"></td></tr>
                     ${customMeasRows}
                 </table>
@@ -14745,7 +14793,7 @@ The {storeName} Team`
             const otherMeasurements = [
                 { key: 'cup', label: 'Cup Size', value: o.measurements.cup, unit: '' },
                 { key: 'height', label: 'Height', value: o.measurements.height, unit: unit },
-                { key: 'hollow', label: 'Hollow to Hem', value: o.measurements.hollow, unit: unit },
+                { key: 'waistToFloor', label: 'Waist to Floor', value: o.measurements.waistToFloor, unit: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, unit: '"' }
             ];
             
@@ -14859,6 +14907,27 @@ The {storeName} Team`
             const dressItem = o.items.find(i => i.type === 'dress');
             const accessoryItems = o.items.filter(i => i.type === 'accessory' || i.type === 'inhouse');
             
+            // Save measurements to client's measurement history
+            const measurementRecord = {
+                date: today(),
+                takenBy: o.measurements.takenBy || '',
+                bust: o.measurements.bust || '',
+                cup: o.measurements.cup || '',
+                waist: o.measurements.waist || '',
+                hip: o.measurements.hip || '',
+                height: o.measurements.height || '',
+                heels: o.measurements.heels || '',
+                waistToFloor: o.measurements.waistToFloor || '',
+                notes: o.measurements.notes || '',
+                unit: o.measurements.unit || 'in',
+                custom: o.measurements.custom || [],
+                source: 'order' // Mark as coming from Say Yes
+            };
+            
+            // Get existing measurements and add new one
+            const existingMeasurements = getClientMeasurements();
+            existingMeasurements.push(measurementRecord);
+            
             const record = {
                 ClientID: c.ID,
                 ClientName: clientName,
@@ -14887,7 +14956,13 @@ The {storeName} Team`
             };
             try {
                 await saveRecord('Orders', record);
-                await updateRecord('Clients', c.ID, { Status: 'ordered', Measurements: JSON.stringify(o.measurements), LastVisit: today() });
+                await updateRecord('Clients', c.ID, { 
+                    Status: 'ordered', 
+                    Measurements: JSON.stringify(o.measurements), 
+                    MeasurementHistory: JSON.stringify(existingMeasurements),
+                    LastVisit: today() 
+                });
+                currentClient.MeasurementHistory = JSON.stringify(existingMeasurements);
                 return true;
             } catch (e) { 
                 console.error('Error saving order:', e);
@@ -14994,7 +15069,7 @@ ${store.name || 'Estrelle Bridal'}`;
             const otherMeas = [
                 { key: 'cup', label: 'Cup Size', value: o.measurements.cup, u: '' },
                 { key: 'height', label: 'Height', value: o.measurements.height, u: unit },
-                { key: 'hollow', label: 'Hollow to Hem', value: o.measurements.hollow, u: unit },
+                { key: 'waistToFloor', label: 'Waist to Floor', value: o.measurements.waistToFloor, u: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, u: '"' }
             ];
             
@@ -15040,6 +15115,7 @@ ${store.name || 'Estrelle Bridal'}`;
                 ${$('oiDetails').value ? `<p><b>Important ordering details:</b> ${$('oiDetails').value}</p>` : ''}
                 
                 <h2>MEASUREMENTS</h2>
+                ${o.measurements.takenBy ? `<p style="font-size:9px;margin-bottom:6px"><b>Measured by:</b> ${o.measurements.takenBy}</p>` : ''}
                 <table>
                     <tr><th>Item</th><th>Measurement</th><th>Client's Initial</th></tr>
                     ${coreRows}
