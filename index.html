@@ -3154,13 +3154,45 @@ The {StoreName} Team
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label class="form-label">Fee Type</label>
-                                        <select class="form-input" id="oiFeeType">
+                                        <select class="form-input" id="oiFeeType" onchange="toggleRushOptions()">
                                             <option value="shipping">Shipping</option>
                                             <option value="rush">Rush Fee</option>
                                             <option value="other">Other</option>
                                         </select>
                                     </div>
-                                    <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="oiFeePrice" placeholder="$0" oninput="formatPriceInput(this)"></div>
+                                    <div class="form-group" id="oiFeeAmountGroup">
+                                        <label class="form-label">Amount</label>
+                                        <input type="text" class="form-input" id="oiFeePrice" placeholder="$0" oninput="formatPriceInput(this)">
+                                    </div>
+                                </div>
+                                <!-- Rush Fee Options (shown when rush is selected) -->
+                                <div id="oiRushOptions" style="display:none">
+                                    <div style="display:flex;gap:12px;margin-bottom:10px">
+                                        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+                                            <input type="radio" name="oiRushType" value="fixed" checked onchange="toggleRushType()"> Fixed Amount
+                                        </label>
+                                        <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+                                            <input type="radio" name="oiRushType" value="percent" onchange="toggleRushType()"> Percentage
+                                        </label>
+                                    </div>
+                                    <div id="oiRushPercentGroup" style="display:none">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label class="form-label">Percentage</label>
+                                                <div style="display:flex;align-items:center;gap:4px">
+                                                    <input type="number" class="form-input" id="oiRushPercent" placeholder="15" style="width:80px" min="0" max="100">
+                                                    <span>%</span>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Apply To</label>
+                                                <select class="form-input" id="oiRushApplyTo">
+                                                    <option value="all">Entire Order</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div id="oiRushCalculated" style="font-size:11px;color:var(--taupe);margin-top:4px"></div>
+                                    </div>
                                 </div>
                                 <div class="form-group"><label class="form-label">Note</label><input type="text" class="form-input" id="oiFeeNote" placeholder="e.g. Express shipping from Italy"></div>
                             </div>
@@ -3599,12 +3631,20 @@ The {StoreName} Team
             const cursorPos = input.selectionStart;
             const oldLength = input.value.length;
             
-            // Remove all non-digits
-            let value = input.value.replace(/[^\d]/g, '');
+            // Remove all non-digits and non-decimal points
+            let value = input.value.replace(/[^\d.]/g, '');
             
-            // Format with commas
+            // Only allow one decimal point
+            const parts = value.split('.');
+            if (parts.length > 2) {
+                value = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            // Format with commas (only the integer part)
             if (value) {
-                value = '$' + Number(value).toLocaleString();
+                const [intPart, decPart] = value.split('.');
+                const formattedInt = intPart ? Number(intPart).toLocaleString() : '0';
+                value = '$' + formattedInt + (decPart !== undefined ? '.' + decPart.slice(0, 2) : '');
             }
             
             input.value = value;
@@ -14972,6 +15012,11 @@ The {storeName} Team`
             $('oiDiscountFields').style.display = type === 'discount' ? 'block' : 'none';
             $('oiCustomItemFields').style.display = type === 'custom' ? 'block' : 'none';
             
+            // Reset rush options when switching types
+            if (type === 'fee') {
+                toggleRushOptions();
+            }
+            
             // Populate designer dropdown when showing designer fields
             if (type === 'dress' || type === 'accessory') {
                 populateDesignerDropdown();
@@ -14986,6 +15031,85 @@ The {storeName} Team`
                         return `<option value="${item.id}">${label}</option>`;
                     }).join('');
             }
+        }
+        
+        function toggleRushOptions() {
+            const feeType = $('oiFeeType').value;
+            const rushOptions = $('oiRushOptions');
+            const amountGroup = $('oiFeeAmountGroup');
+            
+            if (feeType === 'rush') {
+                rushOptions.style.display = 'block';
+                // Populate apply-to dropdown with current items
+                populateRushApplyTo();
+                toggleRushType();
+            } else {
+                rushOptions.style.display = 'none';
+                amountGroup.style.display = 'block';
+            }
+        }
+        
+        function toggleRushType() {
+            const rushType = document.querySelector('input[name="oiRushType"]:checked')?.value || 'fixed';
+            const amountGroup = $('oiFeeAmountGroup');
+            const percentGroup = $('oiRushPercentGroup');
+            
+            if (rushType === 'percent') {
+                amountGroup.style.display = 'none';
+                percentGroup.style.display = 'block';
+                calculateRushPercent();
+            } else {
+                amountGroup.style.display = 'block';
+                percentGroup.style.display = 'none';
+            }
+        }
+        
+        function populateRushApplyTo() {
+            const items = currentOrder.items.filter(i => i.type === 'dress' || i.type === 'accessory' || i.type === 'inhouse');
+            let html = '<option value="all">Entire Order</option>';
+            
+            items.forEach(item => {
+                const label = item.designer ? `${item.designer} - ${item.name}` : item.name;
+                html += `<option value="${item.id}">${label}</option>`;
+            });
+            
+            $('oiRushApplyTo').innerHTML = html;
+            
+            // Add change listener to recalculate
+            $('oiRushApplyTo').onchange = calculateRushPercent;
+            $('oiRushPercent').oninput = calculateRushPercent;
+        }
+        
+        function calculateRushPercent() {
+            const percent = parseFloat($('oiRushPercent').value) || 0;
+            const applyTo = $('oiRushApplyTo').value;
+            let baseAmount = 0;
+            
+            if (applyTo === 'all') {
+                // Calculate from all items (excluding fees and discounts)
+                currentOrder.items.forEach(item => {
+                    if (item.type !== 'fee' && item.type !== 'discount') {
+                        baseAmount += item.price || 0;
+                        if (item.customizations) {
+                            item.customizations.forEach(c => baseAmount += c.price || 0);
+                        }
+                    }
+                });
+            } else {
+                // Calculate from specific item
+                const item = currentOrder.items.find(i => i.id === applyTo);
+                if (item) {
+                    baseAmount = item.price || 0;
+                    if (item.customizations) {
+                        item.customizations.forEach(c => baseAmount += c.price || 0);
+                    }
+                }
+            }
+            
+            const rushAmount = Math.round(baseAmount * percent / 100 * 100) / 100;
+            const applyLabel = applyTo === 'all' ? 'entire order' : $('oiRushApplyTo').options[$('oiRushApplyTo').selectedIndex].text;
+            $('oiRushCalculated').innerHTML = percent > 0 ? 
+                `${percent}% of ${money(baseAmount)} (${applyLabel}) = <b>${money(rushAmount)}</b>` : '';
         }
         
         function populateDesignerDropdown() {
@@ -15075,11 +15199,62 @@ The {storeName} Team`
                 $('oiCustomParent').value = '';
             } else if (type === 'fee') {
                 item.feeType = $('oiFeeType').value;
-                item.name = item.feeType === 'shipping' ? 'Shipping' : item.feeType === 'rush' ? 'Rush Fee' : $('oiFeeNote').value || 'Other Fee';
-                item.price = parsePriceInput($('oiFeePrice').value);
+                
+                if (item.feeType === 'rush') {
+                    const rushType = document.querySelector('input[name="oiRushType"]:checked')?.value || 'fixed';
+                    
+                    if (rushType === 'percent') {
+                        const percent = parseFloat($('oiRushPercent').value) || 0;
+                        const applyTo = $('oiRushApplyTo').value;
+                        
+                        if (!percent) { toast('Enter rush fee percentage'); return; }
+                        
+                        // Calculate the amount
+                        let baseAmount = 0;
+                        if (applyTo === 'all') {
+                            currentOrder.items.forEach(i => {
+                                if (i.type !== 'fee' && i.type !== 'discount') {
+                                    baseAmount += i.price || 0;
+                                    if (i.customizations) {
+                                        i.customizations.forEach(c => baseAmount += c.price || 0);
+                                    }
+                                }
+                            });
+                            item.name = `Rush Fee (${percent}% of order)`;
+                        } else {
+                            const targetItem = currentOrder.items.find(i => i.id === applyTo);
+                            if (targetItem) {
+                                baseAmount = targetItem.price || 0;
+                                if (targetItem.customizations) {
+                                    targetItem.customizations.forEach(c => baseAmount += c.price || 0);
+                                }
+                                const targetLabel = targetItem.designer ? `${targetItem.designer} ${targetItem.name}` : targetItem.name;
+                                item.name = `Rush Fee (${percent}% of ${targetLabel})`;
+                            }
+                        }
+                        
+                        item.price = Math.round(baseAmount * percent / 100 * 100) / 100;
+                        item.rushPercent = percent;
+                        item.rushApplyTo = applyTo;
+                    } else {
+                        item.name = 'Rush Fee';
+                        item.price = parsePriceInput($('oiFeePrice').value);
+                    }
+                } else {
+                    item.name = item.feeType === 'shipping' ? 'Shipping' : $('oiFeeNote').value || 'Other Fee';
+                    item.price = parsePriceInput($('oiFeePrice').value);
+                }
+                
                 item.note = $('oiFeeNote').value.trim();
                 if (!item.price) { toast('Enter fee amount'); return; }
+                
+                // Reset fields
                 ['oiFeePrice','oiFeeNote'].forEach(i => $(i).value = '');
+                $('oiRushPercent').value = '';
+                $('oiRushApplyTo').value = 'all';
+                $('oiRushCalculated').innerHTML = '';
+                document.querySelector('input[name="oiRushType"][value="fixed"]').checked = true;
+                toggleRushType();
             } else if (type === 'discount') {
                 item.name = $('oiDiscountName').value.trim() || 'Discount';
                 const amount = parsePriceInput($('oiDiscountAmount').value);
