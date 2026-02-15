@@ -3056,6 +3056,9 @@ The {StoreName} Team
                         </div>
                     </div>
                     <div class="form-group" style="margin-top:12px"><label class="form-label">Measurement Notes</label><textarea class="form-input" id="mNotes"></textarea></div>
+                    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--champagne);display:flex;justify-content:flex-end">
+                        <button class="btn btn-secondary" onclick="saveMeasurementsFromSayYes()" style="font-size:12px">💾 Save Measurements to Client</button>
+                    </div>
                 </div>
                 <div id="yStep2" style="display:none">
                     <!-- Order Details (PO, ETA) -->
@@ -3811,6 +3814,14 @@ The {StoreName} Team
                 // Merge server data with pending local updates
                 let appointments = d.appointments || [];
                 
+                // Deduplicate appointments by ID (in case of sync issues)
+                const seenApptIds = new Set();
+                appointments = appointments.filter(a => {
+                    if (seenApptIds.has(a.ID)) return false;
+                    seenApptIds.add(a.ID);
+                    return true;
+                });
+                
                 // Apply any pending appointment updates
                 if (pendingUpdates.appointments) {
                     for (const [apptId, updates] of Object.entries(pendingUpdates.appointments)) {
@@ -4277,8 +4288,16 @@ The {StoreName} Team
             $('statAlts').textContent = data.alterations.length;
             $('statClients').textContent = data.clients.length;
 
-            // Filter to only show appointments with valid clients
-            const appts = todayAppts.filter(a => getClient(a.ClientID)).sort((a,b) => (a.Time||'').localeCompare(b.Time||''));
+            // Filter to only show appointments with valid clients, and dedupe by ID
+            const seenIds = new Set();
+            const appts = todayAppts
+                .filter(a => getClient(a.ClientID))
+                .filter(a => {
+                    if (seenIds.has(a.ID)) return false;
+                    seenIds.add(a.ID);
+                    return true;
+                })
+                .sort((a,b) => (a.Time||'').localeCompare(b.Time||''));
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isNoShow = a.Status === 'no-show';
@@ -13247,6 +13266,69 @@ The {storeName} Team`
             renderClientMeasurements();
         }
         
+        // Save measurements from Say Yes modal (Step 1) to client's history
+        async function saveMeasurementsFromSayYes() {
+            // Validate Taken By is required
+            if (!$('mTakenBy').value) {
+                toast('Please select who took the measurements', 'error');
+                return;
+            }
+            
+            // Check if there's at least some measurement data
+            const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value || 
+                                   $('mHeight').value || $('mWaistToFloor').value;
+            if (!hasMeasurements) {
+                toast('Please enter at least one measurement', 'error');
+                return;
+            }
+            
+            const measurement = {
+                date: today(),
+                takenBy: $('mTakenBy').value,
+                bust: $('mBust').value.trim(),
+                cup: $('mCup').value.trim(),
+                waist: $('mWaist').value.trim(),
+                hip: $('mHip').value.trim(),
+                height: $('mHeight').value.trim(),
+                heels: $('mHeels').value.trim(),
+                waistToFloor: $('mWaistToFloor').value.trim(),
+                notes: $('mNotes').value.trim(),
+                unit: measUnit,
+                custom: [...customMeasurements],
+                source: 'order'
+            };
+            
+            // Build summary for confirmation
+            const summary = [
+                measurement.bust ? `B: ${measurement.bust}` : '',
+                measurement.waist ? `W: ${measurement.waist}` : '',
+                measurement.hip ? `H: ${measurement.hip}` : ''
+            ].filter(Boolean).join(' / ');
+            
+            const confirmed = await appConfirm(
+                `Save these measurements to ${currentClient.FirstName}'s profile?\n\n${summary}\nTaken by: ${measurement.takenBy}`,
+                'Save Measurements'
+            );
+            if (!confirmed) return;
+            
+            // Get existing measurements
+            const measurements = getClientMeasurements();
+            measurements.push(measurement);
+            
+            // Save to client
+            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
+            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            
+            // Also store in currentOrder so it persists
+            currentOrder.measurements = { ...measurement };
+            currentOrder.measurementsSaved = true;
+            
+            toast('Measurements saved to client profile!', 'success');
+            
+            // Update the dropdown to show the new measurement
+            populateSavedMeasurementsDropdown();
+        }
+        
         async function deleteMeasurement(idx) {
             const confirmed = await appConfirmDanger('Delete this measurement record?', 'Delete Measurement');
             if (!confirmed) return;
@@ -14265,7 +14347,7 @@ The {storeName} Team`
                 step: yStep,
                 measurements: measurements,
                 selectedMeasurementIdx: $('selectSavedMeasurement').value,
-                items: [...currentOrder.items],
+                items: currentOrder.items.map(item => ({ ...item, customizations: item.customizations ? [...item.customizations] : [] })),
                 taxType: $('taxHst')?.checked ? 'hst' : ($('taxCustom')?.checked ? 'custom' : 'none'),
                 customTaxRate: $('customTaxRate')?.value || '',
                 date: $('yDate')?.value || '',
@@ -14276,6 +14358,9 @@ The {storeName} Team`
                 initials: initials,
                 savedAt: new Date().toISOString()
             };
+            
+            console.log('Saving draft:', draft);
+            console.log('Items being saved:', draft.items);
             
             // Save to Google Sheets (syncs across devices)
             await updateRecord('Clients', currentClient.ID, { OrderDraft: JSON.stringify(draft) });
@@ -14318,94 +14403,110 @@ The {storeName} Team`
         function loadDraft(draft) {
             console.log('Loading draft:', draft);
             
-            // Restore measurements
-            if (draft.measurements) {
-                $('mBust').value = draft.measurements.bust || '';
-                $('mCup').value = draft.measurements.cup || '';
-                $('mWaist').value = draft.measurements.waist || '';
-                $('mHip').value = draft.measurements.hip || '';
-                $('mHeight').value = draft.measurements.height || '';
-                $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
-                $('mHeels').value = draft.measurements.heels || '';
-                $('mNotes').value = draft.measurements.notes || '';
-                $('mTakenBy').value = draft.measurements.takenBy || '';
-                
-                if (draft.measurements.unit) {
-                    measUnit = draft.measurements.unit;
-                    setMeasUnit(draft.measurements.unit);
-                }
-                
-                if (draft.measurements.custom) {
-                    customMeasurements = [...draft.measurements.custom];
-                    renderCustomMeas();
-                }
-                
-                // Also store in currentOrder so it persists through navigation
-                currentOrder.measurements = { ...draft.measurements };
-            }
-            
-            // Restore selected measurement from dropdown
-            if (draft.selectedMeasurementIdx) {
-                $('selectSavedMeasurement').value = draft.selectedMeasurementIdx;
-            }
-            
-            // Restore tax settings BEFORE rendering items so total is correct
-            if (draft.taxType === 'custom') {
-                $('taxCustom').checked = true;
-                $('taxHst').checked = false;
-                $('taxNone').checked = false;
-                $('customTaxRate').value = draft.customTaxRate || '';
-            } else if (draft.taxType === 'none') {
-                $('taxNone').checked = true;
-                $('taxHst').checked = false;
-                $('taxCustom').checked = false;
-                $('customTaxRate').value = '';
-            } else {
-                // Default to HST (or legacy drafts with hst: true)
-                $('taxHst').checked = true;
-                $('taxCustom').checked = false;
-                $('taxNone').checked = false;
-                $('customTaxRate').value = '';
-            }
-            
-            // Restore order items
-            if (draft.items && draft.items.length > 0) {
-                currentOrder.items = [...draft.items];
-                console.log('Restored items:', currentOrder.items);
-            }
-            
-            // Restore date
-            if (draft.date) $('yDate').value = draft.date;
-            
-            // Restore PO and arrival date if saved
-            if (draft.po) $('oiPO').value = draft.po;
-            if (draft.arrivalDate) $('oiArrivalDate').value = draft.arrivalDate;
-            
-            // Restore order details
-            if (draft.orderDetails) $('oiDetails').value = draft.orderDetails;
-            
-            // Restore consultant selection
-            if (draft.consultant) {
-                currentOrder.consultantId = draft.consultant;
-            }
-            
-            // Restore initials
-            if (draft.initials) {
-                currentOrder.draftInitials = draft.initials;
-            }
-            
-            // Go to the step they were on (but not past step 2 to review items)
-            yStep = Math.min(draft.step || 1, 2);
-            updateYSteps();
-            
-            // Render items AFTER everything is set up (use setTimeout to ensure DOM is ready)
+            // Use setTimeout to ensure modal is fully rendered
             setTimeout(() => {
-                if (currentOrder.items.length > 0) {
-                    renderOrderItems();
+                // Restore measurements
+                if (draft.measurements) {
+                    console.log('Restoring measurements:', draft.measurements);
+                    $('mBust').value = draft.measurements.bust || '';
+                    $('mCup').value = draft.measurements.cup || '';
+                    $('mWaist').value = draft.measurements.waist || '';
+                    $('mHip').value = draft.measurements.hip || '';
+                    $('mHeight').value = draft.measurements.height || '';
+                    $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
+                    $('mHeels').value = draft.measurements.heels || '';
+                    $('mNotes').value = draft.measurements.notes || '';
+                    $('mTakenBy').value = draft.measurements.takenBy || '';
+                    
+                    if (draft.measurements.unit) {
+                        measUnit = draft.measurements.unit;
+                        setMeasUnit(draft.measurements.unit);
+                    }
+                    
+                    if (draft.measurements.custom && draft.measurements.custom.length > 0) {
+                        customMeasurements = [...draft.measurements.custom];
+                        renderCustomMeas();
+                    }
+                    
+                    // Also store in currentOrder so it persists through navigation
+                    currentOrder.measurements = { ...draft.measurements };
                 }
+                
+                // Restore selected measurement from dropdown
+                if (draft.selectedMeasurementIdx) {
+                    $('selectSavedMeasurement').value = draft.selectedMeasurementIdx;
+                }
+                
+                // Restore tax settings BEFORE rendering items so total is correct
+                if (draft.taxType === 'custom') {
+                    $('taxCustom').checked = true;
+                    $('taxHst').checked = false;
+                    $('taxNone').checked = false;
+                    $('customTaxRate').value = draft.customTaxRate || '';
+                } else if (draft.taxType === 'none') {
+                    $('taxNone').checked = true;
+                    $('taxHst').checked = false;
+                    $('taxCustom').checked = false;
+                    $('customTaxRate').value = '';
+                } else {
+                    // Default to HST (or legacy drafts with hst: true)
+                    $('taxHst').checked = true;
+                    $('taxCustom').checked = false;
+                    $('taxNone').checked = false;
+                    $('customTaxRate').value = '';
+                }
+                
+                // Restore order items (include designer info)
+                if (draft.items && draft.items.length > 0) {
+                    currentOrder.items = draft.items.map(item => ({ ...item }));
+                    console.log('Restored items:', currentOrder.items);
+                }
+                
+                // Restore date
+                if (draft.date) $('yDate').value = draft.date;
+                
+                // Restore PO and arrival date if saved
+                if (draft.po) $('oiPO').value = draft.po;
+                if (draft.arrivalDate) $('oiArrivalDate').value = draft.arrivalDate;
+                
+                // Restore order details
+                if (draft.orderDetails) $('oiDetails').value = draft.orderDetails;
+                
+                // Restore consultant selection
+                if (draft.consultant) {
+                    currentOrder.consultantId = draft.consultant;
+                }
+                
+                // Restore initials
+                if (draft.initials) {
+                    currentOrder.draftInitials = draft.initials;
+                }
+                
+                // Go to the step they were on (but not past step 2 to review items)
+                yStep = Math.min(draft.step || 1, 2);
+                updateYSteps();
+                
+                // Render items after a short delay to ensure DOM is ready
+                setTimeout(() => {
+                    if (currentOrder.items.length > 0) {
+                        renderOrderItems();
+                    }
+                    // Re-apply measurements one more time to be safe
+                    if (draft.measurements) {
+                        $('mBust').value = draft.measurements.bust || '';
+                        $('mCup').value = draft.measurements.cup || '';
+                        $('mWaist').value = draft.measurements.waist || '';
+                        $('mHip').value = draft.measurements.hip || '';
+                        $('mHeight').value = draft.measurements.height || '';
+                        $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
+                        $('mHeels').value = draft.measurements.heels || '';
+                        $('mNotes').value = draft.measurements.notes || '';
+                        $('mTakenBy').value = draft.measurements.takenBy || '';
+                    }
+                }, 100);
+                
+                toast('Draft loaded!', 'success');
             }, 50);
-            
-            toast('Draft loaded!', 'success');
         }
         
         async function deleteDraft(clientId) {
