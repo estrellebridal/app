@@ -2632,14 +2632,24 @@ The {StoreName} Team
                     </div>
                 </div>
                 
-                <div class="form-row">
+                <!-- Items Section -->
+                <div id="orderItemsSection">
                     <div class="form-group">
-                        <label class="form-label">Dress / Item</label>
-                        <input type="text" class="form-input" id="editOrderDress">
+                        <label class="form-label">Items <span id="orderItemCount" style="color:var(--taupe);font-weight:normal"></span></label>
+                        <select class="form-input" id="editOrderItemSelect" onchange="selectOrderItem()" style="display:none">
+                        </select>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Designer</label>
-                        <input type="text" class="form-input" id="editOrderDesigner">
+                    <div id="orderItemDetails">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Dress / Item</label>
+                                <input type="text" class="form-input" id="editOrderDress">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Designer</label>
+                                <input type="text" class="form-input" id="editOrderDesigner">
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -3273,58 +3283,60 @@ The {StoreName} Team
                     <div class="contract" id="contractPreview" style="max-height:60vh;overflow-y:auto;font-size:12px;padding:20px"></div>
                 </div>
                 <div id="yStep5" style="display:none">
+                    <div style="background:#e8f4ea;border-left:4px solid var(--sage);padding:12px;border-radius:4px;margin-bottom:16px">
+                        <p style="font-size:11px;font-weight:600;margin:0 0 4px 0;color:#2d5a3d">💡 Two Ways to Complete:</p>
+                        <p style="font-size:10px;margin:0;color:#2d5a3d"><b>Digital:</b> Have client initial & sign below, then proceed to email. <b>Paper:</b> Print contract below, then click "Save Order" to save without digital signature.</p>
+                    </div>
+                    
+                    <div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--champagne)">
+                        <button class="btn btn-secondary" onclick="generateBlankContract()" style="width:100%">🖨️ Print Contract for Paper Signature</button>
+                    </div>
+                    
                     <div class="grid-2">
                         <div>
-                            <p style="font-size:11px;font-weight:600;margin-bottom:8px">Measurement Initials <span style="color:#e74c3c">*</span></p>
-                            <p style="font-size:10px;color:var(--rose);margin-bottom:10px">Client must initial Bust, Waist, and Hip to confirm accuracy</p>
-                            <div id="measInitials" style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:12px"></div>
+                            <p style="font-size:11px;font-weight:600;margin-bottom:6px">Consultant <span style="color:#e74c3c">*</span></p>
+                            <select class="form-input" id="yConsultantSelect" onchange="loadConsultantSignature()"><option value="">Select...</option></select>
+                            <div class="form-group" style="margin-top:8px"><label class="form-label">Contract Date</label><input type="date" class="form-input" id="yDate"></div>
                         </div>
                         <div>
-                            <p style="font-size:11px;font-weight:600;margin-bottom:8px">Consultant</p>
-                            <div class="form-group"><label class="form-label">Select Consultant</label><select class="form-input" id="yConsultantSelect" onchange="loadConsultantSignature()"><option value="">Select...</option></select></div>
-                            <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="yDate"></div>
+                            <p style="font-size:11px;font-weight:600;margin-bottom:6px">Client Initials</p>
+                            <p style="font-size:9px;color:var(--taupe);margin-bottom:6px">For digital signing only</p>
+                            <div id="measInitials" style="background:var(--cream);padding:8px;border-radius:5px;font-size:11px"></div>
                         </div>
                     </div>
                     
                     <div class="grid-2" style="margin-top:16px">
                         <div>
-                            <p style="font-size:11px;font-weight:600;margin-bottom:8px">Customer Signature</p>
-                            <p style="font-size:10px;color:var(--rose);margin-bottom:6px">By signing, customer agrees to all terms</p>
-                            <canvas id="sigPad" class="sig-pad" width="280" height="120"></canvas>
-                            <div style="display:flex;justify-content:space-between;margin-top:4px">
-                                <button class="btn btn-sm btn-secondary" onclick="clearSig('customer')">Clear</button>
-                                <span style="font-size:9px;color:var(--rose)" id="sigTime"></span>
-                            </div>
+                            <p style="font-size:11px;font-weight:600;margin-bottom:6px">Customer Signature</p>
+                            <canvas id="sigPad" class="sig-pad" width="280" height="100"></canvas>
+                            <button class="btn btn-sm btn-secondary" onclick="clearSig('customer')" style="margin-top:4px">Clear</button>
                         </div>
                         <div>
-                            <p style="font-size:11px;font-weight:600;margin-bottom:8px">Consultant Signature</p>
-                            <p style="font-size:10px;color:var(--rose);margin-bottom:6px" id="consultantSigNote">Select consultant above to load signature</p>
-                            <canvas id="sigPadConsultant" class="sig-pad" width="280" height="120"></canvas>
-                            <div style="display:flex;justify-content:space-between;margin-top:4px">
-                                <button class="btn btn-sm btn-secondary" onclick="clearSig('consultant')">Clear</button>
-                                <span style="font-size:9px;color:var(--rose)" id="sigTimeConsultant"></span>
-                            </div>
+                            <p style="font-size:11px;font-weight:600;margin-bottom:6px">Consultant Signature</p>
+                            <p style="font-size:9px;color:var(--taupe);margin-bottom:4px" id="consultantSigNote">Select consultant to load</p>
+                            <canvas id="sigPadConsultant" class="sig-pad" width="280" height="100"></canvas>
+                            <button class="btn btn-sm btn-secondary" onclick="clearSig('consultant')" style="margin-top:4px">Clear</button>
                         </div>
                     </div>
                 </div>
                 <div id="yStep6" style="display:none">
-                    <p style="font-size:11px;color:var(--rose);margin-bottom:12px">Review the email before sending. You can edit the subject and message.</p>
-                    <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="emailTo" readonly style="background:var(--blush)"></div>
-                    <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="emailSubject"></div>
-                    <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="emailBody" style="min-height:180px;font-size:12px;line-height:1.6"></textarea></div>
-                    <div style="background:var(--blush);padding:10px;border-radius:5px;font-size:10px;color:var(--taupe)">
-                        📎 Note: If using "Open in Gmail", you'll need to manually attach the PDF contract
+                    <div style="background:var(--blush);padding:12px;border-radius:8px;margin-bottom:12px">
+                        <p style="font-size:11px;font-weight:600;margin:0 0 6px 0">📧 Email Contract to Client</p>
+                        <p style="font-size:10px;color:var(--taupe);margin:0">Review and send, or use "Save Order" if client signed on paper.</p>
                     </div>
+                    <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="emailTo" readonly style="background:#f5f5f5"></div>
+                    <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="emailSubject"></div>
+                    <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="emailBody" style="min-height:120px;font-size:11px;line-height:1.5"></textarea></div>
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="yPrev" onclick="yPrev()" style="display:none">← Back</button>
-                <button class="btn btn-secondary" id="ySaveDraft" onclick="saveDraft()" title="Save progress and continue later">💾 Save Draft</button>
+                <button class="btn btn-secondary" id="ySaveDraft" onclick="saveDraft()" title="Save and continue later">💾 Save Draft</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" id="yNext" onclick="yNext()">Next →</button>
-                <button class="btn btn-secondary" id="ySaveOnly" onclick="saveOrderOnly()" style="display:none">💾 Save Only</button>
-                <button class="btn btn-secondary" id="yDone" onclick="sendContractEmail()" style="display:none">📤 Send via App</button>
-                <button class="btn btn-success" id="yGmail" onclick="openContractInGmail()" style="display:none">📧 Open in Gmail</button>
+                <button class="btn btn-secondary" id="ySaveOnly" onclick="saveOrderOnly()" style="display:none" title="Save order without emailing">💾 Save Order</button>
+                <button class="btn btn-primary" id="yGmail" onclick="openContractInGmail()" style="display:none">📧 Gmail</button>
+                <button class="btn btn-success" id="yDone" onclick="sendContractEmail()" style="display:none">📤 Send</button>
             </div>
         </div>
     </div>
@@ -7602,9 +7614,60 @@ The Estrelle Bridal Team`;
             // Order fields
             $('editOrderPO').value = order.PO || '';
             $('editOrderDate').value = order.OrderDate || '';
-            $('editOrderDress').value = order.Dress || '';
-            $('editOrderDesigner').value = order.Designer || '';
-            $('editOrderSize').value = order.Size || '';
+            
+            // Parse items - check if Items JSON exists
+            let items = [];
+            try {
+                if (order.Items) {
+                    items = JSON.parse(order.Items);
+                }
+            } catch (e) {
+                items = [];
+            }
+            
+            // Store items on the modal for later use
+            window.currentOrderItems = items;
+            window.currentOrderItemIndex = 0;
+            
+            // If we have parsed items, use those
+            if (items.length > 0) {
+                const dressItems = items.filter(i => i.type === 'dress' || i.type === 'accessory' || i.type === 'inhouse');
+                
+                if (dressItems.length > 1) {
+                    // Multiple items - show dropdown
+                    $('editOrderItemSelect').style.display = 'block';
+                    $('editOrderItemSelect').innerHTML = dressItems.map((item, idx) => {
+                        const label = item.designer ? `${item.designer} - ${item.name}` : item.name;
+                        return `<option value="${idx}">${label}</option>`;
+                    }).join('');
+                    $('orderItemCount').textContent = `(${dressItems.length} items)`;
+                    
+                    // Show first item details
+                    selectOrderItem(0);
+                } else if (dressItems.length === 1) {
+                    // Single item
+                    $('editOrderItemSelect').style.display = 'none';
+                    $('orderItemCount').textContent = '';
+                    $('editOrderDress').value = dressItems[0].name || '';
+                    $('editOrderDesigner').value = dressItems[0].designer || '';
+                    $('editOrderSize').value = dressItems[0].size || '';
+                } else {
+                    // No dress items - use legacy fields
+                    $('editOrderItemSelect').style.display = 'none';
+                    $('orderItemCount').textContent = '';
+                    $('editOrderDress').value = order.Dress || '';
+                    $('editOrderDesigner').value = order.Designer || '';
+                    $('editOrderSize').value = order.Size || '';
+                }
+            } else {
+                // Legacy order - no Items JSON, use flat fields
+                $('editOrderItemSelect').style.display = 'none';
+                $('orderItemCount').textContent = '';
+                $('editOrderDress').value = order.Dress || '';
+                $('editOrderDesigner').value = order.Designer || '';
+                $('editOrderSize').value = order.Size || '';
+            }
+            
             $('editOrderStatus').value = order.Status || 'pending submission';
             $('editOrderArrival').value = order.ArrivalDate || '';
             $('editOrderCustomization').value = order.Customization || '';
@@ -7661,12 +7724,39 @@ The Estrelle Bridal Team`;
             openModal('orderDetails');
         }
         
+        function selectOrderItem(idx) {
+            const index = idx !== undefined ? idx : parseInt($('editOrderItemSelect').value);
+            const items = window.currentOrderItems || [];
+            const dressItems = items.filter(i => i.type === 'dress' || i.type === 'accessory' || i.type === 'inhouse');
+            
+            if (dressItems[index]) {
+                const item = dressItems[index];
+                $('editOrderDress').value = item.name || '';
+                $('editOrderDesigner').value = item.designer || '';
+                $('editOrderSize').value = item.size || '';
+                window.currentOrderItemIndex = index;
+            }
+        }
+        
         async function saveOrderDetails() {
             const orderId = $('editOrderId').value;
             if (!orderId) return;
             
             const clientId = $('editOrderClientId').value;
             const isLinked = clientId && getClient(clientId);
+            
+            // Update the current item in Items array if applicable
+            const items = window.currentOrderItems || [];
+            const dressItems = items.filter(i => i.type === 'dress' || i.type === 'accessory' || i.type === 'inhouse');
+            
+            if (dressItems.length > 0 && window.currentOrderItemIndex !== undefined) {
+                const item = dressItems[window.currentOrderItemIndex];
+                if (item) {
+                    item.name = $('editOrderDress').value;
+                    item.designer = $('editOrderDesigner').value;
+                    item.size = $('editOrderSize').value;
+                }
+            }
             
             const updates = {
                 PO: $('editOrderPO').value,
@@ -7683,6 +7773,19 @@ The Estrelle Bridal Team`;
                 SubmittedBy: $('editOrderSubmittedBy').value,
                 SubmittedDate: $('editOrderSubmittedDate').value
             };
+            
+            // Update Items JSON if we have items
+            if (items.length > 0) {
+                updates.Items = JSON.stringify(items);
+                
+                // Also update flat fields to reflect all items
+                const allDresses = dressItems.map(i => i.name).filter(Boolean).join(', ');
+                const allDesigners = dressItems.map(i => i.designer).filter(Boolean).join(', ');
+                const allSizes = dressItems.map(i => i.size).filter(Boolean).join(', ');
+                updates.Dress = allDresses;
+                updates.Designer = allDesigners;
+                updates.Size = allSizes;
+            }
             
             // Add client info if not linked
             if (!isLinked) {
@@ -14522,8 +14625,8 @@ The {storeName} Team`
                     currentOrder.draftInitials = draft.initials;
                 }
                 
-                // Go to the step they were on (but not past step 2 to review items)
-                yStep = Math.min(draft.step || 1, 2);
+                // Go to the step they were on (allow up to step 5 for signing later)
+                yStep = Math.min(draft.step || 1, 5);
                 updateYSteps();
                 
                 // Render items after a short delay to ensure DOM is ready
@@ -14617,11 +14720,21 @@ The {storeName} Team`
                 if (i < yStep) $('ys'+i).classList.add('done');
                 if (i === yStep) { $('ys'+i).classList.add('active'); $('yStep'+i).style.display = 'block'; }
             });
+            
+            // Button visibility - simplified
             $('yPrev').style.display = yStep > 1 ? 'inline-flex' : 'none';
-            $('yNext').style.display = yStep < 6 ? 'inline-flex' : 'none';
-            $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            $('yNext').style.display = yStep < 5 ? 'inline-flex' : 'none';
+            $('ySaveOnly').style.display = (yStep === 5 || yStep === 6) ? 'inline-flex' : 'none';
             $('yGmail').style.display = yStep === 6 ? 'inline-flex' : 'none';
-            $('ySaveOnly').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            $('yDone').style.display = yStep === 6 ? 'inline-flex' : 'none';
+            
+            // On step 5, show "Next" to go to email step (but don't require signatures)
+            if (yStep === 5) {
+                $('yNext').style.display = 'inline-flex';
+                $('yNext').textContent = 'Email →';
+            } else {
+                $('yNext').textContent = 'Next →';
+            }
             
             // Restore data when navigating to specific steps
             if (yStep === 1 && currentOrder.measurements) {
@@ -14709,57 +14822,36 @@ The {storeName} Team`
                 // Photos are optional - no validation needed
             }
             if (yStep === 5) {
-                // Validate initials for all measurements that have values
-                const o = currentOrder;
-                const missingInitials = [];
-                
-                // Check core measurements
-                if (o.measurements.bust && !$('init_bust')?.value?.trim()) missingInitials.push('Bust');
-                if (o.measurements.waist && !$('init_waist')?.value?.trim()) missingInitials.push('Waist');
-                if (o.measurements.hip && !$('init_hip')?.value?.trim()) missingInitials.push('Hip');
-                
-                // Check other measurements - if any have values, init_other is required
-                const hasOtherMeasurements = o.measurements.cup || o.measurements.height || 
-                    o.measurements.waistToFloor || o.measurements.heels || 
-                    (o.measurements.custom && o.measurements.custom.length > 0);
-                
-                if (hasOtherMeasurements && !$('init_other')?.value?.trim()) {
-                    missingInitials.push('Other measurements');
-                }
-                
-                if (missingInitials.length > 0) {
-                    toast(`Client must initial: ${missingInitials.join(', ')}`, 'error');
-                    return;
-                }
-                
+                // Only require consultant selection
                 const selectedId = $('yConsultantSelect').value;
                 if (!selectedId) {
                     toast('Please select a consultant', 'error');
                     return;
                 }
                 
-                // Check if customer has signed
-                const customerSig = sigPadCustomer?.canvas?.toDataURL();
-                const isCustomerSigBlank = isCanvasBlank(sigPadCustomer?.canvas);
-                if (isCustomerSigBlank) {
-                    toast('Customer signature is required', 'error');
-                    return;
-                }
-                
-                // Check if consultant signature is loaded
-                const consultantSig = sigPadConsultant?.canvas?.toDataURL();
-                const isConsultantSigBlank = isCanvasBlank(sigPadConsultant?.canvas);
-                if (isConsultantSigBlank) {
-                    toast('Please select consultant to load their signature', 'error');
-                    return;
-                }
-                
-                // Save signature data before moving to email step
-                currentOrder.signatureData = customerSig;
-                currentOrder.consultantSignatureData = consultantSig;
                 const consultant = data.consultants.find(c => c.ID == selectedId);
                 currentOrder.consultant = consultant ? consultant.Name : '';
+                currentOrder.consultantId = selectedId;
+                
+                // Capture signatures if present (but don't require them)
+                if (sigPadCustomer?.canvas && !isCanvasBlank(sigPadCustomer.canvas)) {
+                    currentOrder.signatureData = sigPadCustomer.canvas.toDataURL();
+                }
+                if (sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
+                    currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+                }
+                
+                // Collect any initials that were entered
                 currentOrder.initials = collectInitials();
+                
+                // Warn if missing signatures but allow proceeding
+                const isCustomerSigBlank = isCanvasBlank(sigPadCustomer?.canvas);
+                const hasInitials = $('init_bust')?.value?.trim() || $('init_waist')?.value?.trim() || $('init_hip')?.value?.trim();
+                
+                if (isCustomerSigBlank && !hasInitials) {
+                    // No digital signatures - that's fine for paper signing workflow
+                    console.log('Proceeding without digital signatures (paper signing workflow)');
+                }
             }
             if (yStep < 6) { yStep++; updateYSteps(); }
         }
@@ -16236,6 +16328,283 @@ p{margin:6px 0;}
                 
                 <h2>FORCE MAJEURE</h2>
                 <p>The Seller will not be liable for delays in performance or for non-performance due to unforeseen circumstances or causes beyond the Seller's reasonable control.</p>
+            `;
+        }
+        
+        async function generateBlankContract() {
+            const c = currentClient;
+            const o = currentOrder;
+            
+            // Ensure measurements are saved from form if on step 1 or navigated back
+            if (!o.measurements || !o.measurements.bust) {
+                o.measurements = { 
+                    bust: $('mBust').value,
+                    cup: $('mCup').value,
+                    waist: $('mWaist').value, 
+                    hip: $('mHip').value, 
+                    height: $('mHeight').value, 
+                    waistToFloor: $('mWaistToFloor').value,
+                    heels: $('mHeels').value, 
+                    notes: $('mNotes').value,
+                    unit: measUnit,
+                    custom: [...customMeasurements],
+                    takenBy: $('mTakenBy').value
+                };
+            }
+            
+            // Validate we have items
+            if (!o.items || o.items.length === 0) {
+                toast('Please add items to the order first', 'error');
+                return;
+            }
+            
+            toast('Generating blank contract...', '');
+            
+            // Get contract HTML without signatures/initials
+            const contractHtml = getBlankContractHtml();
+            
+            try {
+                const result = await api('POST', {
+                    action: 'sendContract',
+                    contractData: {
+                        brideName: `${c.FirstName} ${c.LastName}`,
+                        contractHtml: contractHtml,
+                        signatureData: null,
+                        consultantSignatureData: null,
+                        signDate: $('yDate').value || today(),
+                        skipEmail: true,
+                        blankContract: true
+                    }
+                });
+                
+                if (result.driveLink) {
+                    toast('Blank contract saved to Drive!', 'success');
+                    window.open(result.driveLink, '_blank');
+                } else {
+                    toast('Contract generated', 'success');
+                }
+            } catch (e) {
+                console.error('Generate blank contract error:', e);
+                toast('Failed to generate contract', 'error');
+            }
+        }
+        
+        function getBlankContractHtml() {
+            const c = currentClient;
+            const o = currentOrder;
+            
+            // Get consultant signature if selected
+            const selectedConsultantId = $('yConsultantSelect')?.value;
+            const consultant = data.consultants.find(cons => cons.ID == selectedConsultantId);
+            const consultantName = consultant?.Name || '';
+            const consultantSig = consultant?.Signature || '';
+            
+            // Calculate totals
+            let subtotal = 0;
+            o.items.forEach(item => {
+                subtotal += item.price || 0;
+                if (item.customizations) {
+                    item.customizations.forEach(cust => subtotal += cust.price || 0);
+                }
+            });
+            
+            const taxInfo = getTaxInfo();
+            const taxAmount = Math.round(subtotal * taxInfo.rate * 100) / 100;
+            const total = subtotal + taxAmount;
+            const unit = o.measurements?.unit || measUnit || 'in';
+            
+            let taxRows = '';
+            if (taxInfo.rate > 0) {
+                taxRows = `
+                    <tr><td colspan="4" style="text-align:right">Subtotal</td><td>${money(subtotal)}</td></tr>
+                    <tr><td colspan="4" style="text-align:right">${taxInfo.label}</td><td>${money(taxAmount)}</td></tr>
+                `;
+            }
+            
+            // Build items HTML
+            let itemsHtml = '';
+            o.items.forEach(item => {
+                if (item.type === 'dress' || item.type === 'accessory') {
+                    itemsHtml += `<tr>
+                        <td>${item.name}</td>
+                        <td>${item.designer || '—'}</td>
+                        <td>${item.size || '—'}${item.color ? ', ' + item.color : ''}</td>
+                        <td>—</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                    if (item.customizations && item.customizations.length > 0) {
+                        item.customizations.forEach(cust => {
+                            itemsHtml += `<tr style="font-size:10px;color:#666">
+                                <td style="padding-left:15px">↳ ${cust.name}</td>
+                                <td>${item.designer}</td>
+                                <td>${cust.delivery === 'ondress' ? 'On dress' : 'Separate'}</td>
+                                <td>Customization</td>
+                                <td>${money(cust.price)}</td>
+                            </tr>`;
+                        });
+                    }
+                } else if (item.type === 'inhouse') {
+                    itemsHtml += `<tr>
+                        <td>${item.name}</td>
+                        <td>In-House</td>
+                        <td>—</td>
+                        <td>${item.notes ? item.notes.substring(0, 30) : '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'fee') {
+                    itemsHtml += `<tr style="font-size:10px">
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${item.note || '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'discount') {
+                    itemsHtml += `<tr style="font-size:10px;color:#27ae60">
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>Discount</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'custom') {
+                    itemsHtml += `<tr>
+                        <td>${item.name}</td>
+                        <td>Custom</td>
+                        <td>—</td>
+                        <td>${item.notes ? item.notes.substring(0, 30) : '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                }
+            });
+            
+            // Build measurements with blank initial boxes
+            const meas = o.measurements || {};
+            const coreMeas = [
+                { label: 'Bust', value: meas.bust, u: unit },
+                { label: 'Waist', value: meas.waist, u: unit },
+                { label: 'Hip', value: meas.hip, u: unit }
+            ];
+            
+            const otherMeas = [
+                { label: 'Cup Size', value: meas.cup, u: '' },
+                { label: 'Height', value: meas.height, u: unit },
+                { label: 'Waist to Floor', value: meas.waistToFloor, u: unit },
+                { label: 'Heels', value: meas.heels, u: '"' }
+            ];
+            
+            if (meas.custom) {
+                meas.custom.forEach(m => {
+                    otherMeas.push({ label: m.name, value: m.value, u: m.unit });
+                });
+            }
+            
+            // Blank initial box HTML
+            const blankInitial = '<div style="width:60px;height:25px;border:1px solid #999;display:inline-block"></div>';
+            
+            const coreRows = coreMeas.filter(m => m.value).map(m => 
+                `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center">${blankInitial}</td></tr>`
+            ).join('');
+            
+            const otherWithValues = otherMeas.filter(m => m.value);
+            let otherRow = '';
+            if (otherWithValues.length > 0) {
+                otherRow = `<tr><td>Other</td><td>${otherWithValues.map(m => `${m.label}: ${m.value}${m.u}`).join(', ')}</td><td style="text-align:center">${blankInitial}</td></tr>`;
+            }
+            
+            // Blank signature box for client, real signature for consultant if available
+            const blankSigBox = '<div style="width:200px;height:60px;border-bottom:1px solid #000;display:inline-block"></div>';
+            const consultantSigHtml = consultantSig ? 
+                `<img src="${consultantSig}" style="max-width:200px;max-height:60px;border-bottom:1px solid #000;">` : 
+                blankSigBox;
+            
+            const orderDetails = $('oiDetails')?.value || '';
+            const contractDate = $('yDate')?.value || today();
+            
+            return `
+                <h1 style="text-align:center;font-size:16px;">SALES CONTRACT</h1>
+                
+                <div style="background:#f9f7f5;padding:10px;border-radius:4px;margin-bottom:15px">
+                    <h2 style="margin:0 0 8px 0;font-size:11px">CUSTOMER INFORMATION</h2>
+                    <table style="border:none;font-size:10px">
+                        <tr><td style="border:none;padding:2px"><b>Name:</b> ${c.FirstName} ${c.LastName}</td><td style="border:none;padding:2px"><b>Email:</b> ${c.Email || '—'}</td></tr>
+                        <tr><td style="border:none;padding:2px"><b>Phone:</b> ${c.Phone || '—'}</td><td style="border:none;padding:2px"><b>Wedding Date:</b> ${fmtDate(c.WeddingDate) || '—'}</td></tr>
+                        <tr><td style="border:none;padding:2px" colspan="2"><b>Contract Date:</b> ${fmtDate(contractDate)}</td></tr>
+                    </table>
+                </div>
+                
+                <h2>PARTIES</h2>
+                <p>This Sales Contract (hereinafter referred to as the "Contract") is entered into on <b>${fmtDate(contractDate)}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${c.FirstName} ${c.LastName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
+                
+                <h2>GOODS AND PRICE</h2>
+                <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
+                <table>
+                    <tr><th>Product</th><th>Designer/Source</th><th>Details</th><th>Notes</th><th>Price</th></tr>
+                    ${itemsHtml}
+                    ${taxRows}
+                    <tr><td colspan="4" style="text-align:right;font-weight:bold">TOTAL</td><td style="font-weight:bold">${money(total)}</td></tr>
+                </table>
+                ${orderDetails ? `<p><b>Important ordering details:</b> ${orderDetails}</p>` : ''}
+                
+                <h2>MEASUREMENTS</h2>
+                ${meas.takenBy ? `<p style="font-size:9px;margin-bottom:6px"><b>Measured by:</b> ${meas.takenBy}</p>` : ''}
+                <table>
+                    <tr><th>Item</th><th>Measurement</th><th>Client's Initial</th></tr>
+                    ${coreRows}
+                    ${otherRow}
+                </table>
+                ${meas.notes ? `<p><b>Important measurement notes:</b> ${meas.notes}</p>` : ''}
+                
+                <h2>PAYMENT TERMS</h2>
+                <p>The Customer agrees to make an initial deposit of at least 50% of the total purchase price upon placing the order, which is non-refundable.</p>
+                <p>The Seller will send a balance finalization request to the Buyer by the end of the production, and the Customer agrees to pay the remaining balance in full before shipment.</p>
+                
+                <h2>DELIVERY AND SHIPPING</h2>
+                <p>The delivery of the goods (hereinafter referred to as the "Delivery") will be at Estrelle Bridal.</p>
+                <p>The shipping method will be decided by the suppliers and Seller will be responsible for the costs of the shipment.</p>
+                
+                <h2>NO REFUNDS OR RETURNS</h2>
+                <p>The Customer acknowledges that the wedding dress is made-to-order or customized to their specifications. Therefore, NO returns or refunds will be accepted after the order has been confirmed and production has started.</p>
+                
+                <h2>CANCELLATION OF ORDERS</h2>
+                <p>The Customer who cancels their sales contract are NOT entitled to a refund of ANY monies paid up to and including the cancellation date. The Customer is required to make full payment as per the original order agreement, even in the event of order cancellation, costs will still be incurred to the suppliers and to the Seller regardless of any circumstance.</p>
+                
+                <h2>INSPECTION</h2>
+                <p>Hereby, the Customer acknowledges that it has relied solely on the investigations, examinations, and inspections that the Customer has chosen to make and that the Seller has afforded the Customer the opportunity for full and complete investigations, examinations, and inspections.</p>
+                
+                <h2>RISK OF LOSS AND TITLE</h2>
+                <p>The risk of loss or damage for the goods will be on the Seller until the goods pass upon delivery to the Customer or its designee.</p>
+                <p>The Title of the goods will also remain with the Seller until the goods pass upon delivery to the Customer or its designee.</p>
+                
+                <h2>DELAY OR FAILURE TO PERFORM AND FORCE MAJEURE</h2>
+                <p>Under no circumstances will the Seller be held liable to the Customer for any delay that may occur, non-delivery or an arising fault of this Agreement that may be due to any labour dispute, shortage in transportation, delay or shortage of materials to produce the Goods, fires, accidents, Acts of God, or any other causes outside Seller's control. The Seller will notify the Customer immediately upon realization that it will not be able to deliver the Goods as promised. Upon such notice, either Party may terminate this Agreement.</p>
+                
+                <h2>LIMITATION OF LIABILITY</h2>
+                <p>Under no circumstances will the Seller be liable for any indirect, special, consequential, or punitive damages (including lost profits) arising out of or relating to this Agreement or the transactions it contemplates (whether for breach of contract, tort, negligence, or other form of action).</p>
+                
+                <h2>FIT & BODY SIZE CHANGES</h2>
+                <p>The Customer acknowledges that the wedding dress is ordered based on measurements taken at the time of purchase. The Seller is not responsible for any changes in the Customer's body size or shape after the order is placed. Any significant fluctuations in weight or body measurements may affect the fit, potentially requiring substantial alterations at the Customer's expense, or, in some cases, resulting in the dress not fitting as intended. The Seller bears no liability for such outcomes.</p>
+                
+                <h2>ENTIRE AGREEMENT</h2>
+                <p>This Agreement contains the entire agreement and understanding among the Parties hereto with respect to the subject matter hereof, and supersedes all prior agreements, understandings, inducements and conditions, express or implied, oral or written, of any nature whatsoever with respect to the subject matter hereof. The express terms hereof control and supersede any course of performance and/or usage of the trade inconsistent with any of the terms hereof.</p>
+                
+                <h2>FORCE MAJEURE</h2>
+                <p>The Seller will not be liable for delays in performance or for non-performance due to unforeseen circumstances or causes beyond the Seller's reasonable control.</p>
+                
+                <div style="margin-top:40px;page-break-inside:avoid;">
+                    <div style="display:flex;justify-content:space-between;">
+                        <div style="width:45%;">
+                            <p style="font-weight:bold;margin-bottom:10px;font-size:12px;">Customer Signature:</p>
+                            ${blankSigBox}
+                            <p style="font-size:10px;color:#666;margin-top:5px;">Date: ${fmtDate(contractDate)}</p>
+                        </div>
+                        <div style="width:45%;">
+                            <p style="font-weight:bold;margin-bottom:10px;font-size:12px;">Consultant Signature:</p>
+                            ${consultantSigHtml}
+                            <p style="font-size:10px;color:#666;margin-top:5px;">${consultantName ? consultantName + ' — ' : ''}${fmtDate(contractDate)}</p>
+                        </div>
+                    </div>
+                </div>
             `;
         }
 
