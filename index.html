@@ -4090,9 +4090,12 @@ The {StoreName} Team
             if (name === 'clients') setClientsView(clientsView || 'all');
             if (name === 'schedule') setScheduleView(scheduleView || 'week');
             if (name === 'orders') { 
-                // Refresh data when switching to Orders/Alterations tab
+                // Render immediately with cached data
+                setOrdersView(ordersView || 'orders');
+                // Then refresh data in background
                 loadData().then(() => {
-                    setOrdersView(ordersView || 'orders');
+                    if (ordersView === 'orders') renderOrders();
+                    else renderAlts();
                 });
             }
             if (name === 'reporting') renderReporting();
@@ -16804,7 +16807,104 @@ p{margin:6px 0;}
         // Load cached data first for instant UI, then fetch fresh from server
         loadCachedData();
         showPage('dashboard');
-        loadData();
+        
+        // Load fresh data and re-render current view
+        loadData().then(() => {
+            // Re-render dashboard with fresh data
+            renderDash();
+            // If orders tab needs rendering, do it
+            if (ordersView === 'orders') {
+                renderOrders();
+            } else if (ordersView === 'alterations') {
+                renderAlts();
+            }
+        });
+        
+        // ========== AUTO-REFRESH ==========
+        // Poll for updates every 60 seconds when app is visible
+        let autoRefreshInterval = null;
+        const AUTO_REFRESH_MS = 60000; // 60 seconds
+        
+        function startAutoRefresh() {
+            if (autoRefreshInterval) return;
+            autoRefreshInterval = setInterval(async () => {
+                // Only refresh if document is visible and no modal is open
+                if (document.hidden) return;
+                if (document.querySelector('.modal-overlay.active')) return;
+                
+                console.log('Auto-refreshing data...');
+                try {
+                    const d = await api('GET');
+                    if (!d || typeof d !== 'object') return;
+                    
+                    // Check if data actually changed
+                    const oldApptCount = data.appointments.length;
+                    const oldOrderCount = data.orders.length;
+                    const newApptCount = (d.appointments || []).length;
+                    const newOrderCount = (d.orders || []).length;
+                    
+                    // Update data
+                    data = { 
+                        clients: d.clients || [], 
+                        appointments: d.appointments || [], 
+                        topoptions: d.topoptions || [], 
+                        orders: d.orders || [], 
+                        alterations: d.alterations || [], 
+                        designers: d.designers || [],
+                        consultants: d.consultants || [],
+                        visitnotes: d.visitnotes || [],
+                        announcements: d.announcements || [],
+                        emailtemplates: d.emailtemplates || []
+                    };
+                    saveCachedData();
+                    
+                    // Re-render current view
+                    const activePage = document.querySelector('.section.active')?.id?.replace('page-', '');
+                    if (activePage === 'dashboard') renderDash();
+                    else if (activePage === 'orders') {
+                        if (ordersView === 'orders') renderOrders();
+                        else renderAlts();
+                    }
+                    else if (activePage === 'schedule') renderSchedule();
+                    else if (activePage === 'clients' && !currentClient) renderClients();
+                    
+                    // Show subtle indicator if counts changed
+                    if (oldApptCount !== newApptCount || oldOrderCount !== newOrderCount) {
+                        console.log('Data updated:', { appointments: newApptCount, orders: newOrderCount });
+                    }
+                } catch (e) {
+                    console.log('Auto-refresh failed:', e.message);
+                }
+            }, AUTO_REFRESH_MS);
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        // Start/stop based on visibility
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopAutoRefresh();
+            } else {
+                // Refresh immediately when tab becomes visible
+                loadData().then(() => {
+                    const activePage = document.querySelector('.section.active')?.id?.replace('page-', '');
+                    if (activePage === 'dashboard') renderDash();
+                    else if (activePage === 'orders') {
+                        if (ordersView === 'orders') renderOrders();
+                        else renderAlts();
+                    }
+                });
+                startAutoRefresh();
+            }
+        });
+        
+        // Start auto-refresh
+        startAutoRefresh();
 
         </script>
 </body>
