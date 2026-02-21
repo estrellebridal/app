@@ -192,9 +192,11 @@
         .appt-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
         .appt-notes { font-size: 13px; margin-top: 6px; color: var(--text-secondary); }
         .appt-actions { display: flex; gap: 6px; margin-top: 10px; }
-        .appt-type-consultation { border-left: 4px solid var(--accent); }
+        .appt-type-consultation, .appt-type-bridal-consultation { border-left: 4px solid var(--accent); }
         .appt-type-fitting { border-left: 4px solid var(--blue); }
+        .appt-type-final-fitting { border-left: 4px solid #9b59b6; }
         .appt-type-pickup { border-left: 4px solid var(--sage); }
+        .appt-type-measurement { border-left: 4px solid var(--honey); }
 
         /* Option cards */
         .option-card { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--sage); }
@@ -757,6 +759,128 @@
             cursor: pointer;
         }
         
+        /* Custom Select Dropdown */
+        .custom-select {
+            position: relative;
+            width: 100%;
+        }
+        .custom-select-trigger {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            background: var(--bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            transition: all 0.2s;
+            color: var(--text);
+            user-select: none;
+        }
+        .custom-select-trigger:hover {
+            border-color: var(--accent);
+        }
+        .custom-select-trigger.open {
+            border-color: var(--accent);
+            background: var(--card);
+            border-radius: 10px 10px 0 0;
+        }
+        .custom-select-trigger .trigger-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+        .custom-select-trigger .trigger-arrow {
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .custom-select-trigger.open .trigger-arrow {
+            transform: rotate(180deg);
+        }
+        .custom-select-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--accent);
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            z-index: 200;
+            max-height: 240px;
+            overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .custom-select-options.open {
+            display: block;
+            animation: customSelectFade 0.15s ease-out;
+        }
+        @keyframes customSelectFade {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .custom-select-option {
+            padding: 11px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            transition: background 0.1s;
+            border-bottom: 1px solid var(--border);
+        }
+        .custom-select-option:last-child {
+            border-bottom: none;
+        }
+        .custom-select-option:hover {
+            background: var(--accent-light);
+        }
+        .custom-select-option.selected {
+            background: var(--accent-medium);
+            color: var(--accent);
+            font-weight: 600;
+        }
+        .custom-select-option .option-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .custom-select-option .option-check {
+            width: 16px;
+            height: 16px;
+            margin-left: auto;
+            opacity: 0;
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+        .custom-select-option.selected .option-check {
+            opacity: 1;
+        }
+        /* Hide the native select when custom is active */
+        select.form-input.custom-hidden {
+            display: none !important;
+        }
+        @media (max-width: 900px) {
+            .custom-select-trigger {
+                padding: 12px;
+                font-size: 16px;
+            }
+            .custom-select-option {
+                padding: 14px;
+                font-size: 15px;
+            }
+        }
+
         /* Dropdown menu (appears near button) */
         .dropdown-menu {
             position: fixed;
@@ -1715,7 +1839,7 @@
                     <div style="font-size:11px;font-weight:600;margin-bottom:12px;color:var(--taupe);text-transform:uppercase;letter-spacing:0.5px">Appointment Details</div>
                     <div class="form-row" style="margin-bottom:12px"><div class="form-group" style="margin-bottom:0"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate" onchange="updateFollowUpDate()"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
                     <div class="form-row">
-                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input" id="aType" onchange="toggleConsultationReason()"></select></div>
+                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input custom-hidden" id="aType" onchange="toggleConsultationReason()"></select><div class="custom-select" id="aTypeCustom"><div class="custom-select-trigger" onclick="toggleCustomSelect('aTypeCustom')"><span class="trigger-label" id="aTypeCustomLabel">Bridal Consultation</span><svg class="trigger-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div><div class="custom-select-options" id="aTypeCustomOptions"></div></div></div>
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input" id="aConsultant"><option value="">Select...</option></select></div>
                     </div>
                     
@@ -3563,6 +3687,40 @@ The {StoreName} Team
             const now = new Date();
             return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
         };
+        // Normalize appointment type display (handles Timely inconsistencies)
+        const normalizeApptType = (type) => {
+            if (!type) return 'Bridal Consultation';
+            // Clean up: trim, remove trailing punctuation and extra spaces
+            let cleaned = String(type).trim().replace(/[!?.,]+$/, '').replace(/\s+/g, ' ').trim();
+            const lower = cleaned.toLowerCase();
+            
+            // Check if this type matches a user-configured service type (case-insensitive)
+            const userTypes = getServiceTypes();
+            const matchedUserType = userTypes.find(t => t.toLowerCase() === lower);
+            if (matchedUserType) return matchedUserType;
+            
+            // Map common variations to standard names
+            if (lower === 'consultation' || lower === 'bridal consultation' || lower === 'bridal') {
+                return 'Bridal Consultation';
+            }
+            if (lower === 'fitting' || lower === 'bridal fitting') {
+                return 'Fitting';
+            }
+            if (lower === 'final fitting' || lower === 'final') {
+                return 'Final Fitting';
+            }
+            if (lower === 'alterations' || lower === 'alteration') {
+                return 'Alterations';
+            }
+            if (lower === 'pickup' || lower === 'pick up' || lower === 'pick-up') {
+                return 'Pickup';
+            }
+            if (lower === 'measurement' || lower === 'measurements') {
+                return 'Measurement';
+            }
+            // Return cleaned value with title case
+            return cleaned.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+        };
         const isToday = (d) => {
             if (!d) return false;
             const todayStr = today();
@@ -4356,7 +4514,7 @@ The {StoreName} Team
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
-                        <div class="item-meta">${fmtTime(a.Time)} · ${a.Type||''} · ${a.Consultant||''}</div>
+                        <div class="item-meta">${fmtTime(a.Time)} · ${normalizeApptType(a.Type)} · ${a.Consultant||''}</div>
                     </div>
                     <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
                         ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="openConfirmEmailModal('${a.ID}')" title="Send email">📧</button>` : ''}
@@ -4449,7 +4607,7 @@ The {StoreName} Team
                         <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                         <div class="item-info" style="flex:1">
                             <div class="item-name">${c.FirstName} ${c.LastName}</div>
-                            <div class="item-meta">${statusLabel} · ${a.Type||''} on ${fmtDate(a.Date)}</div>
+                            <div class="item-meta">${statusLabel} · ${normalizeApptType(a.Type)} on ${fmtDate(a.Date)}</div>
                         </div>
                         <div style="display:flex;gap:4px">
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();editAppt('${a.ID}')" title="Edit follow-up">✏️</button>
@@ -4510,7 +4668,7 @@ The {StoreName} Team
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info" style="flex:1" onclick="openClient('${a.ClientID}')">
                         <div class="item-name">${c.FirstName} ${c.LastName}</div>
-                        <div class="item-meta">${urgencyLabel} · ${fmtTime(a.Time)} · ${a.Type||''}</div>
+                        <div class="item-meta">${urgencyLabel} · ${fmtTime(a.Time)} · ${normalizeApptType(a.Type)}</div>
                     </div>
                     ${confirmButtons(a.ID, false)}
                 </div>`;
@@ -5255,12 +5413,12 @@ The {StoreName} Team
                     <div class="card-body" style="padding:0">
                         ${appts.map(a => {
                             const c = getClient(a.ClientID);
-                            const typeClass = `appt-type-${a.Type || 'consultation'}`;
+                            const typeClass = `appt-type-${normalizeApptType(a.Type).toLowerCase().replace(/\s+/g, '-')}`;
                             return `<div class="${typeClass} schedule-appt-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 14px;border-bottom:1px solid var(--blush);cursor:pointer" onclick="openClient('${a.ClientID}')">
                                 <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
                                     <div style="font-family:'Cormorant Garamond',serif;font-size:18px;width:50px;flex-shrink:0">${fmtTime(a.Time)}</div>
                                     <div class="avatar" style="flex-shrink:0">${initials(c.FirstName, c.LastName)}</div>
-                                    <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo confirmation">✓</span>` : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${a.Type||''} · ${a.Consultant||''}</div></div>
+                                    <div style="min-width:0"><div style="font-weight:500">${c.FirstName} ${c.LastName}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo confirmation">✓</span>` : ''}</div><div style="font-size:10px;color:var(--text-secondary)">${normalizeApptType(a.Type)} · ${a.Consultant||''}</div></div>
                                 </div>
                                 <div style="display:flex;gap:4px;align-items:center;flex-shrink:0" onclick="event.stopPropagation()">
                                     <button class="btn btn-sm btn-secondary" onclick="editAppt('${a.ID}')">Edit</button>
@@ -5386,7 +5544,7 @@ The {StoreName} Team
                             white-space:nowrap;
                             overflow:hidden;
                             text-overflow:ellipsis;
-                        " title="${fmtTime(a.Time)} - ${c.FirstName} ${c.LastName} (${a.Type || 'appt'})">
+                        " title="${fmtTime(a.Time)} - ${c.FirstName} ${c.LastName} (${normalizeApptType(a.Type)})">
                             <strong>${fmtTime(a.Time)}</strong> ${c.FirstName}
                         </div>`;
                     });
@@ -5437,7 +5595,7 @@ The {StoreName} Team
                     <div class="avatar" style="width:32px;height:32px;font-size:11px">${initials(c.FirstName, c.LastName)}</div>
                     <div style="flex:1">
                         <div style="font-weight:500;font-size:13px">${c.FirstName} ${c.LastName}</div>
-                        <div style="font-size:10px;color:var(--taupe)">${a.Type || ''} · ${a.Consultant || ''}</div>
+                        <div style="font-size:10px;color:var(--taupe)">${normalizeApptType(a.Type)} · ${a.Consultant || ''}</div>
                     </div>
                     <div style="display:flex;gap:4px">
                         <button class="btn btn-sm btn-secondary" onclick="$('dayApptPopup').style.display='none';$('dayApptOverlay').style.display='none';editAppt('${a.ID}')">Edit</button>
@@ -5543,7 +5701,7 @@ The {StoreName} Team
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtDate(a.Date)}</td>
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${fmtTime(a.Time)}</td>
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${c.FirstName} ${c.LastName}</td>
-                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${a.Type || 'consultation'}</span></td>
+                        <td onclick="openClient('${a.ClientID}')" style="cursor:pointer"><span class="status status-${(a.Type||'consultation').replace(' ','-')}">${normalizeApptType(a.Type)}</span></td>
                         <td onclick="openClient('${a.ClientID}')" style="cursor:pointer">${a.Consultant || ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</td>
                         <td style="text-align:right">
                             <div style="display:flex;gap:4px;justify-content:flex-end;align-items:center">
@@ -5916,7 +6074,7 @@ The Estrelle Bridal Team`;
                     .replace(/\{\{lastName\}\}/g, client.LastName || '')
                     .replace(/\{\{appointmentDate\}\}/g, apptDate)
                     .replace(/\{\{appointmentTime\}\}/g, apptTime)
-                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'Bridal Consultation');
                 // Extract plain text for hidden field
                 const temp = document.createElement('div');
                 temp.innerHTML = bodyHtml;
@@ -5928,7 +6086,7 @@ The Estrelle Bridal Team`;
                     .replace(/\{\{lastName\}\}/g, client.LastName || '')
                     .replace(/\{\{appointmentDate\}\}/g, apptDate)
                     .replace(/\{\{appointmentTime\}\}/g, apptTime)
-                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'consultation');
+                    .replace(/\{\{appointmentType\}\}/g, appt.Type || 'Bridal Consultation');
             }
             
             $('confirmApptId').value = apptId;
@@ -5941,7 +6099,7 @@ The Estrelle Bridal Team`;
             $('confirmLastName').value = client.LastName || '';
             $('confirmApptDate').value = apptDate;
             $('confirmApptTime').value = apptTime;
-            $('confirmApptType').value = appt.Type || 'consultation';
+            $('confirmApptType').value = appt.Type || 'Bridal Consultation';
             
             // Hide follow-up notes reminder for regular confirmations
             const notesDiv = $('followUpNotesReminder');
@@ -6363,7 +6521,7 @@ The Estrelle Bridal Team`;
             
             let body = template.body
                 .replace(/\{firstName\}/g, client.FirstName || '')
-                .replace(/\{appointmentType\}/g, appt.Type || 'consultation')
+                .replace(/\{appointmentType\}/g, appt.Type || 'Bridal Consultation')
                 .replace(/\{appointmentDate\}/g, fmtDate(appt.Date))
                 .replace(/\{topOptions\}/g, topOptionsText)
                 .replace(/\{storeName\}/g, storeName);
@@ -6442,6 +6600,127 @@ The Estrelle Bridal Team`;
             }
         }
 
+        // ========== CUSTOM SELECT DROPDOWN ==========
+        const typeColors = {
+            'bridal consultation': 'var(--accent)',
+            'consultation': 'var(--accent)',
+            'fitting': 'var(--blue)',
+            'final fitting': '#9b59b6',
+            'pickup': 'var(--sage)',
+            'measurement': 'var(--honey)',
+        };
+        const typeIcons = {
+            'bridal consultation': '💬',
+            'consultation': '💬',
+            'fitting': '👗',
+            'final fitting': '✨',
+            'pickup': '🎉',
+            'measurement': '📏',
+        };
+        
+        function getTypeColor(type) {
+            const lower = (type || '').toLowerCase();
+            if (typeColors[lower]) return typeColors[lower];
+            // Fuzzy match for renamed types
+            if (lower.includes('consultation')) return 'var(--accent)';
+            if (lower.includes('fitting')) return 'var(--blue)';
+            if (lower.includes('pickup') || lower.includes('pick up')) return 'var(--sage)';
+            if (lower.includes('measurement')) return 'var(--honey)';
+            return 'var(--text-secondary)';
+        }
+        function getTypeIcon(type) {
+            const lower = (type || '').toLowerCase();
+            if (typeIcons[lower]) return typeIcons[lower];
+            // Fuzzy match for renamed types
+            if (lower.includes('consultation')) return '💬';
+            if (lower.includes('final')) return '✨';
+            if (lower.includes('fitting')) return '👗';
+            if (lower.includes('pickup') || lower.includes('pick up')) return '🎉';
+            if (lower.includes('measurement')) return '📏';
+            if (lower.includes('alteration')) return '✂️';
+            return '📋';
+        }
+        
+        function renderCustomSelectOptions(selectId, customId) {
+            const select = $(selectId);
+            const optionsContainer = $(customId + 'Options');
+            const label = $(customId + 'Label');
+            if (!select || !optionsContainer) return;
+            
+            const options = Array.from(select.options);
+            const currentVal = select.value;
+            
+            optionsContainer.innerHTML = options.map(opt => {
+                const val = opt.value;
+                const text = opt.textContent;
+                const isSelected = val === currentVal;
+                const color = getTypeColor(val);
+                const icon = getTypeIcon(val);
+                return `<div class="custom-select-option ${isSelected ? 'selected' : ''}" data-value="${val}" onclick="selectCustomOption('${selectId}', '${customId}', '${val}', this)">
+                    <span style="font-size:16px">${icon}</span>
+                    <span style="flex:1">${text}</span>
+                    <span class="option-dot" style="background:${color}"></span>
+                    <svg class="option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>`;
+            }).join('');
+            
+            // Update trigger label
+            const selectedOpt = options.find(o => o.value === currentVal);
+            if (selectedOpt) {
+                const icon = getTypeIcon(currentVal);
+                const color = getTypeColor(currentVal);
+                label.innerHTML = `<span style="font-size:15px">${icon}</span> ${selectedOpt.textContent} <span class="option-dot" style="background:${color};display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:2px"></span>`;
+            }
+        }
+        
+        function toggleCustomSelect(customId) {
+            const trigger = document.querySelector(`#${customId} .custom-select-trigger`);
+            const options = $(customId + 'Options');
+            const isOpen = options.classList.contains('open');
+            
+            // Close all other open custom selects
+            document.querySelectorAll('.custom-select-options.open').forEach(el => el.classList.remove('open'));
+            document.querySelectorAll('.custom-select-trigger.open').forEach(el => el.classList.remove('open'));
+            
+            if (!isOpen) {
+                options.classList.add('open');
+                trigger.classList.add('open');
+                // Close on outside click
+                setTimeout(() => {
+                    const closeHandler = (e) => {
+                        if (!document.getElementById(customId)?.contains(e.target)) {
+                            options.classList.remove('open');
+                            trigger.classList.remove('open');
+                            document.removeEventListener('click', closeHandler);
+                        }
+                    };
+                    document.addEventListener('click', closeHandler);
+                }, 10);
+            } else {
+                options.classList.remove('open');
+                trigger.classList.remove('open');
+            }
+        }
+        
+        function selectCustomOption(selectId, customId, value, optEl) {
+            const select = $(selectId);
+            select.value = value;
+            
+            // Update visual
+            renderCustomSelectOptions(selectId, customId);
+            
+            // Close dropdown
+            $(customId + 'Options').classList.remove('open');
+            document.querySelector(`#${customId} .custom-select-trigger`).classList.remove('open');
+            
+            // Fire change event on the hidden select
+            select.dispatchEvent(new Event('change'));
+        }
+        
+        function syncCustomSelect(selectId, customId) {
+            renderCustomSelectOptions(selectId, customId);
+        }
+
         function populateApptModal(forClientId = null) {
             // Reset fields
             $('editApptId').value = '';
@@ -6457,7 +6736,8 @@ The Estrelle Bridal Team`;
                 const val = t.toLowerCase();
                 return `<option value="${val}">${t}</option>`;
             }).join('');
-            $('aType').value = serviceTypes[0]?.toLowerCase() || 'consultation';
+            $('aType').value = serviceTypes[0]?.toLowerCase() || 'bridal consultation';
+            syncCustomSelect('aType', 'aTypeCustom');
             
             // Re-enable client dropdown (may have been disabled)
             $('aClient').disabled = false;
@@ -6518,8 +6798,8 @@ The Estrelle Bridal Team`;
         }
         
         function toggleConsultationReason() {
-            const type = $('aType').value;
-            const isConsultation = type === 'consultation';
+            const type = $('aType').value.toLowerCase();
+            const isConsultation = type.includes('consultation');
             const isFitting = type.includes('fitting');
             
             // Show/hide consultation reason
@@ -6626,7 +6906,7 @@ The Estrelle Bridal Team`;
                 <div style="background:var(--cream);padding:12px;border-radius:6px;margin-bottom:12px">
                     <div style="font-size:16px;font-weight:600;margin-bottom:4px">${c ? c.FirstName + ' ' + c.LastName : 'Unknown Client'}</div>
                     <div style="font-size:12px;color:var(--rose)">${fmtDate(a.Date)} at ${fmtTime(a.Time)}</div>
-                    <div style="font-size:11px;color:var(--taupe);margin-top:4px">${a.Type || 'Appointment'} · ${a.Consultant || 'No consultant'}</div>
+                    <div style="font-size:11px;color:var(--taupe);margin-top:4px">${normalizeApptType(a.Type)} · ${a.Consultant || 'No consultant'}</div>
                     ${reason ? `<div style="font-size:11px;color:var(--accent);margin-top:4px">🎯 ${reason}</div>` : ''}
                 </div>
             `;
@@ -6819,15 +7099,17 @@ The Estrelle Bridal Team`;
             
             // Populate service types dropdown
             const serviceTypes = getServiceTypes();
-            const currentType = (a.Type || 'consultation').toLowerCase();
+            const normalizedType = normalizeApptType(a.Type);
+            const currentType = normalizedType.toLowerCase();
             $('aType').innerHTML = serviceTypes.map(t => {
                 const val = t.toLowerCase();
                 return `<option value="${val}" ${val === currentType ? 'selected' : ''}>${t}</option>`;
             }).join('');
             // If current type not in list, add it
             if (!serviceTypes.some(t => t.toLowerCase() === currentType)) {
-                $('aType').innerHTML += `<option value="${currentType}" selected>${a.Type}</option>`;
+                $('aType').innerHTML += `<option value="${currentType}" selected>${normalizedType}</option>`;
             }
+            syncCustomSelect('aType', 'aTypeCustom');
             
             // Show/hide consultation reason based on type
             toggleConsultationReason();
@@ -6949,7 +7231,7 @@ The Estrelle Bridal Team`;
             const noteParts = [];
             
             // Add reason for consultation appointments
-            if ($('aType').value === 'consultation') {
+            if ($('aType').value.toLowerCase().includes('consultation')) {
                 const reason = getSelectedReason();
                 if (reason) noteParts.push(`🎯 Reason: ${reason}`);
             }
@@ -6985,7 +7267,7 @@ The Estrelle Bridal Team`;
                 ClientName: clientName,
                 Date: $('aDate').value, 
                 Time: $('aTime').value, 
-                Type: $('aType').value, 
+                Type: normalizeApptType($('aType').value), 
                 Consultant: $('aConsultant').value, 
                 Notes: noteParts.join('\n\n'),
                 FollowUpDate: followUpDate,
@@ -9001,7 +9283,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 const monthAppts = data.appointments.filter(a => {
                     const d = parseDate(a.Date);
                     return d && d.getFullYear() === year && d.getMonth() === i && 
-                           (a.Type === 'consultation' || !a.Type);
+                           ((a.Type || '').toLowerCase().includes('consultation') || !a.Type);
                 });
                 
                 const monthOrders = yearOrders.filter(o => {
@@ -9190,7 +9472,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     return d && d.getFullYear() === year;
                 }).forEach(a => {
                     const c = getClient(a.ClientID);
-                    csvContent += `${fmtDate(a.Date)},${a.Time || ''},"${c ? c.FirstName + ' ' + c.LastName : ''}",${a.Type || 'consultation'},${a.Consultant || ''},"${(a.Notes || '').replace(/"/g, '""')}"\n`;
+                    csvContent += `${fmtDate(a.Date)},${a.Time || ''},"${c ? c.FirstName + ' ' + c.LastName : ''}",${normalizeApptType(a.Type)},${a.Consultant || ''},"${(a.Notes || '').replace(/"/g, '""')}"\n`;
                 });
             } else if (type === 'seasonality') {
                 filename = `estrelle_seasonality_${year}.csv`;
@@ -9203,7 +9485,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     }).length;
                     const consultations = data.appointments.filter(a => {
                         const d = parseDate(a.Date);
-                        return d && d.getFullYear() === year && d.getMonth() === i && (a.Type === 'consultation' || !a.Type);
+                        return d && d.getFullYear() === year && d.getMonth() === i && ((a.Type || '').toLowerCase().includes('consultation') || !a.Type);
                     }).length;
                     const orders = data.orders.filter(o => {
                         const d = parseDate(o.OrderDate);
@@ -10893,7 +11175,7 @@ www.estrellebridal.com`;
             
             $('clientEmailAppt').innerHTML = `
                 <option value="">-- No appointment selected --</option>
-                ${clientAppts.map(a => `<option value="${a.ID}">${fmtDate(a.Date)} at ${fmtTime(a.Time)} - ${a.Type || 'Appointment'}</option>`).join('')}
+                ${clientAppts.map(a => `<option value="${a.ID}">${fmtDate(a.Date)} at ${fmtTime(a.Time)} - ${normalizeApptType(a.Type)}</option>`).join('')}
             `;
             
             $('clientEmailApptGroup').style.display = 'none';
@@ -11039,8 +11321,8 @@ www.estrellebridal.com`;
                 text = text.replace(/\{appointmentDate\}/g, fmtDate(appt.Date) || '');
                 text = text.replace(/\{AppointmentTime\}/gi, fmtTime(appt.Time) || '');
                 text = text.replace(/\{appointmentTime\}/g, fmtTime(appt.Time) || '');
-                text = text.replace(/\{AppointmentType\}/gi, appt.Type || 'consultation');
-                text = text.replace(/\{appointmentType\}/g, appt.Type || 'consultation');
+                text = text.replace(/\{AppointmentType\}/gi, appt.Type || 'Bridal Consultation');
+                text = text.replace(/\{appointmentType\}/g, appt.Type || 'Bridal Consultation');
                 text = text.replace(/\{Consultant\}/gi, appt.Consultant || '');
                 text = text.replace(/\{consultant\}/g, appt.Consultant || '');
             } else {
@@ -11200,7 +11482,7 @@ www.estrellebridal.com`;
         }
         
         // ========== SETTINGS ==========
-        const DEFAULT_SERVICE_TYPES = ['Consultation', 'Fitting', 'Final Fitting', 'Pickup'];
+        const DEFAULT_SERVICE_TYPES = ['Bridal Consultation', 'Fitting', 'Final Fitting', 'Pickup', 'Measurement'];
         const DEFAULT_STORE_INFO = {
             name: 'Estrelle Bridal',
             address: '',
@@ -11255,7 +11537,38 @@ www.estrellebridal.com`;
             const saved = localStorage.getItem('estrelle_service_types');
             if (saved) {
                 try {
-                    return JSON.parse(saved);
+                    let types = JSON.parse(saved);
+                    let changed = false;
+                    
+                    // One-time migration: if "Consultation" exists but "Bridal Consultation" doesn't, rename it
+                    const hasPlain = types.indexOf('Consultation');
+                    const hasBridal = types.some(t => t === 'Bridal Consultation');
+                    if (hasPlain !== -1 && !hasBridal) {
+                        types[hasPlain] = 'Bridal Consultation';
+                        changed = true;
+                    } else if (hasPlain !== -1 && hasBridal) {
+                        // Both exist — remove the plain duplicate
+                        types.splice(hasPlain, 1);
+                        changed = true;
+                    }
+                    
+                    // Remove duplicates
+                    const before = types.length;
+                    types = [...new Set(types)];
+                    if (types.length !== before) changed = true;
+                    
+                    // Add Measurement if missing
+                    if (!types.some(t => t.toLowerCase() === 'measurement')) {
+                        types.push('Measurement');
+                        changed = true;
+                    }
+                    
+                    // Only save back if something actually changed
+                    if (changed) {
+                        localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+                    }
+                    
+                    return types;
                 } catch (e) {
                     return [...DEFAULT_SERVICE_TYPES];
                 }
@@ -12768,7 +13081,7 @@ The {storeName} Team`
                 const rescheduledFrom = a.RescheduledFrom;
                 
                 return `
-                <div class="appt-item appt-type-${a.Type || 'consultation'}" style="cursor:pointer;${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}">
+                <div class="appt-item appt-type-${normalizeApptType(a.Type).toLowerCase().replace(/\s+/g, '-')}" style="cursor:pointer;${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}">
                     <div style="display:flex;justify-content:space-between;align-items:flex-start">
                         <div onclick="viewAppt('${a.ID}')" style="flex:1;min-width:0">
                             <div class="appt-date">
@@ -12777,7 +13090,7 @@ The {storeName} Team`
                                 ${isNoShow ? ' <span style="font-size:10px;color:var(--red);font-weight:600">NO-SHOW</span>' : ''}
                                 ${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}
                             </div>
-                            <div class="appt-meta">${a.Type||''} · ${a.Consultant||''}</div>
+                            <div class="appt-meta">${normalizeApptType(a.Type)} · ${a.Consultant||''}</div>
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
                         <div class="appt-actions" onclick="event.stopPropagation()">
@@ -13983,7 +14296,7 @@ The {storeName} Team`
                             ClientName: clientName,
                             Date: item.date || today(),
                             Time: item.time || '10:00',
-                            Type: item.type || 'consultation',
+                            Type: item.type || 'Bridal Consultation',
                             Consultant: item.consultant || '',
                             Status: item.status === 'did-not-show' ? 'no-show' : '',
                             CreatedAt: today()
