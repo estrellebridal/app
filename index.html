@@ -4510,11 +4510,11 @@ The {StoreName} Team
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isNoShow = a.Status === 'no-show';
-                return `<div class="list-item" style="${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
+                return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
-                        <div class="item-meta">${fmtTime(a.Time)} · ${normalizeApptType(a.Type)} · ${a.Consultant||''}</div>
+                        <div class="item-meta">${fmtTime(a.Time)} · <span style="color:${getTypeColor(a.Type)};font-weight:600">${normalizeApptType(a.Type)}</span> · ${a.Consultant||''}</div>
                     </div>
                     <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
                         ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="openConfirmEmailModal('${a.ID}')" title="Send email">📧</button>` : ''}
@@ -8661,16 +8661,51 @@ The Estrelle Bridal Team`;
             
             if (!confirm(`Change status to "${newStatus}" for ${orderIds.length} orders?`)) return;
             
+            let altsCreated = 0;
             for (const id of orderIds) {
                 await updateRecord('Orders', id, { Status: newStatus });
                 const order = data.orders.find(o => String(o.ID) === String(id));
-                if (order) order.Status = newStatus;
+                if (order) {
+                    order.Status = newStatus;
+                    
+                    // Auto-create alteration when bulk-changing to "in alterations"
+                    if (newStatus === 'in alterations' && order.ClientID) {
+                        const existingAlt = data.alterations.find(a => String(a.ClientID) === String(order.ClientID) && a.Status !== 'complete');
+                        if (!existingAlt) {
+                            const client = getClient(order.ClientID);
+                            if (client) {
+                                const altRecord = {
+                                    ClientID: String(order.ClientID),
+                                    ClientName: `${client.FirstName} ${client.LastName}`,
+                                    OrderID: order.ID,
+                                    Items: order.Dress || 'Dress',
+                                    Notes: 'Auto-created from order status change',
+                                    Status: 'in progress',
+                                    StartDate: today(),
+                                    DueDate: client.WeddingDate || '',
+                                    Seamstress: ''
+                                };
+                                try {
+                                    const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
+                                    altRecord.ID = (result && result.id) ? result.id : 'alt_' + Date.now() + '_' + altsCreated;
+                                    data.alterations.push(altRecord);
+                                    altsCreated++;
+                                } catch (e) {
+                                    console.error('Failed to create alteration:', e);
+                                }
+                            }
+                        }
+                    }
+                }
             }
             
             saveCachedData();
             renderOrders();
+            if (altsCreated > 0) renderAlts();
             deselectAllOrders();
-            toast(`Updated ${orderIds.length} orders to "${newStatus}"`, 'success');
+            let msg = `Updated ${orderIds.length} orders to "${newStatus}"`;
+            if (altsCreated > 0) msg += ` (${altsCreated} alteration${altsCreated > 1 ? 's' : ''} created)`;
+            toast(msg, 'success');
         }
         
         async function bulkDeleteOrders() {
@@ -8969,7 +9004,36 @@ The Estrelle Bridal Team`;
                 await updateRecord('Orders', id, { Status: status });
                 // Immediately update local data and re-render
                 const order = data.orders.find(o => o.ID == id);
-                if (order) order.Status = status;
+                if (order) {
+                    order.Status = status;
+                    
+                    // Auto-create alteration record when status changes to "in alterations"
+                    if (status === 'in alterations' && order.ClientID) {
+                        const existingAlt = data.alterations.find(a => String(a.ClientID) === String(order.ClientID) && a.Status !== 'complete');
+                        if (!existingAlt) {
+                            const client = getClient(order.ClientID);
+                            if (client) {
+                                const altRecord = {
+                                    ClientID: String(order.ClientID),
+                                    ClientName: `${client.FirstName} ${client.LastName}`,
+                                    OrderID: order.ID,
+                                    Items: order.Dress || 'Dress',
+                                    Notes: `Auto-created from order status change`,
+                                    Status: 'in progress',
+                                    StartDate: today(),
+                                    DueDate: client.WeddingDate || '',
+                                    Seamstress: ''
+                                };
+                                const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
+                                altRecord.ID = (result && result.id) ? result.id : 'alt_' + Date.now();
+                                data.alterations.push(altRecord);
+                                saveCachedData();
+                                renderAlts();
+                                console.log('Auto-created alteration for', altRecord.ClientName);
+                            }
+                        }
+                    }
+                }
                 renderOrders();
                 toast('Status updated', 'success');
             } catch (e) {}
@@ -10977,6 +11041,35 @@ www.estrellebridal.com`;
             const name = $('edDesignerName').value.trim();
             if (!name) { toast('Enter designer name'); return; }
             
+            // Check for duplicate names (case-insensitive), skip if editing same entry
+            const dupeIdx = designerData.findIndex((d, i) => i !== idx && d.name.trim().toLowerCase() === name.toLowerCase());
+            if (dupeIdx !== -1) {
+                toast(`"${designerData[dupeIdx].name}" already exists — updating existing entry instead`, 'success');
+                // Merge into existing entry instead of creating duplicate
+                const designer = {
+                    ...designerData[dupeIdx],
+                    name: name,
+                    standard: parseInt($('edDesignerStandard').value) || 4,
+                    rushTiers: editingDesignerTiers.filter(t => t.months && t.fee).sort((a,b) => b.months - a.months),
+                    minMonths: parseInt($('edDesignerMinMonths').value) || null,
+                    belowMin: {
+                        fee: $('edDesignerBelowFee').value.trim() || null,
+                        note: $('edDesignerBelowNote').value.trim() || null
+                    }
+                };
+                if (!designer.minMonths) {
+                    designer.minMonths = designer.rushTiers.length > 0 
+                        ? designer.rushTiers[designer.rushTiers.length - 1].months 
+                        : designer.standard;
+                }
+                designerData[dupeIdx] = designer;
+                // If we were adding new (idx === -1), don't also add — just updated the dupe
+                saveDesignerData();
+                closeModal('editDesigner');
+                renderDesigners();
+                return;
+            }
+            
             const designer = {
                 name: name,
                 standard: parseInt($('edDesignerStandard').value) || 4,
@@ -12319,6 +12412,47 @@ www.estrellebridal.com`;
             renderServiceTypes();
         }
         
+        async function cleanUpAppointmentTypes() {
+            // Only run once — check flag
+            if (localStorage.getItem('estrelle_types_cleaned')) return;
+            
+            const toFix = data.appointments.filter(a => {
+                if (!a.Type) return false;
+                const normalized = normalizeApptType(a.Type);
+                return normalized !== a.Type;
+            });
+            
+            if (toFix.length === 0) {
+                localStorage.setItem('estrelle_types_cleaned', '1');
+                return;
+            }
+            
+            console.log(`Auto-cleaning ${toFix.length} appointment type(s)...`);
+            
+            let updated = 0;
+            for (let i = 0; i < toFix.length; i++) {
+                const a = toFix[i];
+                const newType = normalizeApptType(a.Type);
+                try {
+                    await api('POST', { action: 'update', sheet: 'Appointments', id: a.ID, record: { Type: newType } });
+                    a.Type = newType;
+                    updated++;
+                } catch (e) {
+                    console.error('Failed to update appointment:', a.ID, e);
+                }
+                if (i < toFix.length - 1) {
+                    await new Promise(r => setTimeout(r, 200));
+                }
+            }
+            
+            saveCachedData();
+            localStorage.setItem('estrelle_types_cleaned', '1');
+            console.log(`Cleaned up ${updated} appointment type(s)`);
+            
+            // Silently re-render
+            renderDash();
+        }
+        
         // ========== ANNIVERSARIES ==========
         let anniversaryView = 'list';
         let annCalMonth = new Date().getMonth();
@@ -12919,6 +13053,13 @@ The {storeName} Team`
                 rushTiers: [],
                 belowMin: { note: 'Inquiry required, most likely NOT possible' },
                 minMonths: 4
+            },
+            {
+                name: 'Lihi Hod',
+                standard: 5,
+                rushTiers: [],
+                belowMin: { note: 'Inquiry required' },
+                minMonths: 5
             }
         ];
         
@@ -12941,6 +13082,36 @@ The {storeName} Team`
             } else {
                 designerData = [...DEFAULT_DESIGNER_DATA];
             }
+            
+            // Deduplicate — keep the last (most recently added/edited) entry for each name
+            const beforeCount = designerData.length;
+            const seen = new Map();
+            designerData.forEach((d, i) => {
+                const key = d.name.trim().toLowerCase();
+                seen.set(key, i); // last occurrence wins
+            });
+            if (seen.size < designerData.length) {
+                const keepIndices = new Set(seen.values());
+                designerData = designerData.filter((_, i) => keepIndices.has(i));
+                console.log(`Deduped designers: ${beforeCount} → ${designerData.length}`);
+                saveDesignerData(); // Persist the cleanup
+            }
+            
+            // Merge any new default designers that aren't in localStorage yet
+            const existingNames = new Set(designerData.map(d => d.name.trim().toLowerCase()));
+            let added = 0;
+            for (const def of DEFAULT_DESIGNER_DATA) {
+                if (!existingNames.has(def.name.trim().toLowerCase())) {
+                    designerData.push({ ...def });
+                    existingNames.add(def.name.trim().toLowerCase());
+                    added++;
+                }
+            }
+            if (added > 0) {
+                console.log(`Merged ${added} new default designer(s) into localStorage`);
+                saveDesignerData();
+            }
+            
             console.log('Loaded designerData:', designerData.length, 'designers');
         }
         function saveDesignerData() {
@@ -13283,10 +13454,19 @@ The {storeName} Team`
             // Final fallback - use DESIGNER_RUSH_DATA directly
             const designers = (designerData && designerData.length > 0) ? designerData : DESIGNER_RUSH_DATA;
             
-            console.log('populateOptionModal - using', designers.length, 'designers');
+            // Deduplicate by name (case-insensitive) — keeps first occurrence
+            const seen = new Set();
+            const uniqueDesigners = designers.filter(d => {
+                const key = d.name.trim().toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+            
+            console.log('populateOptionModal - using', uniqueDesigners.length, 'designers (deduped from', designers.length, ')');
             
             dropdown.innerHTML = '<option value="">Select designer...</option>' + 
-                designers.map(d => `<option value="${d.name}">${d.name}</option>`).join('') +
+                uniqueDesigners.map(d => `<option value="${d.name}">${d.name}</option>`).join('') +
                 '<option value="custom">+ Custom Designer</option>';
             
             $('customDesignerGroup').style.display = 'none';
@@ -14372,6 +14552,59 @@ The {storeName} Team`
                 
                 console.log('Import complete - Clients:', clientsCreated, 'Appointments:', apptsCreated, 'Deleted:', apptsDeleted);
                 
+                // Auto-create alteration records for imported fitting appointments
+                let altsCreated = 0;
+                const fittingItems = timelyImportData.filter(item => {
+                    const type = (item.type || '').toLowerCase();
+                    return type.includes('fitting');
+                });
+                
+                for (const item of fittingItems) {
+                    const clientId = item.existingClientId || batchClientIds[timelyImportData.indexOf(item)] || (item.batchClientIdx !== null ? batchClientIds[item.batchClientIdx] : null);
+                    if (!clientId) continue;
+                    
+                    // Check for existing alteration (no duplicates)
+                    const existingAlt = data.alterations.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
+                    if (existingAlt) continue;
+                    
+                    const client = getClient(clientId);
+                    if (!client) continue;
+                    
+                    const order = data.orders.find(o => String(o.ClientID) === String(clientId) && o.Status !== 'picked up');
+                    
+                    const altRecord = {
+                        ClientID: String(clientId),
+                        ClientName: `${client.FirstName} ${client.LastName}`,
+                        OrderID: order ? order.ID : '',
+                        Items: order ? (order.Dress || 'Dress') : 'Dress',
+                        Notes: `Auto-created from Timely ${normalizeApptType(item.type)} import on ${item.date}`,
+                        Status: 'in progress',
+                        StartDate: today(),
+                        DueDate: client.WeddingDate || '',
+                        Seamstress: ''
+                    };
+                    
+                    try {
+                        const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
+                        altRecord.ID = (result && result.id) ? result.id : 'alt_' + Date.now() + '_' + altsCreated;
+                        data.alterations.push(altRecord);
+                        
+                        // Also update order status to "in alterations" if applicable
+                        if (order && order.Status !== 'in alterations' && order.Status !== 'picked up') {
+                            await updateRecord('Orders', order.ID, { Status: 'in alterations' });
+                            order.Status = 'in alterations';
+                        }
+                        
+                        altsCreated++;
+                    } catch (e) {
+                        console.error('Failed to create alteration for', altRecord.ClientName, e);
+                    }
+                }
+                
+                if (altsCreated > 0) {
+                    console.log('Auto-created', altsCreated, 'alteration(s) from fitting imports');
+                }
+                
                 // Save to cache
                 saveCachedData();
                 
@@ -14380,9 +14613,13 @@ The {storeName} Team`
                 renderClients();
                 renderAllAppointments();
                 renderDash();
+                renderAlts();
                 
                 // Show toast with results
                 let msg = 'Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments';
+                if (altsCreated > 0) {
+                    msg += ', ' + altsCreated + ' alteration(s)';
+                }
                 if (apptsDeleted > 0) {
                     msg += '. ' + apptsDeleted + ' removed (not in Timely)';
                 }
@@ -14790,6 +15027,17 @@ The {storeName} Team`
                 takenBy: $('mTakenBy').value,
                 custom: [...customMeasurements]
             };
+            
+            // Guard: don't save empty drafts — must have items OR at least one measurement
+            const hasItems = currentOrder.items && currentOrder.items.length > 0;
+            const hasMeasurements = measurements.bust || measurements.waist || measurements.hip || 
+                                    measurements.height || measurements.waistToFloor;
+            const hasOrderDetails = $('oiPO')?.value || $('oiDetails')?.value || $('oiArrivalDate')?.value;
+            
+            if (!hasItems && !hasMeasurements && !hasOrderDetails) {
+                toast('Nothing to save yet — enter measurements or add items first', 'error');
+                return;
+            }
             
             // Collect initials if on step 5
             let initials = {};
@@ -15525,7 +15773,18 @@ The {storeName} Team`
                 loadDesignerData();
             }
             
-            const designerNames = (designerData || []).map(d => d.name).filter(Boolean).sort();
+            // Deduplicate by name (case-insensitive)
+            const seen = new Set();
+            const designerNames = (designerData || [])
+                .map(d => d.name)
+                .filter(name => {
+                    if (!name) return false;
+                    const key = name.trim().toLowerCase();
+                    if (seen.has(key)) return false;
+                    seen.add(key);
+                    return true;
+                })
+                .sort();
             console.log('Designer names:', designerNames);
             
             $('oiDesignerSelect').innerHTML = '<option value="">Select designer...</option>' +
@@ -17131,6 +17390,8 @@ p{margin:6px 0;}
             } else if (ordersView === 'alterations') {
                 renderAlts();
             }
+            // One-time silent cleanup of messy type names in Google Sheet
+            cleanUpAppointmentTypes();
         });
         
         // ========== AUTO-REFRESH ==========
