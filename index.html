@@ -201,6 +201,9 @@
         /* Option cards */
         .option-card { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 10px; border-left: 4px solid var(--sage); }
         .option-card.favorite { border-left-color: #e74c3c; background: rgba(231, 76, 60, 0.05); }
+        .placeholder-chip { display: inline-flex; align-items: center; gap: 2px; padding: 4px 10px; background: var(--blush); border: 1px solid var(--champagne); border-radius: 20px; font-size: 10px; font-weight: 500; color: var(--accent); cursor: pointer; transition: all 0.15s; user-select: none; }
+        .placeholder-chip:hover { background: var(--accent-light); border-color: var(--accent); transform: scale(1.03); }
+        .placeholder-chip:active { transform: scale(0.97); }
         .option-designer { font-weight: 600; font-size: 14px; }
         .option-style { font-size: 13px; color: var(--text-secondary); }
         .option-notes { font-size: 12px; margin-top: 6px; color: var(--text-secondary); }
@@ -250,7 +253,8 @@
         .contract th, .contract td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; font-size: 11px; }
 
         /* Toast - Updated */
-        .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); }
+        .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: calc(100vw - 48px); }
+        @media (max-width: 900px) { .toast { bottom: 82px; right: 12px; left: 12px; text-align: center; } }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { background: linear-gradient(135deg, var(--sage) 0%, #8a9f82 100%); }
         .toast.error { background: linear-gradient(135deg, var(--red) 0%, #a05858 100%); }
@@ -1753,7 +1757,7 @@
                             <div class="card-body" id="cAppts"></div>
                         </div>
                         <div class="card">
-                            <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="openModal('addOption')">+ Add</button></div>
+                            <div class="card-header"><h2 class="card-title">Top Options</h2><button class="btn btn-sm btn-secondary" onclick="$('editOptionId').value='';openModal('addOption')">+ Add</button></div>
                             <div class="card-body" id="cOptions"></div>
                         </div>
                     </div>
@@ -2098,19 +2102,15 @@
         </div>
     </div>
 
-    <!-- Add Option -->
+    <!-- Add/Edit Option -->
     <div class="modal-overlay" id="modal-addOption">
         <div class="modal">
-            <div class="modal-header"><h2 class="modal-title">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
+            <div class="modal-header"><h2 class="modal-title" id="optionModalTitle">Add Top Option</h2><button class="modal-close" onclick="closeModal('addOption')">×</button></div>
+            <input type="hidden" id="editOptionId" value="">
             <div class="modal-body">
                 <div class="form-row">
                     <div class="form-group"><label class="form-label">Designer</label><select class="form-input" id="oDesigner" onchange="toggleCustomDesigner()">
                         <option value="">Select designer...</option>
-                        <option value="Vivienne Westwood">Vivienne Westwood</option>
-                        <option value="Netta BenShabu">Netta BenShabu</option>
-                        <option value="Stephane Rolland">Stephane Rolland</option>
-                        <option value="Enaura Bridal">Enaura Bridal</option>
-                        <option value="Galia Lahav">Galia Lahav</option>
                         <option value="custom">+ Custom Designer</option>
                     </select></div>
                     <div class="form-group"><label class="form-label">Style</label><input type="text" class="form-input" id="oStyle"></div>
@@ -2119,12 +2119,16 @@
                     <label class="form-label">Custom Designer Name</label>
                     <input type="text" class="form-input" id="oCustomDesigner" placeholder="Enter designer name">
                 </div>
+                <div class="form-row">
+                    <div class="form-group"><label class="form-label">Size</label><input type="text" class="form-input" id="oSize" placeholder="e.g. 6, 8, 10"></div>
+                    <div class="form-group"><label class="form-label">Price</label><input type="text" class="form-input" id="oPrice" placeholder="Leave blank = as listed" onblur="formatOptionPrice(this)"></div>
+                </div>
                 <div class="form-group"><label class="form-label">Customizations</label><textarea class="form-input" id="oCustom" placeholder="e.g. Add sleeves, lower back"></textarea></div>
                 <div class="form-group"><label class="form-label">Decision By</label><input type="date" class="form-input" id="oDecisionBy"></div>
                 <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="oOptionNotes"></textarea></div>
                 <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer"><input type="checkbox" id="oFavorite"> ❤️ Bride liked this one</label>
             </div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addOption')">Cancel</button><button class="btn btn-primary" onclick="saveOption()">Add</button></div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('addOption')">Cancel</button><button class="btn btn-primary" id="optionSaveBtn" onclick="saveOption()">Add</button></div>
         </div>
     </div>
 
@@ -2311,54 +2315,67 @@
 
     <!-- Add/Edit Email Template Modal -->
     <div class="modal-overlay" id="modal-emailTemplate">
-        <div class="modal" style="max-width:650px">
-            <div class="modal-header"><h2 class="modal-title" id="emailTemplateModalTitle">Add Email Template</h2><button class="modal-close" onclick="closeModal('emailTemplate')">×</button></div>
-            <div class="modal-body">
+        <div class="modal" style="max-width:720px">
+            <div class="modal-header"><h2 class="modal-title" id="emailTemplateModalTitle">Create Email Template</h2><button class="modal-close" onclick="closeModal('emailTemplate')">×</button></div>
+            <div class="modal-body" style="padding:0">
                 <input type="hidden" id="editTemplateId">
                 
-                <div class="form-group">
-                    <label class="form-label">Template Name *</label>
-                    <input type="text" class="form-input" id="tplName" placeholder="e.g., Appointment Confirmation">
+                <!-- Starter Templates (only show for new) -->
+                <div id="tplStarters" style="padding:16px 20px;border-bottom:1px solid var(--border)">
+                    <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:10px">START FROM A TEMPLATE</div>
+                    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">
+                        <button class="btn btn-sm btn-secondary" onclick="loadStarterTemplate('followup')" style="white-space:nowrap;font-size:11px">📞 Follow-up</button>
+                        <button class="btn btn-sm btn-secondary" onclick="loadStarterTemplate('thankyou')" style="white-space:nowrap;font-size:11px">💌 Thank You</button>
+                        <button class="btn btn-sm btn-secondary" onclick="loadStarterTemplate('reminder')" style="white-space:nowrap;font-size:11px">⏰ Reminder</button>
+                        <button class="btn btn-sm btn-secondary" onclick="loadStarterTemplate('status')" style="white-space:nowrap;font-size:11px">📦 Order Update</button>
+                        <button class="btn btn-sm btn-secondary" onclick="loadStarterTemplate('blank')" style="white-space:nowrap;font-size:11px">✏️ Blank</button>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label class="form-label">Email Subject *</label>
-                    <input type="text" class="form-input" id="tplSubject" placeholder="e.g., Your appointment at {StoreName} is confirmed!">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email Body *</label>
-                    <textarea class="form-input" id="tplBody" style="min-height:200px;font-family:inherit" placeholder="Hi {FirstName},
+                <div style="padding:20px">
+                    <div class="form-group">
+                        <label class="form-label">Template Name *</label>
+                        <input type="text" class="form-input" id="tplName" placeholder="e.g., Post-Appointment Follow Up" oninput="updateTplPreview()">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Subject Line *</label>
+                        <input type="text" class="form-input" id="tplSubject" placeholder="e.g., Thank you for visiting us, {FirstName}!" oninput="updateTplPreview()">
+                    </div>
+                    
+                    <div class="form-row" style="align-items:flex-start">
+                        <!-- Editor side -->
+                        <div class="form-group" style="flex:1;min-width:0">
+                            <label class="form-label">Message *</label>
+                            <textarea class="form-input" id="tplBody" style="min-height:220px;font-family:inherit;font-size:13px;line-height:1.6" placeholder="Write your email here...
 
-We're excited to confirm your appointment at {StoreName}!
-
-📅 Date: {AppointmentDate}
-🕐 Time: {AppointmentTime}
-👗 Consultant: {Consultant}
-
-Please arrive 5-10 minutes early. If you need to reschedule, please let us know at least 24 hours in advance.
-
-We can't wait to help you find your dream dress!
-
-Warmly,
-The {StoreName} Team
-{StorePhone}"></textarea>
-                </div>
-                
-                <!-- Placeholders Helper -->
-                <div style="background:var(--blush);padding:12px;border-radius:8px">
-                    <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:8px">💡 CLICK TO INSERT PLACEHOLDER</div>
-                    <div style="display:flex;flex-wrap:wrap;gap:4px">
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{FirstName}')">{FirstName}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{LastName}')">{LastName}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{WeddingDate}')">{WeddingDate}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{Venue}')">{Venue}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{AppointmentDate}')">{AppointmentDate}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{AppointmentTime}')">{AppointmentTime}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{Consultant}')">{Consultant}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StoreName}')">{StoreName}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StorePhone}')">{StorePhone}</button>
-                        <button type="button" class="btn btn-sm" style="background:white;font-size:10px;padding:4px 8px" onclick="insertPlaceholder('tplBody', '{StoreAddress}')">{StoreAddress}</button>
+Tip: Click the tags below to insert dynamic fields that auto-fill with client data." oninput="updateTplPreview()"></textarea>
+                            
+                            <!-- Placeholder Chips -->
+                            <div style="margin-top:8px">
+                                <div style="font-size:10px;font-weight:600;color:var(--taupe);margin-bottom:6px">TAP TO INSERT</div>
+                                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{FirstName}')">👤 First Name</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{LastName}')">👤 Last Name</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{WeddingDate}')">💍 Wedding Date</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{Venue}')">📍 Venue</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{AppointmentDate}')">📅 Appt Date</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{AppointmentTime}')">🕐 Appt Time</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{Consultant}')">👗 Consultant</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{topOptions}')">⭐ Top Picks</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{StoreName}')">🏪 Store Name</span>
+                                    <span class="placeholder-chip" onclick="insertPlaceholder('tplBody', '{StorePhone}')">📞 Store Phone</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Live Preview -->
+                    <div style="margin-top:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+                        <div style="background:var(--cream);padding:8px 14px;font-size:10px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border)">Preview (sample data)</div>
+                        <div id="tplPreview" style="padding:16px;font-size:12px;line-height:1.6;min-height:80px;color:var(--text-secondary);background:white">
+                            <span style="color:var(--taupe);font-style:italic">Start typing to see a preview...</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2384,6 +2401,7 @@ The {StoreName} Team
                         <option value="">-- Select a template --</option>
                         <option value="custom">✏️ Write Custom Email</option>
                     </select>
+                    <div style="margin-top:6px"><a href="#" onclick="event.preventDefault();closeModal('clientEmail');openAddTemplateModal()" style="font-size:11px;color:var(--accent)">+ Create a new template</a></div>
                 </div>
                 
                 <!-- Appointment Selector (for templates with appointment placeholders) -->
@@ -11139,14 +11157,6 @@ www.estrellebridal.com`;
             `).join('') : '<p style="color:var(--text-secondary);font-size:13px">No templates yet. Click "Add Template" to create one.</p>';
         }
         
-        function openAddTemplateModal() {
-            $('emailTemplateModalTitle').textContent = 'Add Email Template';
-            $('editTemplateId').value = '';
-            $('tplName').value = '';
-            $('tplSubject').value = '';
-            $('tplBody').value = '';
-            openModal('emailTemplate');
-        }
         
         function editEmailTemplate(id) {
             const template = (data.emailtemplates || []).find(t => String(t.ID) === String(id));
@@ -11157,6 +11167,8 @@ www.estrellebridal.com`;
             $('tplName').value = template.Name || '';
             $('tplSubject').value = template.Subject || '';
             $('tplBody').value = template.Body || '';
+            if ($('tplStarters')) $('tplStarters').style.display = 'none'; // Hide starters when editing
+            updateTplPreview();
             openModal('emailTemplate');
         }
         
@@ -11231,6 +11243,126 @@ www.estrellebridal.com`;
             toast('Copied: ' + placeholder, 'success');
         }
         
+        // ========== STARTER TEMPLATES & LIVE PREVIEW ==========
+        const STARTER_TEMPLATES = {
+            followup: {
+                name: 'Post-Appointment Follow Up',
+                subject: 'Following up on your {StoreName} visit, {FirstName}!',
+                body: `Hi {FirstName},
+
+It was so lovely meeting you at your {AppointmentType} on {AppointmentDate}! I wanted to follow up and see how you're feeling about everything.
+
+{topOptions}
+
+If you have any questions or would like to schedule another appointment, please don't hesitate to reach out!
+
+We're here to help you find THE dress.
+
+Warmly,
+The {StoreName} Team`
+            },
+            thankyou: {
+                name: 'Thank You',
+                subject: 'Thank you for visiting {StoreName}, {FirstName}! 💕',
+                body: `Hi {FirstName},
+
+Thank you so much for choosing {StoreName} for your bridal journey! It was such a pleasure working with you.
+
+We hope you had a wonderful experience and we look forward to seeing you again soon.
+
+If you have a moment, we'd love it if you could share your experience with us on Google — it means the world to us!
+
+With love,
+The {StoreName} Team
+{StorePhone}`
+            },
+            reminder: {
+                name: 'Appointment Reminder',
+                subject: 'Reminder: Your appointment at {StoreName} tomorrow!',
+                body: `Hi {FirstName},
+
+Just a friendly reminder about your upcoming appointment:
+
+📅 {AppointmentDate} at {AppointmentTime}
+👗 {AppointmentType}
+📍 {StoreAddress}
+
+Please arrive 5-10 minutes early. If you need to reschedule, please let us know as soon as possible.
+
+We can't wait to see you!
+
+Warmly,
+The {StoreName} Team`
+            },
+            status: {
+                name: 'Order Status Update',
+                subject: 'Update on your order, {FirstName}!',
+                body: `Hi {FirstName},
+
+We have an exciting update on your order from {StoreName}!
+
+[Add your update here]
+
+If you have any questions at all, please don't hesitate to reach out to us.
+
+With love,
+The {StoreName} Team
+{StorePhone}`
+            },
+            blank: {
+                name: '',
+                subject: '',
+                body: ''
+            }
+        };
+        
+        function loadStarterTemplate(type) {
+            const starter = STARTER_TEMPLATES[type];
+            if (!starter) return;
+            
+            $('tplName').value = starter.name;
+            $('tplSubject').value = starter.subject;
+            $('tplBody').value = starter.body;
+            updateTplPreview();
+            
+            if (type !== 'blank') toast('Template loaded — customize it!', 'success');
+        }
+        
+        function updateTplPreview() {
+            const subject = $('tplSubject')?.value || '';
+            const body = $('tplBody')?.value || '';
+            const preview = $('tplPreview');
+            if (!preview) return;
+            
+            if (!subject && !body) {
+                preview.innerHTML = '<span style="color:var(--taupe);font-style:italic">Start typing to see a preview...</span>';
+                return;
+            }
+            
+            // Replace placeholders with sample data for preview
+            const sampleClient = currentClient || { FirstName: 'Sarah', LastName: 'Chen', WeddingDate: '2026-08-15', Venue: 'Casa Loma', ID: 0 };
+            const sampleAppt = { Date: '2026-03-15', Time: '2:00 PM', Type: 'Bridal Consultation', Consultant: 'Yining Jin' };
+            
+            const previewSubject = replacePlaceholders(subject, sampleClient, sampleAppt);
+            const previewBody = replacePlaceholders(body, sampleClient, sampleAppt);
+            
+            preview.innerHTML = `
+                <div style="font-weight:600;margin-bottom:8px;color:var(--text)">Subject: ${previewSubject || '<span style="color:var(--taupe)">(empty)</span>'}</div>
+                <div style="border-top:1px solid var(--border);padding-top:8px;white-space:pre-wrap;color:var(--text)">${previewBody || '<span style="color:var(--taupe)">(empty)</span>'}</div>
+            `;
+        }
+        
+        function openAddTemplateModal() {
+            $('emailTemplateModalTitle').textContent = 'Create Email Template';
+            $('editTemplateId').value = '';
+            $('tplName').value = '';
+            $('tplSubject').value = '';
+            $('tplBody').value = '';
+            if ($('tplStarters')) $('tplStarters').style.display = 'block';
+            updateTplPreview();
+            openModal('emailTemplate');
+        }
+        
         // ========== CLIENT EMAIL ==========
         function openClientEmailModal() {
             if (!currentClient) { toast('No client selected', 'error'); return; }
@@ -11293,7 +11425,8 @@ www.estrellebridal.com`;
             // Handle system templates
             if (templateId === 'sys_confirmation') {
                 subject = 'Your appointment at {StoreName} is confirmed!';
-                body = getConfirmTemplate();
+                const tpl = getConfirmTemplate();
+                body = (typeof tpl === 'string') ? tpl : (tpl.text || tpl.html || '');
                 $('clientEmailApptGroup').style.display = 'block';
             } else if (templateId === 'sys_followup') {
                 const template = getFollowupTemplate();
@@ -11363,7 +11496,8 @@ www.estrellebridal.com`;
                 // Get original template to re-apply placeholders
                 if (templateId === 'sys_confirmation') {
                     subject = 'Your appointment at {StoreName} is confirmed!';
-                    body = getConfirmTemplate();
+                    const tpl = getConfirmTemplate();
+                    body = (typeof tpl === 'string') ? tpl : (tpl.text || tpl.html || '');
                 } else if (templateId === 'sys_followup') {
                     const template = getFollowupTemplate();
                     subject = template.subject;
@@ -11396,48 +11530,57 @@ www.estrellebridal.com`;
         }
         
         function replacePlaceholders(text, client, appt) {
+            if (!text || typeof text !== 'string') return text || '';
+            
             const storeInfo = getStoreInfo();
             
-            // Client placeholders (both cases)
-            text = text.replace(/\{FirstName\}/gi, client.FirstName || '');
-            text = text.replace(/\{firstName\}/g, client.FirstName || '');
-            text = text.replace(/\{LastName\}/gi, client.LastName || '');
-            text = text.replace(/\{lastName\}/g, client.LastName || '');
-            text = text.replace(/\{WeddingDate\}/gi, fmtDate(client.WeddingDate) || '');
-            text = text.replace(/\{weddingDate\}/g, fmtDate(client.WeddingDate) || '');
-            text = text.replace(/\{Venue\}/gi, client.Venue || '');
-            text = text.replace(/\{venue\}/g, client.Venue || '');
-            
-            // Appointment placeholders (both cases)
-            if (appt) {
-                text = text.replace(/\{AppointmentDate\}/gi, fmtDate(appt.Date) || '');
-                text = text.replace(/\{appointmentDate\}/g, fmtDate(appt.Date) || '');
-                text = text.replace(/\{AppointmentTime\}/gi, fmtTime(appt.Time) || '');
-                text = text.replace(/\{appointmentTime\}/g, fmtTime(appt.Time) || '');
-                text = text.replace(/\{AppointmentType\}/gi, appt.Type || 'Bridal Consultation');
-                text = text.replace(/\{appointmentType\}/g, appt.Type || 'Bridal Consultation');
-                text = text.replace(/\{Consultant\}/gi, appt.Consultant || '');
-                text = text.replace(/\{consultant\}/g, appt.Consultant || '');
-            } else {
-                text = text.replace(/\{AppointmentDate\}/gi, '');
-                text = text.replace(/\{appointmentDate\}/g, '');
-                text = text.replace(/\{AppointmentTime\}/gi, '');
-                text = text.replace(/\{appointmentTime\}/g, '');
-                text = text.replace(/\{AppointmentType\}/gi, '');
-                text = text.replace(/\{appointmentType\}/g, '');
-                text = text.replace(/\{Consultant\}/gi, '');
-                text = text.replace(/\{consultant\}/g, '');
+            // Helper: replace both {{var}} and {var} (case-insensitive)
+            function r(pattern, value) {
+                // Double braces first, then single
+                text = text.replace(new RegExp('\\{\\{' + pattern + '\\}\\}', 'gi'), value);
+                text = text.replace(new RegExp('\\{' + pattern + '\\}', 'gi'), value);
             }
             
-            // Store placeholders (both cases)
-            text = text.replace(/\{StoreName\}/gi, storeInfo.name || 'Estrelle Bridal');
-            text = text.replace(/\{storeName\}/g, storeInfo.name || 'Estrelle Bridal');
-            text = text.replace(/\{StorePhone\}/gi, storeInfo.phone || '');
-            text = text.replace(/\{storePhone\}/g, storeInfo.phone || '');
-            text = text.replace(/\{StoreAddress\}/gi, storeInfo.address || '');
-            text = text.replace(/\{storeAddress\}/g, storeInfo.address || '');
-            text = text.replace(/\{StoreEmail\}/gi, storeInfo.email || '');
-            text = text.replace(/\{storeEmail\}/g, storeInfo.email || '');
+            // Client placeholders
+            r('firstName', client.FirstName || '');
+            r('FirstName', client.FirstName || '');
+            r('lastName', client.LastName || '');
+            r('LastName', client.LastName || '');
+            r('weddingDate', fmtDate(client.WeddingDate) || '');
+            r('WeddingDate', fmtDate(client.WeddingDate) || '');
+            r('venue', client.Venue || '');
+            r('Venue', client.Venue || '');
+            
+            // Appointment placeholders
+            if (appt) {
+                r('appointmentDate', fmtDate(appt.Date) || '');
+                r('AppointmentDate', fmtDate(appt.Date) || '');
+                r('appointmentTime', fmtTime(appt.Time) || '');
+                r('AppointmentTime', fmtTime(appt.Time) || '');
+                r('appointmentType', appt.Type || 'Bridal Consultation');
+                r('AppointmentType', appt.Type || 'Bridal Consultation');
+                r('consultant', appt.Consultant || '');
+                r('Consultant', appt.Consultant || '');
+            } else {
+                r('appointmentDate', '');
+                r('AppointmentDate', '');
+                r('appointmentTime', '');
+                r('AppointmentTime', '');
+                r('appointmentType', '');
+                r('AppointmentType', '');
+                r('consultant', '');
+                r('Consultant', '');
+            }
+            
+            // Store placeholders
+            r('storeName', storeInfo.name || 'Estrelle Bridal');
+            r('StoreName', storeInfo.name || 'Estrelle Bridal');
+            r('storePhone', storeInfo.phone || '');
+            r('StorePhone', storeInfo.phone || '');
+            r('storeAddress', storeInfo.address || '');
+            r('StoreAddress', storeInfo.address || '');
+            r('storeEmail', storeInfo.email || '');
+            r('StoreEmail', storeInfo.email || '');
             
             // Top options placeholder
             if (client && client.ID) {
@@ -11449,8 +11592,10 @@ www.estrellebridal.com`;
                     ? `You looked absolutely stunning in your top choices:\n• ${topOptionsList.join('\n• ')}`
                     : '';
                     
+                text = text.replace(/\{\{topOptions\}\}/gi, topOptionsText);
                 text = text.replace(/\{topOptions\}/gi, topOptionsText);
             } else {
+                text = text.replace(/\{\{topOptions\}\}/gi, '');
                 text = text.replace(/\{topOptions\}/gi, '');
             }
             
@@ -13446,6 +13591,15 @@ The {storeName} Team`
                 return;
             }
             
+            // Reset to Add mode (editOption will override this)
+            if (!$('editOptionId').value) {
+                $('optionModalTitle').textContent = 'Add Top Option';
+                $('optionSaveBtn').textContent = 'Add';
+                ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner','oDecisionBy','oSize','oPrice'].forEach(i => { if ($(i)) $(i).value = ''; });
+                $('oFavorite').checked = false;
+                $('editOptionId').value = '';
+            }
+            
             // Ensure designer data is loaded
             if (!designerData || designerData.length === 0) {
                 loadDesignerData();
@@ -13483,15 +13637,17 @@ The {storeName} Team`
             const opts = data.topoptions.filter(o => o.ClientID == currentClient.ID);
             $('cOptions').innerHTML = opts.length ? opts.map(o => {
                 const isLiked = o.IsFavorite === true || o.IsFavorite === 'TRUE';
+                const priceText = o.Price ? money(o.Price) : '<span style="color:var(--taupe);font-style:italic">as listed</span>';
                 return `
                 <div class="option-card ${isLiked ? 'favorite' : ''}">
                     <div class="option-designer">${o.Designer} — ${o.Style}</div>
-                    <div class="option-style">${o.Size ? 'Size ' + o.Size : ''} ${o.Price ? '· ' + money(o.Price) : ''}</div>
+                    <div class="option-style">${o.Size ? 'Size ' + o.Size + ' · ' : ''}${priceText}</div>
                     ${o.Customizations ? `<div class="option-notes"><b>Custom:</b> ${o.Customizations}</div>` : ''}
                     ${o.DecisionBy ? `<div class="option-notes"><b>Decision by:</b> ${fmtDate(o.DecisionBy)}</div>` : ''}
                     ${o.Notes ? `<div class="option-notes">${o.Notes}</div>` : ''}
                     <div class="option-actions">
                         <button class="action-btn ${isLiked ? 'liked' : ''}" onclick="toggleFavorite(${o.ID})">${isLiked ? '❤️ Liked' : '🤍 Like'}</button>
+                        <button class="action-btn" onclick="editOption(${o.ID})">Edit</button>
                         <button class="action-btn" onclick="deleteOptionConfirm(${o.ID})">Delete</button>
                     </div>
                 </div>`;
@@ -13504,51 +13660,129 @@ The {storeName} Team`
                 designer = $('oCustomDesigner').value.trim();
                 if (!designer) { toast('Enter custom designer name'); return; }
             }
+            if (!designer) { toast('Select designer'); return; }
             
+            const editId = $('editOptionId').value;
             const clientName = `${currentClient.FirstName} ${currentClient.LastName}`;
-            const record = { ClientID: currentClient.ID, ClientName: clientName, Designer: designer, Style: $('oStyle').value, Customizations: $('oCustom').value, DecisionBy: $('oDecisionBy').value, Notes: $('oOptionNotes').value, IsFavorite: $('oFavorite').checked };
-            if (!record.Designer) { toast('Select designer'); return; }
+            
+            // Parse price — strip $ and commas
+            let priceVal = $('oPrice').value.trim().replace(/[$,]/g, '');
+            const price = priceVal ? parseFloat(priceVal) || 0 : '';
+            
+            const record = { 
+                ClientID: currentClient.ID, 
+                ClientName: clientName, 
+                Designer: designer, 
+                Style: $('oStyle').value, 
+                Size: $('oSize').value.trim(),
+                Price: price,
+                Customizations: $('oCustom').value, 
+                DecisionBy: $('oDecisionBy').value, 
+                Notes: $('oOptionNotes').value, 
+                IsFavorite: $('oFavorite').checked 
+            };
             
             closeModal('addOption');
             
-            // Add to local data immediately with temp ID
-            const tempId = Date.now();
-            const newRecord = { ...record, ID: tempId };
-            data.topoptions.push(newRecord);
-            saveCachedData();
-            
-            // Render immediately with new data
-            renderClientOptions();
-            toast('Added!', 'success');
-            
-            // Clear form
-            ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner','oDecisionBy'].forEach(i => $(i).value = '');
-            $('oFavorite').checked = false;
-            $('customDesignerGroup').style.display = 'none';
-            
-            // Send to server in background
-            api('POST', { action: 'add', sheet: 'TopOptions', record })
-                .then(res => {
-                    if (res && res.id) {
-                        const idx = data.topoptions.findIndex(r => r.ID === tempId);
-                        if (idx >= 0) data.topoptions[idx].ID = res.id;
-                        saveCachedData();
-                    }
-                })
-                .catch(e => {
-                    // Remove on error
-                    const idx = data.topoptions.findIndex(r => r.ID === tempId);
-                    if (idx >= 0) data.topoptions.splice(idx, 1);
+            if (editId) {
+                // UPDATE existing option
+                const existing = data.topoptions.find(o => String(o.ID) === String(editId));
+                if (existing) {
+                    Object.assign(existing, record);
                     saveCachedData();
                     renderClientOptions();
-                    toast('Save failed', 'error');
-                });
+                    toast('Option updated!', 'success');
+                    
+                    // Update server in background
+                    updateRecord('TopOptions', editId, record);
+                }
+            } else {
+                // ADD new option
+                const tempId = Date.now();
+                const newRecord = { ...record, ID: tempId };
+                data.topoptions.push(newRecord);
+                saveCachedData();
+                renderClientOptions();
+                toast('Added!', 'success');
+                
+                // Send to server in background
+                api('POST', { action: 'add', sheet: 'TopOptions', record })
+                    .then(res => {
+                        if (res && res.id) {
+                            const idx = data.topoptions.findIndex(r => r.ID === tempId);
+                            if (idx >= 0) data.topoptions[idx].ID = res.id;
+                            saveCachedData();
+                        }
+                    })
+                    .catch(e => {
+                        const idx = data.topoptions.findIndex(r => r.ID === tempId);
+                        if (idx >= 0) data.topoptions.splice(idx, 1);
+                        saveCachedData();
+                        renderClientOptions();
+                        toast('Save failed', 'error');
+                    });
+            }
+            
+            // Clear form
+            $('editOptionId').value = '';
+            ['oDesigner','oStyle','oCustom','oOptionNotes','oCustomDesigner','oDecisionBy','oSize','oPrice'].forEach(i => $(i).value = '');
+            $('oFavorite').checked = false;
+            $('customDesignerGroup').style.display = 'none';
+        }
+        
+        function editOption(id) {
+            const opt = data.topoptions.find(o => o.ID == id);
+            if (!opt) { toast('Option not found', 'error'); return; }
+            
+            // Set modal to edit mode
+            $('optionModalTitle').textContent = 'Edit Top Option';
+            $('optionSaveBtn').textContent = 'Save Changes';
+            $('editOptionId').value = id;
+            
+            // Open modal (this also calls populateOptionModal which sets up designers)
+            openModal('addOption');
+            
+            // Populate fields after a tick to ensure dropdown is populated
+            setTimeout(() => {
+                // Check if designer is in dropdown, otherwise use custom
+                const dropdown = $('oDesigner');
+                const designerInList = Array.from(dropdown.options).some(o => o.value === opt.Designer);
+                
+                if (designerInList) {
+                    dropdown.value = opt.Designer;
+                    $('customDesignerGroup').style.display = 'none';
+                } else {
+                    dropdown.value = 'custom';
+                    $('oCustomDesigner').value = opt.Designer;
+                    $('customDesignerGroup').style.display = 'block';
+                }
+                
+                $('oStyle').value = opt.Style || '';
+                $('oSize').value = opt.Size || '';
+                $('oPrice').value = opt.Price ? money(opt.Price).replace('$', '') : '';
+                $('oCustom').value = opt.Customizations || '';
+                $('oDecisionBy').value = opt.DecisionBy || '';
+                $('oOptionNotes').value = opt.Notes || '';
+                $('oFavorite').checked = (opt.IsFavorite === true || opt.IsFavorite === 'TRUE');
+            }, 50);
+        }
+        
+        function formatOptionPrice(input) {
+            let val = input.value.trim();
+            if (!val) return;
+            val = val.replace(/[$,]/g, '');
+            const num = parseFloat(val);
+            if (!isNaN(num) && num > 0) {
+                input.value = num.toLocaleString();
+            }
         }
 
         async function toggleFavorite(id) {
             const opt = data.topoptions.find(o => o.ID == id);
             if (!opt) return;
             const newValue = !(opt.IsFavorite === true || opt.IsFavorite === 'TRUE');
+            opt.IsFavorite = newValue ? 'TRUE' : '';
+            saveCachedData();
             updateRecord('TopOptions', id, { IsFavorite: newValue });
             renderClientOptions();
         }
