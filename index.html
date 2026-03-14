@@ -1027,7 +1027,7 @@
                 <div class="grid-main">
                     <div>
                         <div class="card" style="margin-bottom:20px"><div class="card-header"><h2 class="card-title">📍 Today's Appointments</h2></div><div class="card-body" id="dashToday"><div class="loading">Loading</div></div></div>
-                        <div class="card" style="margin-bottom:20px" id="draftsCard"><div class="card-header"><h2 class="card-title">📝 Pending Drafts</h2></div><div class="card-body" id="dashDrafts"><div class="loading">Loading</div></div></div>
+                        <div class="card" style="margin-bottom:20px;border-left:4px solid #d4a800" id="draftsCard"><div class="card-header" style="background:linear-gradient(135deg,#fffcf0,#fff8e1)"><h2 class="card-title">📝 Pending Drafts</h2></div><div class="card-body" id="dashDrafts"><div class="loading">Loading</div></div></div>
                         <div class="card" style="margin-bottom:20px" id="followUpCard"><div class="card-header"><h2 class="card-title">📞 Follow-ups</h2></div><div class="card-body" id="dashFollowUps"><div class="loading">Loading</div></div></div>
                         <div class="card" style="margin-bottom:20px" id="confirmDueCard"><div class="card-header"><h2 class="card-title">📧 Confirmations Due</h2></div><div class="card-body" id="dashConfirmDue"><div class="loading">Loading</div></div></div>
                     </div>
@@ -1168,6 +1168,7 @@
                         <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
                             <button class="btn btn-sm" id="viewOrders" onclick="setOrdersView('orders')" style="border:none;border-radius:0;background:var(--accent);color:white">Orders</button>
                             <button class="btn btn-sm" id="viewAlterations" onclick="setOrdersView('alterations')" style="border:none;border-radius:0;background:white;color:var(--text)">Alterations</button>
+                            <button class="btn btn-sm" id="viewCalculator" onclick="setOrdersView('calculator')" style="border:none;border-radius:0;background:white;color:var(--text)">✂️ Calculator</button>
                         </div>
                         <button class="btn btn-primary" id="ordersAddBtn" onclick="openAddOrder()">+ Add Order</button>
                     </div>
@@ -1306,9 +1307,22 @@
                         <div class="card-body" id="alterationsList"></div>
                     </div>
                 </div>
+                
+                <!-- Calculator View -->
+                <div id="calculatorViewContent" style="display:none">
+                    <div id="altCalcApp"></div>
+                    
+                    <!-- Sticky total bar for calculator -->
+                    <div id="altCalcTotalBar" style="position:sticky;bottom:0;background:var(--charcoal);color:white;padding:14px 20px;border-radius:12px;margin-top:16px;display:flex;justify-content:center;align-items:center;gap:32px;box-shadow:0 -4px 24px rgba(0,0,0,0.15);flex-wrap:wrap">
+                        <div style="text-align:center"><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--taupe);margin-bottom:2px">Our Cost</div><div id="calcTotalCost" style="font-size:22px;font-weight:700;font-family:'Cormorant Garamond',serif">$0</div></div>
+                        <div style="text-align:center"><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--taupe);margin-bottom:2px">Client Price</div><div id="calcTotalPrice" style="font-size:22px;font-weight:700;color:#C4A265;font-family:'Cormorant Garamond',serif">$0</div></div>
+                        <div style="text-align:center"><div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--taupe);margin-bottom:2px">Items</div><div id="calcItemCount" style="font-size:22px;font-weight:700;font-family:'Cormorant Garamond',serif">0</div></div>
+                        <div id="calcMinNote" style="font-size:10px;color:#C4A265;letter-spacing:1px;font-weight:600"></div>
+                        <button class="btn btn-sm" onclick="saveCalcToAlteration()" style="background:#C4A265;color:white;border:none;padding:8px 16px;border-radius:6px;font-weight:600;font-size:12px">Save to Client</button>
+                        <button class="btn btn-sm" onclick="resetCalc()" style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);padding:8px 16px;border-radius:6px;font-size:12px">Reset</button>
+                    </div>
+                </div>
             </section>
-
-            <!-- Designers (now hidden, moved to Settings) -->
             <!-- Reporting (Analytics + Report Builder) -->
             <section class="section" id="page-reporting">
                 <div class="header">
@@ -1700,7 +1714,23 @@
                     <div>
                         <button class="btn btn-secondary" onclick="goBack()">← Back</button>
                         <button class="btn btn-success" onclick="sheSaidYes()" id="btnSheSaidYes">💍 She Said Yes!</button>
-                        <span id="draftIndicator" style="display:none;margin-left:8px;padding:4px 10px;background:#fff3cd;color:#856404;border-radius:4px;font-size:11px;cursor:pointer" onclick="sheSaidYes()">📝 Draft saved - click to continue</span>
+                        <span id="draftIndicator" style="display:none"></span>
+                    </div>
+                    <!-- Draft Banner (shown when client has a saved draft) -->
+                    <div id="draftBanner" style="display:none;background:linear-gradient(135deg,#fff8e1,#fff3cd);border:1.5px solid #f0d060;border-radius:10px;padding:14px 18px;margin-bottom:16px;cursor:pointer" onclick="sheSaidYes(true)">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                            <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+                                <div style="font-size:28px">📝</div>
+                                <div>
+                                    <div style="font-weight:700;font-size:14px;color:#6d5a00">Unsaved Draft</div>
+                                    <div id="draftBannerMeta" style="font-size:11px;color:#8a7a30;margin-top:2px"></div>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:8px;flex-shrink:0" onclick="event.stopPropagation()">
+                                <button class="btn btn-sm" onclick="sheSaidYes(true)" style="background:#d4a800;color:white;border:none;font-weight:600;padding:7px 16px">Continue Draft</button>
+                                <button class="btn btn-sm btn-secondary" onclick="deleteDraftFromProfile()" style="color:#c00;font-size:11px" title="Delete draft">🗑️</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="timeline-box" id="timelineBox">
@@ -2002,48 +2032,50 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <h3 style="font-size:12px;font-weight:600">✂️ Alteration Items</h3>
                         <div style="display:flex;gap:6px">
-                            <button class="btn btn-sm btn-secondary" onclick="manageSavedAltItems()" title="Manage saved items">⚙️</button>
                             <button class="btn btn-sm btn-secondary" onclick="addAlterationItem()">+ Add Item</button>
                         </div>
                     </div>
                     <div id="altItemsList"></div>
+                    
+                    <!-- Running Totals (shown when items have costs) -->
+                    <div id="altTotalsBar" style="display:none;background:var(--charcoal);color:white;padding:10px 16px;border-radius:8px;margin-top:10px;display:none;justify-content:space-around;align-items:center;flex-wrap:wrap;gap:8px">
+                    </div>
                 </div>
                 
-                <!-- Add Item Form (hidden by default) -->
-                <div id="addAltItemForm" style="display:none;background:var(--blush);padding:12px;border-radius:5px;margin-bottom:16px">
-                    <div class="form-row">
+                <!-- Add Item Panel (hidden by default) — now with pricing categories -->
+                <div id="addAltItemForm" style="display:none;background:var(--blush);border:1px solid var(--champagne);border-radius:8px;margin-bottom:16px;overflow:hidden">
+                    <!-- Tab bar: Browse pricing vs Custom -->
+                    <div style="display:flex;border-bottom:1px solid var(--champagne)">
+                        <button class="btn btn-sm" id="altAddTabBrowse" onclick="setAltAddTab('browse')" style="flex:1;border:none;border-radius:0;background:var(--accent);color:white;padding:10px;font-size:12px">Browse Pricing</button>
+                        <button class="btn btn-sm" id="altAddTabCustom" onclick="setAltAddTab('custom')" style="flex:1;border:none;border-radius:0;background:transparent;color:var(--text);padding:10px;font-size:12px">+ Custom Item</button>
+                    </div>
+                    
+                    <!-- Browse Tab: search + categorized list -->
+                    <div id="altAddBrowsePanel" style="padding:12px">
+                        <input type="text" class="form-input" id="altItemSearch" placeholder="Search alterations... e.g. hem, bustle, sleeves" oninput="filterAltPricingList()" style="margin-bottom:10px;font-size:13px">
+                        <div id="altPricingCatList" style="max-height:320px;overflow-y:auto"></div>
+                    </div>
+                    
+                    <!-- Custom Tab -->
+                    <div id="altAddCustomPanel" style="display:none;padding:12px">
                         <div class="form-group">
-                            <label class="form-label">Item</label>
-                            <select class="form-input" id="newAltItemType" onchange="toggleCustomAltItem()">
-                                <option value="hem">Hem (shorten/lengthen)</option>
-                                <option value="bustle">Bustle</option>
-                                <option value="take-in">Take In</option>
-                                <option value="let-out">Let Out</option>
-                                <option value="straps">Straps Adjustment</option>
-                                <option value="cups">Add Bra Cups</option>
-                                <option value="buttons">Buttons/Hooks</option>
-                                <option value="steaming">Steaming</option>
-                                <option value="cleaning">Cleaning</option>
-                                <option value="---" disabled>── Saved Items ──</option>
-                                <!-- Saved items will be populated here -->
-                                <option value="custom">+ Custom...</option>
-                            </select>
+                            <label class="form-label">Item Name *</label>
+                            <input type="text" class="form-input" id="customAltItemName" placeholder="e.g., Reshape neckline">
                         </div>
-                        <div class="form-group" id="customAltItemGroup" style="display:none">
-                            <label class="form-label">Custom Item Name</label>
-                            <input type="text" class="form-input" id="customAltItem" placeholder="e.g., Shorten sleeves">
-                            <label style="display:flex;align-items:center;gap:6px;font-size:10px;margin-top:6px;cursor:pointer">
-                                <input type="checkbox" id="saveCustomAltItem"> Save for future use
-                            </label>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Our Cost</label>
+                                <input type="text" class="form-input" id="customAltItemCost" placeholder="e.g., 150" onblur="formatOptionPrice(this)">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Details</label>
+                                <input type="text" class="form-input" id="customAltItemDetails" placeholder="Optional notes...">
+                            </div>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Details/Measurements</label>
-                        <input type="text" class="form-input" id="newAltItemDetails" placeholder="e.g., Take up 2 inches, 3-point bustle...">
-                    </div>
-                    <div style="display:flex;justify-content:flex-end;gap:8px">
-                        <button class="btn btn-sm btn-secondary" onclick="cancelAddAltItem()">Cancel</button>
-                        <button class="btn btn-sm btn-primary" onclick="saveNewAltItem()">Add Item</button>
+                        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px">
+                            <button class="btn btn-sm btn-secondary" onclick="cancelAddAltItem()">Cancel</button>
+                            <button class="btn btn-sm btn-primary" onclick="saveCustomAltItemNew()">Add Item</button>
+                        </div>
                     </div>
                 </div>
                 
@@ -4462,37 +4494,21 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 Pinned: false
             };
             
-            try {
-                if (editId) {
-                    await updateRecord('Announcements', editId, record);
-                    const idx = data.announcements.findIndex(a => a.ID == editId);
-                    if (idx !== -1) {
-                        data.announcements[idx] = { ...data.announcements[idx], ...record };
-                    }
-                    saveCachedData();
-                } else {
-                    // saveRecord handles optimistic update
-                    await saveRecord('Announcements', record);
-                }
-                
-                closeModal('announcement');
-                renderAnnouncements();
-                toast(editId ? 'Announcement updated!' : 'Announcement added!', 'success');
-            } catch (e) {
-                toast('Error saving: ' + e.message, 'error');
+            if (editId) {
+                updateRecord('Announcements', editId, record);
+            } else {
+                saveRecord('Announcements', record);
             }
+            
+            closeModal('announcement');
+            renderAnnouncements();
+            toast(editId ? 'Announcement updated!' : 'Announcement added!', 'success');
         }
         
         async function dismissAnnouncement(id) {
-            try {
-                await deleteRecord('Announcements', id);
-                data.announcements = data.announcements.filter(a => a.ID != id);
-                saveCachedData();
-                renderAnnouncements();
-                toast('Announcement dismissed', 'success');
-            } catch (e) {
-                toast('Error deleting: ' + e.message, 'error');
-            }
+            deleteRecord('Announcements', id);
+            renderAnnouncements();
+            toast('Announcement dismissed', 'success');
         }
 
         // ========== DASHBOARD ==========
@@ -7045,7 +7061,7 @@ The Estrelle Bridal Team`;
             
             // Update appointment with new photos
             a.Photos = photos;
-            await updateRecord('Appointments', currentViewApptId, { Photos: JSON.stringify(photos) });
+            updateRecord('Appointments', currentViewApptId, { Photos: JSON.stringify(photos) });
             
             $('apptPhotoUploadStatus').style.display = 'none';
             $('apptPhotoInput').value = '';
@@ -7062,7 +7078,7 @@ The Estrelle Bridal Team`;
             if (!a || !a.Photos) return;
             
             a.Photos.splice(index, 1);
-            await updateRecord('Appointments', currentViewApptId, { Photos: JSON.stringify(a.Photos) });
+            updateRecord('Appointments', currentViewApptId, { Photos: JSON.stringify(a.Photos) });
             
             renderApptPhotos(a);
             renderClientAppts();
@@ -7226,14 +7242,25 @@ The Estrelle Bridal Team`;
                 };
                 
                 try {
-                    // Wait for server to return the real client ID
-                    const result = await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
-                    clientId = result.id;
-                    
-                    // Add to local data with the REAL ID from server
-                    newClient.ID = clientId;
+                    // Use temp ID immediately, get real ID in background
+                    const tempClientId = Date.now();
+                    newClient.ID = tempClientId;
+                    clientId = tempClientId;
                     data.clients.push(newClient);
                     saveCachedData();
+                    
+                    // Get real ID in background
+                    api('POST', { action: 'add', sheet: 'Clients', record: newClient })
+                        .then(result => {
+                            if (result && result.id) {
+                                const idx = data.clients.findIndex(c => c.ID === tempClientId);
+                                if (idx >= 0) data.clients[idx].ID = result.id;
+                                // Also update any appointments that reference the temp ID
+                                data.appointments.filter(a => a.ClientID == tempClientId).forEach(a => a.ClientID = result.id);
+                                saveCachedData();
+                            }
+                        })
+                        .catch(e => console.warn('Client sync failed (saved locally):', e));
                 } catch (e) {
                     toast('Failed to create client', 'error');
                     return;
@@ -7335,7 +7362,7 @@ The Estrelle Bridal Team`;
                 // Auto-create alteration record if this is a fitting appointment
                 const apptType = record.Type.toLowerCase();
                 if (apptType.includes('fitting')) {
-                    await autoCreateAlteration(clientId, record);
+                    autoCreateAlteration(clientId, record);
                 }
             }
             
@@ -7351,17 +7378,12 @@ The Estrelle Bridal Team`;
         async function autoCreateAlteration(clientId, apptRecord) {
             // Check if alteration already exists for this client
             const existingAlt = data.alterations.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
-            if (existingAlt) {
-                console.log('Alteration already exists for client', clientId);
-                return; // Don't create duplicate
-            }
+            if (existingAlt) return;
             
             const client = getClient(clientId);
             if (!client) return;
             
             const clientName = `${client.FirstName} ${client.LastName}`;
-            
-            // Get order info if exists
             const order = data.orders.find(o => String(o.ClientID) === String(clientId) && o.Status !== 'picked up');
             
             const altRecord = {
@@ -7376,29 +7398,14 @@ The Estrelle Bridal Team`;
                 Seamstress: ''
             };
             
-            try {
-                const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
-                if (result && result.id) {
-                    altRecord.ID = result.id;
-                } else {
-                    altRecord.ID = 'alt_' + Date.now();
-                }
-                data.alterations.push(altRecord);
-                saveCachedData();
-                
-                // Also update order status to "in alterations" if exists
-                if (order && order.Status !== 'in alterations' && order.Status !== 'picked up' && order.Status !== 'picked up') {
-                    await updateRecord('Orders', order.ID, { Status: 'in alterations' });
-                    order.Status = 'in alterations';
-                    saveCachedData();
-                }
-                
-                console.log('Auto-created alteration for', clientName);
-                return true;
-            } catch (e) {
-                console.error('Failed to auto-create alteration:', e);
-                return false;
+            saveRecord('Alterations', altRecord);
+            
+            // Also update order status in background
+            if (order && order.Status !== 'in alterations' && order.Status !== 'picked up') {
+                updateRecord('Orders', order.ID, { Status: 'in alterations' });
             }
+            
+            console.log('Auto-created alteration for', clientName);
         }
         
         async function syncFittingsToAlterations() {
@@ -8100,14 +8107,7 @@ The Estrelle Bridal Team`;
             }
             
             try {
-                await updateRecord('Orders', orderId, updates);
-                
-                // Update local data
-                const order = data.orders.find(o => String(o.ID) === String(orderId));
-                if (order) {
-                    Object.assign(order, updates);
-                }
-                saveCachedData();
+                updateRecord('Orders', orderId, updates);
                 
                 closeModal('orderDetails');
                 renderOrders();
@@ -8333,10 +8333,7 @@ The Estrelle Bridal Team`;
             };
             
             try {
-                const result = await saveRecord('Orders', record);
-                record.ID = result.id || Date.now();
-                // saveRecord already pushed to data.orders, just update the reference
-                saveCachedData();
+                saveRecord('Orders', record);
                 
                 closeModal('addOrder');
                 renderOrders();
@@ -8580,9 +8577,7 @@ The Estrelle Bridal Team`;
             };
             
             try {
-                await updateRecord('Orders', orderId, updates);
-                Object.assign(order, updates);
-                saveCachedData();
+                updateRecord('Orders', orderId, updates);
                 
                 closeModal('qaChecklist');
                 renderOrders();
@@ -8621,18 +8616,11 @@ The Estrelle Bridal Team`;
                 QANotes: `⚠️ ISSUE FLAGGED (${today()}): ${notes}` + (order.QANotes ? '\n' + order.QANotes : '')
             };
             
-            try {
-                await updateRecord('Orders', orderId, updates);
-                Object.assign(order, updates);
-                saveCachedData();
-                
-                closeModal('qaChecklist');
-                renderOrders();
-                toast(`Issue flagged for ${order.ClientName}`, 'error');
-            } catch (e) {
-                console.error('QA flag failed:', e);
-                toast('Failed to update order', 'error');
-            }
+            updateRecord('Orders', orderId, updates);
+            
+            closeModal('qaChecklist');
+            renderOrders();
+            toast(`Issue flagged for ${order.ClientName}`, 'error');
         }
         
         // Bulk order actions
@@ -8681,11 +8669,9 @@ The Estrelle Bridal Team`;
             
             let altsCreated = 0;
             for (const id of orderIds) {
-                await updateRecord('Orders', id, { Status: newStatus });
+                updateRecord('Orders', id, { Status: newStatus });
                 const order = data.orders.find(o => String(o.ID) === String(id));
                 if (order) {
-                    order.Status = newStatus;
-                    
                     // Auto-create alteration when bulk-changing to "in alterations"
                     if (newStatus === 'in alterations' && order.ClientID) {
                         const existingAlt = data.alterations.find(a => String(a.ClientID) === String(order.ClientID) && a.Status !== 'complete');
@@ -8703,21 +8689,14 @@ The Estrelle Bridal Team`;
                                     DueDate: client.WeddingDate || '',
                                     Seamstress: ''
                                 };
-                                try {
-                                    const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
-                                    altRecord.ID = (result && result.id) ? result.id : 'alt_' + Date.now() + '_' + altsCreated;
-                                    data.alterations.push(altRecord);
-                                    altsCreated++;
-                                } catch (e) {
-                                    console.error('Failed to create alteration:', e);
-                                }
+                                saveRecord('Alterations', altRecord);
+                                altsCreated++;
                             }
                         }
                     }
                 }
             }
             
-            saveCachedData();
             renderOrders();
             if (altsCreated > 0) renderAlts();
             deselectAllOrders();
@@ -8737,11 +8716,9 @@ The Estrelle Bridal Team`;
             if (!confirmed) return;
             
             for (const id of orderIds) {
-                await deleteRecord('Orders', id);
-                data.orders = data.orders.filter(o => String(o.ID) !== String(id));
+                deleteRecord('Orders', id);
             }
             
-            saveCachedData();
             renderOrders();
             deselectAllOrders();
             toast(`Deleted ${orderIds.length} orders`, 'success');
@@ -8754,7 +8731,7 @@ The Estrelle Bridal Team`;
             const item = items.find(i => i.id === itemId);
             if (item) {
                 item.arrived = !item.arrived;
-                await updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
+                updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
                 renderOrders();
             }
         }
@@ -8766,7 +8743,7 @@ The Estrelle Bridal Team`;
             const item = items.find(i => i.id === itemId);
             if (item) {
                 item.qaChecked = !item.qaChecked;
-                await updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
+                updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
                 renderOrders();
             }
         }
@@ -8780,7 +8757,7 @@ The Estrelle Bridal Team`;
                 const cust = item.customizations.find(c => c.id === custId);
                 if (cust) {
                     cust.qaChecked = !cust.qaChecked;
-                    await updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
+                    updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
                     renderOrders();
                 }
             }
@@ -8793,7 +8770,7 @@ The Estrelle Bridal Team`;
             const item = items.find(i => i.id === itemId);
             if (item) {
                 item.status = status;
-                await updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
+                updateRecord('Orders', orderId, { Items: JSON.stringify(items) });
                 toast('Status updated', 'success');
             }
         }
@@ -8932,7 +8909,7 @@ The Estrelle Bridal Team`;
             }
             
             try {
-                await updateRecord('Orders', currentQaOrderId, { 
+                updateRecord('Orders', currentQaOrderId, { 
                     Items: JSON.stringify(items),
                     Status: 'QA complete',
                     QaNotes: notes,
@@ -9018,43 +8995,35 @@ The Estrelle Bridal Team`;
         }
         
         async function updateOrderStatus(id, status) {
-            try {
-                await updateRecord('Orders', id, { Status: status });
-                // Immediately update local data and re-render
-                const order = data.orders.find(o => o.ID == id);
-                if (order) {
-                    order.Status = status;
-                    
-                    // Auto-create alteration record when status changes to "in alterations"
-                    if (status === 'in alterations' && order.ClientID) {
-                        const existingAlt = data.alterations.find(a => String(a.ClientID) === String(order.ClientID) && a.Status !== 'complete');
-                        if (!existingAlt) {
-                            const client = getClient(order.ClientID);
-                            if (client) {
-                                const altRecord = {
-                                    ClientID: String(order.ClientID),
-                                    ClientName: `${client.FirstName} ${client.LastName}`,
-                                    OrderID: order.ID,
-                                    Items: order.Dress || 'Dress',
-                                    Notes: `Auto-created from order status change`,
-                                    Status: 'in progress',
-                                    StartDate: today(),
-                                    DueDate: client.WeddingDate || '',
-                                    Seamstress: ''
-                                };
-                                const result = await api('POST', { action: 'add', sheet: 'Alterations', record: altRecord });
-                                altRecord.ID = (result && result.id) ? result.id : 'alt_' + Date.now();
-                                data.alterations.push(altRecord);
-                                saveCachedData();
-                                renderAlts();
-                                console.log('Auto-created alteration for', altRecord.ClientName);
-                            }
+            updateRecord('Orders', id, { Status: status });
+            
+            const order = data.orders.find(o => o.ID == id);
+            if (order) {
+                // Auto-create alteration record when status changes to "in alterations"
+                if (status === 'in alterations' && order.ClientID) {
+                    const existingAlt = data.alterations.find(a => String(a.ClientID) === String(order.ClientID) && a.Status !== 'complete');
+                    if (!existingAlt) {
+                        const client = getClient(order.ClientID);
+                        if (client) {
+                            const altRecord = {
+                                ClientID: String(order.ClientID),
+                                ClientName: `${client.FirstName} ${client.LastName}`,
+                                OrderID: order.ID,
+                                Items: order.Dress || 'Dress',
+                                Notes: `Auto-created from order status change`,
+                                Status: 'in progress',
+                                StartDate: today(),
+                                DueDate: client.WeddingDate || '',
+                                Seamstress: ''
+                            };
+                            saveRecord('Alterations', altRecord);
+                            renderAlts();
                         }
                     }
                 }
-                renderOrders();
-                toast('Status updated', 'success');
-            } catch (e) {}
+            }
+            renderOrders();
+            toast('Status updated', 'success');
         }
         
         async function deleteOrder(id) {
@@ -9096,11 +9065,7 @@ The Estrelle Bridal Team`;
             toast(`Order deleted for ${clientName}`, 'success', true);
             
             // Delete from server in background
-            try {
-                await deleteRecord('Orders', id);
-            } catch (e) {
-                console.error('Error deleting order from server:', e);
-            }
+            deleteRecord('Orders', id);
         }
         
         function viewOrder(id) {
@@ -10171,13 +10136,15 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         
         function renderAltItems() {
             if (currentAltItems.length === 0) {
-                $('altItemsList').innerHTML = '<div class="empty" style="font-size:11px">No alteration items yet. Add items as they\'re identified during fittings.</div>';
+                $('altItemsList').innerHTML = '<div class="empty" style="font-size:11px">No alteration items yet. Click "+ Add Item" to browse pricing or add a custom item.</div>';
+                if ($('altTotalsBar')) $('altTotalsBar').style.display = 'none';
                 return;
             }
             
             $('altItemsList').innerHTML = currentAltItems.map((item, idx) => {
                 const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : item.status === 'needs-adjustment' ? '#e67e22' : 'var(--taupe)';
                 const statusBg = item.status === 'done' ? '#27ae6020' : item.status === 'in-progress' ? '#f39c1220' : item.status === 'needs-adjustment' ? '#e67e2220' : 'var(--blush)';
+                const costDisplay = item.cost ? `<span style="font-size:10px;font-weight:600;color:var(--accent)">$${item.cost} / $${item.cost * 2}</span>` : '<span style="font-size:10px;color:var(--taupe);font-style:italic">no price</span>';
                 
                 return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:${statusBg};border-radius:4px;margin-bottom:6px;border-left:3px solid ${statusColor}">
                     <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px" onchange="updateAltItemStatus(${idx}, this.value)">
@@ -10187,7 +10154,10 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
                     </select>
                     <div style="flex:1">
-                        <div style="font-size:12px;font-weight:500">${item.name}</div>
+                        <div style="font-size:12px;font-weight:500;display:flex;justify-content:space-between;align-items:center">
+                            <span>${item.name}</span>
+                            ${costDisplay}
+                        </div>
                         ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
                         <div style="font-size:9px;color:var(--taupe)">Added: Fitting ${item.addedAtFitting || 1}</div>
                     </div>
@@ -10195,6 +10165,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
                 </div>`;
             }).join('');
+            
+            updateAltTotals();
         }
         
         async function editAltItem(idx) {
@@ -10219,136 +10191,73 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         
         function addAlterationItem() {
             $('addAltItemForm').style.display = 'block';
-            $('newAltItemDetails').value = '';
-            $('customAltItem').value = '';
-            if ($('saveCustomAltItem')) $('saveCustomAltItem').checked = false;
-            
-            // Populate dropdown with saved items
-            populateAltItemDropdown();
-            $('newAltItemType').value = 'hem';
-            toggleCustomAltItem();
+            setAltAddTab('browse');
+            $('altItemSearch').value = '';
+            renderAltPricingCatList();
+            // Scroll into view
+            $('addAltItemForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
-        function populateAltItemDropdown() {
-            const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
-            const dropdown = $('newAltItemType');
-            
-            if (!dropdown) {
-                console.log('Alteration dropdown not found');
-                return;
+        function setAltAddTab(tab) {
+            $('altAddTabBrowse').style.background = tab === 'browse' ? 'var(--accent)' : 'transparent';
+            $('altAddTabBrowse').style.color = tab === 'browse' ? 'white' : 'var(--text)';
+            $('altAddTabCustom').style.background = tab === 'custom' ? 'var(--accent)' : 'transparent';
+            $('altAddTabCustom').style.color = tab === 'custom' ? 'white' : 'var(--text)';
+            $('altAddBrowsePanel').style.display = tab === 'browse' ? 'block' : 'none';
+            $('altAddCustomPanel').style.display = tab === 'custom' ? 'block' : 'none';
+            if (tab === 'custom') {
+                $('customAltItemName').value = '';
+                $('customAltItemCost').value = '';
+                $('customAltItemDetails').value = '';
             }
+        }
+        
+        function renderAltPricingCatList(filter) {
+            const container = $('altPricingCatList');
+            if (!container) return;
+            const q = (filter || '').toLowerCase().trim();
+            let html = '';
             
-            console.log('populateAltItemDropdown called, savedItems:', savedItems.length);
-            
-            // Rebuild dropdown
-            let html = `
-                <option value="hem">Hem (shorten/lengthen)</option>
-                <option value="bustle">Bustle</option>
-                <option value="take-in">Take In</option>
-                <option value="let-out">Let Out</option>
-                <option value="straps">Straps Adjustment</option>
-                <option value="cups">Add Bra Cups</option>
-                <option value="buttons">Buttons/Hooks</option>
-                <option value="steaming">Steaming</option>
-                <option value="cleaning">Cleaning</option>
-            `;
-            
-            if (savedItems.length > 0) {
-                html += `<option value="---" disabled>── Saved Items ──</option>`;
-                savedItems.forEach(item => {
-                    html += `<option value="saved:${item}">${item}</option>`;
+            for (const [category, options] of Object.entries(CALC_PRICING)) {
+                // Filter options if search is active
+                const filtered = q ? options.filter(o => o.label.toLowerCase().includes(q)) : options;
+                if (filtered.length === 0) continue;
+                
+                const catId = 'altCat_' + category.replace(/[^a-zA-Z]/g, '');
+                const isOpen = !!q; // Auto-open when searching
+                
+                html += `<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:6px;overflow:hidden">
+                    <div onclick="document.getElementById('${catId}').style.display=document.getElementById('${catId}').style.display==='none'?'block':'none'" 
+                         style="padding:10px 12px;background:var(--cream);cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-weight:600;font-size:12px">${category}</span>
+                        <span style="font-size:10px;color:var(--taupe)">${filtered.length} items</span>
+                    </div>
+                    <div id="${catId}" style="display:${isOpen ? 'block' : 'none'}">`;
+                
+                filtered.forEach(opt => {
+                    html += `<div onclick="addPricedAltItem('${opt.label.replace(/'/g, "\\'")}', ${opt.cost})" 
+                                 style="padding:8px 12px;border-top:1px solid #f0ece6;cursor:pointer;display:flex;justify-content:space-between;align-items:center;font-size:12px;transition:background 0.1s"
+                                 onmouseover="this.style.background='var(--accent-light)'" onmouseout="this.style.background='transparent'">
+                        <span style="flex:1;min-width:0">${opt.label}</span>
+                        <span style="font-weight:600;color:var(--accent);white-space:nowrap;margin-left:8px">$${opt.cost} <span style="color:var(--taupe);font-weight:400">/ $${opt.cost * 2}</span></span>
+                    </div>`;
                 });
+                
+                html += `</div></div>`;
             }
             
-            html += `<option value="custom">+ Custom...</option>`;
-            dropdown.innerHTML = html;
-        }
-        
-        function manageSavedAltItems() {
-            const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
-            
-            if (savedItems.length === 0) {
-                toast('No saved items yet. Add a custom item and check "Save for future use"', 'info');
-                return;
+            if (!html) {
+                html = `<div style="text-align:center;padding:20px;color:var(--taupe);font-size:12px">No items match "${q}".<br><a href="#" onclick="event.preventDefault();setAltAddTab('custom')" style="color:var(--accent)">Add as custom item →</a></div>`;
             }
             
-            let html = '<div style="font-size:12px;margin-bottom:12px">Click × to remove saved items:</div>';
-            savedItems.forEach((item, idx) => {
-                html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:var(--cream);border-radius:4px;margin-bottom:4px">
-                    <span>${item}</span>
-                    <button class="action-btn" style="color:#e74c3c" onclick="deleteSavedAltItem(${idx})">×</button>
-                </div>`;
-            });
-            
-            // Show in a simple alert-style popup
-            const popup = document.createElement('div');
-            popup.id = 'savedItemsPopup';
-            popup.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:white;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:10001;max-width:300px;width:90%';
-            popup.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-                    <h3 style="font-size:14px;font-weight:600">Saved Alteration Items</h3>
-                    <button onclick="document.getElementById('savedItemsPopup').remove()" style="background:none;border:none;font-size:18px;cursor:pointer">×</button>
-                </div>
-                ${html}
-            `;
-            document.body.appendChild(popup);
+            container.innerHTML = html;
         }
         
-        function deleteSavedAltItem(idx) {
-            const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
-            const removed = savedItems.splice(idx, 1);
-            localStorage.setItem('estrelle_alt_items', JSON.stringify(savedItems));
-            toast(`Removed "${removed}"`, 'success');
-            
-            // Refresh the popup
-            document.getElementById('savedItemsPopup')?.remove();
-            if (savedItems.length > 0) {
-                manageSavedAltItems();
-            }
-            
-            // Refresh dropdown if form is open
-            if ($('addAltItemForm').style.display !== 'none') {
-                populateAltItemDropdown();
-            }
+        function filterAltPricingList() {
+            renderAltPricingCatList($('altItemSearch').value);
         }
         
-        function cancelAddAltItem() {
-            $('addAltItemForm').style.display = 'none';
-        }
-        
-        function toggleCustomAltItem() {
-            const val = $('newAltItemType').value;
-            $('customAltItemGroup').style.display = val === 'custom' ? 'block' : 'none';
-        }
-        
-        function saveNewAltItem() {
-            const type = $('newAltItemType').value;
-            let name;
-            
-            if (type === 'custom') {
-                name = $('customAltItem').value.trim();
-                if (!name) {
-                    toast('Enter item name', 'error');
-                    return;
-                }
-                // Save for future if checkbox checked
-                if ($('saveCustomAltItem')?.checked) {
-                    const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
-                    if (!savedItems.includes(name)) {
-                        savedItems.push(name);
-                        localStorage.setItem('estrelle_alt_items', JSON.stringify(savedItems));
-                        toast('Item saved for future use!', 'success');
-                    }
-                }
-            } else if (type.startsWith('saved:')) {
-                name = type.replace('saved:', '');
-            } else {
-                name = type.charAt(0).toUpperCase() + type.slice(1).replace('-', ' ');
-            }
-            
-            const details = $('newAltItemDetails').value;
-            
-            // Calculate which fitting we're at
+        function addPricedAltItem(label, cost) {
             const fittings = data.appointments.filter(a => 
                 a.ClientID == currentAltClientId && 
                 (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
@@ -10357,14 +10266,91 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             currentAltItems.push({
                 id: 'alt_' + Date.now(),
-                name,
-                details,
+                name: label,
+                details: '',
+                cost: cost,
+                matchedLabel: label,
                 status: 'pending',
                 addedAtFitting: pastFittings.length || 1
             });
             
             renderAltItems();
-            cancelAddAltItem();
+            updateAltTotals();
+            toast(`Added: ${label} — $${cost}/$${cost * 2}`, 'success');
+            
+            // Keep form open for quick multi-add, clear search
+            $('altItemSearch').value = '';
+            renderAltPricingCatList();
+        }
+        
+        function saveCustomAltItemNew() {
+            const name = $('customAltItemName').value.trim();
+            if (!name) { toast('Enter item name', 'error'); return; }
+            
+            const costStr = $('customAltItemCost').value.trim().replace(/[$,]/g, '');
+            const cost = costStr ? (parseFloat(costStr) || 0) : 0;
+            const details = $('customAltItemDetails').value.trim();
+            
+            const fittings = data.appointments.filter(a => 
+                a.ClientID == currentAltClientId && 
+                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+            );
+            const pastFittings = fittings.filter(f => parseDate(f.Date) < new Date());
+            
+            currentAltItems.push({
+                id: 'alt_' + Date.now(),
+                name: name,
+                details: details,
+                cost: cost || null,
+                matchedLabel: cost ? 'Custom price' : null,
+                status: 'pending',
+                addedAtFitting: pastFittings.length || 1
+            });
+            
+            renderAltItems();
+            updateAltTotals();
+            toast(cost ? `Added: ${name} — $${cost}/$${cost * 2}` : `Added: ${name} (no price set)`, 'success');
+            
+            // Reset form
+            $('customAltItemName').value = '';
+            $('customAltItemCost').value = '';
+            $('customAltItemDetails').value = '';
+        }
+        
+        function updateAltTotals() {
+            const bar = $('altTotalsBar');
+            if (!bar) return;
+            
+            let totalCost = 0, pricedCount = 0;
+            for (const item of currentAltItems) {
+                if (item.cost) { totalCost += item.cost; pricedCount++; }
+            }
+            
+            if (pricedCount === 0) { bar.style.display = 'none'; return; }
+            
+            let customerPrice = totalCost * 2;
+            let minApplied = false;
+            if (pricedCount >= 3 && customerPrice < 800) { customerPrice = 800; minApplied = true; }
+            const unpriced = currentAltItems.length - pricedCount;
+            
+            bar.style.display = 'flex';
+            bar.innerHTML = `
+                <div style="text-align:center"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--taupe)">Our Cost</div><div style="font-size:18px;font-weight:700">$${totalCost.toLocaleString()}</div></div>
+                <div style="text-align:center"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--taupe)">Client Price</div><div style="font-size:18px;font-weight:700;color:#C4A265">$${customerPrice.toLocaleString()}</div></div>
+                <div style="text-align:center"><div style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--taupe)">Items</div><div style="font-size:18px;font-weight:700">${currentAltItems.length}</div></div>
+                ${minApplied ? `<div style="font-size:9px;color:#C4A265;font-weight:600">$800 MIN</div>` : ''}
+                ${unpriced > 0 ? `<div style="font-size:9px;color:#f39c12">${unpriced} unpriced</div>` : ''}
+                <button class="btn btn-sm" onclick="copyAltQuote()" style="background:#C4A265;color:white;border:none;padding:5px 12px;border-radius:6px;font-size:10px">📋 Copy</button>
+            `;
+        }
+        
+        // Keep these for backward compat
+        function populateAltItemDropdown() {}
+        function manageSavedAltItems() {}
+        function toggleCustomAltItem() {}
+        
+        function cancelAddAltItem() {
+            $('addAltItemForm').style.display = 'none';
         }
         
         function updateAltItemStatus(idx, status) {
@@ -10492,14 +10478,14 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 if (altRecord && altRecord.ID) {
                     const updates = { AlterationItems: itemsJson, Notes: notes };
                     if (neededBy) updates.DueDate = neededBy;
-                    await updateRecord('Alterations', altRecord.ID, updates);
+                    updateRecord('Alterations', altRecord.ID, updates);
                 }
             } catch (e) {
                 console.warn('[ALTS] Google Sheets sync failed (data safe in localStorage):', e);
             }
             
             // Then mark ready
-            await markAlterationComplete(currentAltClientId);
+            markAlterationComplete(currentAltClientId);
             closeModal('alteration');
         }
         
@@ -11988,21 +11974,472 @@ The {StoreName} Team
             $('viewOrders').style.color = view === 'orders' ? 'white' : 'var(--text)';
             $('viewAlterations').style.background = view === 'alterations' ? 'var(--accent)' : 'white';
             $('viewAlterations').style.color = view === 'alterations' ? 'white' : 'var(--text)';
+            $('viewCalculator').style.background = view === 'calculator' ? 'var(--accent)' : 'white';
+            $('viewCalculator').style.color = view === 'calculator' ? 'white' : 'var(--text)';
             
             $('ordersViewContent').style.display = view === 'orders' ? 'block' : 'none';
             $('alterationsViewContent').style.display = view === 'alterations' ? 'block' : 'none';
+            $('calculatorViewContent').style.display = view === 'calculator' ? 'block' : 'none';
             
             if (view === 'orders') {
                 $('ordersAddBtn').textContent = '+ Add Order';
                 $('ordersAddBtn').onclick = openAddOrder;
+                $('ordersAddBtn').style.display = '';
                 renderOrders();
-            } else {
+            } else if (view === 'alterations') {
                 $('ordersAddBtn').textContent = '+ Add Fitting';
                 $('ordersAddBtn').onclick = openAddAlterationItem;
+                $('ordersAddBtn').style.display = '';
                 renderAlts();
+            } else if (view === 'calculator') {
+                $('ordersAddBtn').style.display = 'none';
+                renderCalc();
             }
         }
         
+        // ========== ALTERATION CALCULATOR ==========
+        const CALC_PRICING = {
+  "Bodice — Take In": [
+    { label: "Take in bodice — plain, up to 1″ (per side)", cost: 85, type: "plain" },
+    { label: "Take in bodice — plain, 1–2″ (per side)", cost: 125, type: "plain" },
+    { label: "Take in bodice — plain, 2–3″ (per side)", cost: 180, type: "plain" },
+    { label: "Take in bodice — plain, over 3″ (per side)", cost: 260, type: "plain" },
+    { label: "Take in bodice — lace/bead, up to 1″ (per side)", cost: 115, type: "lace" },
+    { label: "Take in bodice — lace/bead, 1–2″ (per side)", cost: 165, type: "lace" },
+    { label: "Take in bodice — lace/bead, 2–3″ (per side)", cost: 235, type: "lace" },
+    { label: "Take in bodice — lace/bead, over 3″ (per side)", cost: 330, type: "lace" },
+    { label: "Take in bodice — heavy bead, up to 1″ (per side)", cost: 200, type: "heavy" },
+    { label: "Take in bodice — heavy bead, 1–2″ (per side)", cost: 280, type: "heavy" },
+    { label: "Take in bodice — heavy bead, 2–3″ (per side)", cost: 390, type: "heavy" },
+    { label: "Take in bodice — heavy bead, over 3″ (per side)", cost: 540, type: "heavy" },
+    { label: "VW take in bodice — up to 1″ (per side)", cost: 200, type: "vw" },
+    { label: "VW take in bodice — 1–2″ (per side)", cost: 280, type: "vw" },
+    { label: "VW take in bodice — 2–3″ (per side)", cost: 390, type: "vw" },
+    { label: "VW take in bodice — over 3″ (per side)", cost: 540, type: "vw" },
+  ],
+  "Bodice — Let Out": [
+    { label: "Let out bodice — plain, up to 1″ (per side)", cost: 90, type: "plain" },
+    { label: "Let out bodice — plain, 1–2″ (per side)", cost: 140, type: "plain" },
+    { label: "Let out bodice — plain, over 2″ (per side)", cost: 210, type: "plain" },
+    { label: "Let out bodice — lace/bead, up to 1″ (per side)", cost: 125, type: "lace" },
+    { label: "Let out bodice — lace/bead, 1–2″ (per side)", cost: 185, type: "lace" },
+    { label: "Let out bodice — lace/bead, over 2″ (per side)", cost: 270, type: "lace" },
+    { label: "Let out bodice — heavy bead, up to 1″ (per side)", cost: 210, type: "heavy" },
+    { label: "Let out bodice — heavy bead, 1–2″ (per side)", cost: 295, type: "heavy" },
+    { label: "Let out bodice — heavy bead, over 2″ (per side)", cost: 430, type: "heavy" },
+    { label: "VW let out bodice — up to 1″ (per side)", cost: 210, type: "vw" },
+    { label: "VW let out bodice — 1–2″ (per side)", cost: 295, type: "vw" },
+    { label: "VW let out bodice — over 2″ (per side)", cost: 430, type: "vw" },
+  ],
+  "Bodice — Other": [
+    { label: "Add/replace boning (per bone)", cost: 30 },
+    { label: "Shorten side boning", cost: 25 },
+    { label: "Add bra cups — sewn-in", cost: 50 },
+    { label: "Add bra cups — built-in structure", cost: 100 },
+    { label: "Add inner belt — grosgrain ribbon", cost: 40 },
+    { label: "Add inner belt — structured w/ boning", cost: 80 },
+    { label: "Add inner belt — custom petersham", cost: 65 },
+    { label: "Reshape neckline — minor, plain", cost: 70 },
+    { label: "Reshape neckline — minor, lace/beaded", cost: 115 },
+    { label: "Reshape neckline — major, plain", cost: 150 },
+    { label: "Reshape neckline — major, lace/beaded", cost: 225 },
+    { label: "Convert neckline style", cost: 180 },
+    { label: "Tack ruching / smooth fabric", cost: 55 },
+    { label: "Tack neckline ruching", cost: 60 },
+    { label: "Adjust straps", cost: 45 },
+    { label: "Add inner strap (support)", cost: 70 },
+    { label: "Add new straps — plain", cost: 80 },
+    { label: "Add new straps — lace/beaded", cost: 135 },
+    { label: "Add silicone grip", cost: 25 },
+    { label: "VW add/replace boning (per metal bone)", cost: 65, type: "vw" },
+    { label: "VW reshape neckline — minor", cost: 155, type: "vw" },
+    { label: "VW reshape neckline — major", cost: 290, type: "vw" },
+    { label: "VW pin neckline ruching", cost: 115, type: "vw" },
+    { label: "VW add bra cups — sewn-in", cost: 100, type: "vw" },
+    { label: "VW add bra cups — built-in structure", cost: 165, type: "vw" },
+    { label: "VW add inner belt — structured", cost: 140, type: "vw" },
+  ],
+  "Back & Zipper": [
+    { label: "Corset back adjustment", cost: 110 },
+    { label: "Add corset back (replace zipper)", cost: 210 },
+    { label: "Remove seam allowance", cost: 45 },
+    { label: "Replace zipper — standard", cost: 65 },
+    { label: "Replace zipper — long/corset-cover", cost: 95 },
+    { label: "Fix zipper", cost: 60 },
+    { label: "Add nude band at back", cost: 65 },
+    { label: "Add modesty panel — front", cost: 60 },
+    { label: "Add snap for bustle/train", cost: 20 },
+    { label: "Cut inner lining", cost: 30 },
+    { label: "VW replace zipper", cost: 125, type: "vw" },
+    { label: "VW corset back adjustment", cost: 195, type: "vw" },
+  ],
+  "Waist & Hip": [
+    { label: "Take in waist — plain, up to 1″ (per side)", cost: 80, type: "plain" },
+    { label: "Take in waist — plain, 1–2″ (per side)", cost: 115, type: "plain" },
+    { label: "Take in waist — plain, over 2″ (per side)", cost: 170, type: "plain" },
+    { label: "Let out waist — plain, up to 1″ (per side)", cost: 85, type: "plain" },
+    { label: "Let out waist — plain, 1–2″ (per side)", cost: 130, type: "plain" },
+    { label: "Take in hips — plain, up to 1″ (per side)", cost: 80, type: "plain" },
+    { label: "Take in hips — plain, 1–2″ (per side)", cost: 120, type: "plain" },
+    { label: "Take in hips — plain, over 2″ (per side)", cost: 175, type: "plain" },
+    { label: "Let out hips — plain, up to 1″ (per side)", cost: 90, type: "plain" },
+    { label: "Let out hips — plain, 1–2″ (per side)", cost: 140, type: "plain" },
+    { label: "Take in waist — lace/bead, up to 1″ (per side)", cost: 105, type: "lace" },
+    { label: "Take in waist — lace/bead, 1–2″ (per side)", cost: 150, type: "lace" },
+    { label: "Take in waist — lace/bead, over 2″ (per side)", cost: 220, type: "lace" },
+    { label: "Let out waist — lace/bead, up to 1″ (per side)", cost: 115, type: "lace" },
+    { label: "Let out waist — lace/bead, 1–2″ (per side)", cost: 165, type: "lace" },
+    { label: "Take in hips — lace/bead, up to 1″ (per side)", cost: 105, type: "lace" },
+    { label: "Take in hips — lace/bead, 1–2″ (per side)", cost: 155, type: "lace" },
+    { label: "Take in hips — lace/bead, over 2″ (per side)", cost: 225, type: "lace" },
+    { label: "Let out hips — lace/bead, up to 1″ (per side)", cost: 120, type: "lace" },
+    { label: "Let out hips — lace/bead, 1–2″ (per side)", cost: 180, type: "lace" },
+    { label: "Take in waist — heavy bead, up to 1″ (per side)", cost: 175, type: "heavy" },
+    { label: "Take in waist — heavy bead, 1–2″ (per side)", cost: 250, type: "heavy" },
+    { label: "Take in waist — heavy bead, over 2″ (per side)", cost: 350, type: "heavy" },
+    { label: "Let out waist — heavy bead, up to 1″ (per side)", cost: 185, type: "heavy" },
+    { label: "Let out waist — heavy bead, 1–2″ (per side)", cost: 275, type: "heavy" },
+    { label: "Take in hips — heavy bead, up to 1″ (per side)", cost: 175, type: "heavy" },
+    { label: "Take in hips — heavy bead, 1–2″ (per side)", cost: 250, type: "heavy" },
+    { label: "Take in hips — heavy bead, over 2″ (per side)", cost: 360, type: "heavy" },
+    { label: "Let out hips — heavy bead, up to 1″ (per side)", cost: 185, type: "heavy" },
+    { label: "Let out hips — heavy bead, 1–2″ (per side)", cost: 280, type: "heavy" },
+    { label: "Remove excess fabric — waist (plain)", cost: 60, type: "plain" },
+    { label: "Remove excess fabric — waist (lace)", cost: 80, type: "lace" },
+    { label: "Remove excess fabric — waist (heavy bead)", cost: 130, type: "heavy" },
+    { label: "Add waist stay / belt loop", cost: 35 },
+    { label: "Add hip padding", cost: 70 },
+    { label: "VW take in waist — up to 1″ (per side)", cost: 155, type: "vw" },
+    { label: "VW take in waist — 1–2″ (per side)", cost: 220, type: "vw" },
+    { label: "VW take in waist — over 2″ (per side)", cost: 315, type: "vw" },
+  ],
+  "Hemming": [
+    { label: "Hem fitted/A-line — plain, single layer", cost: 120, style: "fitted", type: "plain" },
+    { label: "Hem fitted/A-line — plain, with lining", cost: 155, style: "fitted", type: "plain" },
+    { label: "Hem fitted — lace trim re-applied", cost: 220, style: "fitted", type: "lace" },
+    { label: "Hem fitted — lace + light beading", cost: 265, style: "fitted", type: "lace" },
+    { label: "Hem fitted — lace + lining", cost: 250, style: "fitted", type: "lace" },
+    { label: "Hem fitted — heavy beading", cost: 420, style: "fitted", type: "heavy" },
+    { label: "Hem fitted — heavy beading + lining", cost: 475, style: "fitted", type: "heavy" },
+    { label: "Hem scallop — lace reattach", cost: 280, style: "scallop" },
+    { label: "Hem scallop — beaded reattach", cost: 430, style: "scallop" },
+    { label: "Hem scallop — scallop + lining", cost: 320, style: "scallop" },
+    { label: "Hem scallop train — lace", cost: 350, style: "scallop" },
+    { label: "Hem scallop train — beaded", cost: 480, style: "scallop" },
+    { label: "Hem ball gown — 2–3 layers, plain", cost: 200, style: "ballgown", type: "plain" },
+    { label: "Hem ball gown — 4–5 layers, plain", cost: 300, style: "ballgown", type: "plain" },
+    { label: "Hem ball gown — 5+ layers / huge", cost: 450, style: "ballgown" },
+    { label: "Hem ball gown — lace overlay + plain under", cost: 320, style: "ballgown" },
+    { label: "Hem ball gown — heavy bead overlay + layers", cost: 500, style: "ballgown" },
+    { label: "Hem ball gown — scallop overlay + plain", cost: 400, style: "ballgown" },
+    { label: "Hem ball gown — scallop overlay + beaded", cost: 560, style: "ballgown" },
+    { label: "Hem balance — fitted, plain", cost: 120, style: "fitted" },
+    { label: "Hem balance — fitted, lace/beaded", cost: 180, style: "fitted" },
+    { label: "Hem balance — ball gown, 2–3 layers", cost: 250, style: "ballgown" },
+    { label: "Hem balance — ball gown, 4–5 layers", cost: 375, style: "ballgown" },
+    { label: "Hem balance — ball gown, 5+ layers", cost: 550, style: "ballgown" },
+    { label: "Tulle layers (per layer)", cost: 45 },
+    { label: "Add horsehair braid (per layer)", cost: 80 },
+    { label: "Remove horsehair braid (per layer)", cost: 55 },
+    { label: "Replace horsehair braid (per layer)", cost: 95 },
+  ],
+  "Train": [
+    { label: "Shorten train — plain", cost: 100 },
+    { label: "Shorten train — lace/beaded", cost: 180 },
+    { label: "Shorten train — scallop edge", cost: 225 },
+    { label: "Bustle-length cut + hem — plain", cost: 155 },
+    { label: "Bustle-length cut + hem — lace", cost: 240 },
+    { label: "Add removable train (custom)", cost: 280 },
+  ],
+  "Bustle": [
+    { label: "American (over) — 1–3 points", cost: 85 },
+    { label: "American (over) — 4–6 points", cost: 120 },
+    { label: "American (over) — 7+ points", cost: 165 },
+    { label: "French (under) — standard", cost: 105 },
+    { label: "French (under) — complex multi-point", cost: 155 },
+    { label: "Ballroom / wrist loop — single", cost: 50 },
+    { label: "Ballroom / wrist loop — multiple points", cost: 140 },
+    { label: "2-tier — up to 6 points", cost: 140 },
+    { label: "2-tier — 7–10 points", cost: 180 },
+    { label: "2-tier — 10+ points", cost: 225 },
+    { label: "Combination — over + under combo", cost: 185 },
+  ],
+  "Skirt": [
+    { label: "Take in skirt — plain, fitted (per side)", cost: 95, type: "plain" },
+    { label: "Take in skirt — plain, ball gown (per side)", cost: 140, type: "plain", style: "ballgown" },
+    { label: "Take in skirt — lace, fitted (per side)", cost: 125, type: "lace" },
+    { label: "Take in skirt — lace, ball gown (per side)", cost: 175, type: "lace", style: "ballgown" },
+    { label: "Take in skirt — heavy bead, fitted (per side)", cost: 160, type: "heavy" },
+    { label: "Take in skirt — heavy bead, ball gown (per side)", cost: 225, type: "heavy", style: "ballgown" },
+    { label: "Let out skirt — plain (per side)", cost: 105, type: "plain" },
+    { label: "Let out skirt — lace (per side)", cost: 140, type: "lace" },
+    { label: "Let out skirt — heavy bead (per side)", cost: 180, type: "heavy" },
+    { label: "Add slit", cost: 75 },
+    { label: "Close / shorten slit", cost: 55 },
+    { label: "Shorten straps to raise hem (per strap)", cost: 40 },
+  ],
+  "Sleeves": [
+    { label: "Shorten sleeves — plain", cost: 55 },
+    { label: "Shorten sleeves — lace", cost: 105 },
+    { label: "Shorten sleeves — beaded", cost: 150 },
+    { label: "Take in sleeves — plain (per sleeve)", cost: 55 },
+    { label: "Take in sleeves — lace (per sleeve)", cost: 85 },
+    { label: "Take in sleeves — beaded (per sleeve)", cost: 115 },
+    { label: "Take in sleeves — gradual taper (per sleeve)", cost: 75 },
+    { label: "Let out sleeves — plain (per sleeve)", cost: 60 },
+    { label: "Let out sleeves — lace/beaded (per sleeve)", cost: 95 },
+    { label: "Add sleeves — plain/illusion tulle", cost: 140 },
+    { label: "Add sleeves — lace (matching)", cost: 265 },
+    { label: "Remove sleeves", cost: 75 },
+    { label: "Cap to long sleeve — lace/illusion", cost: 315 },
+    { label: "Add silicone to sleeves", cost: 25 },
+  ],
+  "Lace & Beading": [
+    { label: "Reapply applique — small (1–5)", cost: 75 },
+    { label: "Reapply applique — medium (6–15)", cost: 150 },
+    { label: "Reapply applique — large / full bodice", cost: 265 },
+    { label: "Add lace applique — small", cost: 95 },
+    { label: "Add lace applique — large / trailing", cost: 215 },
+    { label: "Beading repair — small section", cost: 70 },
+    { label: "Beading repair — large section", cost: 150 },
+    { label: "Add beading/crystals — light scatter", cost: 110 },
+    { label: "Add beading/crystals — heavy", cost: 265 },
+  ],
+  "Lining": [
+    { label: "Replace lining — partial (bodice or skirt)", cost: 150 },
+    { label: "Replace lining — full dress", cost: 225 },
+    { label: "Add lining — half dress", cost: 225 },
+    { label: "Add lining — full dress", cost: 300 },
+    { label: "Add double lining — half dress", cost: 325 },
+    { label: "Add double lining — full dress", cost: 425 },
+    { label: "Cut/trim inner lining", cost: 30 },
+  ],
+  "Veil & Accessories": [
+    { label: "Hem veil — plain edge", cost: 50 },
+    { label: "Hem veil — ribbon/satin edge", cost: 75 },
+    { label: "Hem veil — lace edge", cost: 115 },
+    { label: "Shorten veil", cost: 65 },
+    { label: "Add comb to veil", cost: 25 },
+    { label: "Bustle hook for veil", cost: 25 },
+    { label: "Alter jacket/bolero — simple", cost: 75 },
+    { label: "Alter jacket/bolero — complex", cost: 145 },
+    { label: "Take in glove fingers (per pair)", cost: 50 },
+  ],
+};
+
+        let calcState = { dressType: null, dressStyle: null, selections: {} };
+        
+        function calcFilteredOptions(category) {
+            const options = CALC_PRICING[category];
+            if (!options) return [];
+            return options.filter(opt => {
+                if (opt.type) {
+                    if (calcState.dressType === 'vw') {
+                        // VW: show vw-specific items + generic items (no type)
+                        if (opt.type !== 'vw' && opt.type !== undefined) return false;
+                    } else {
+                        if (opt.type === 'vw') return false;
+                        if (opt.type !== calcState.dressType && opt.type !== undefined) {
+                            // Show if it's a generic item (no type filter needed)
+                            return false;
+                        }
+                    }
+                }
+                if (opt.style) {
+                    if (opt.style === 'scallop' && calcState.dressStyle !== 'scallop') return false;
+                    if (opt.style === 'ballgown' && calcState.dressStyle !== 'ballgown') return false;
+                    if (opt.style === 'fitted' && calcState.dressStyle !== 'fitted' && calcState.dressStyle !== 'scallop') return false;
+                }
+                return true;
+            });
+        }
+        
+        function calcSelectType(type) {
+            calcState.dressType = type;
+            calcState.selections = {};
+            renderCalc();
+        }
+        
+        function calcSelectStyle(style) {
+            calcState.dressStyle = style;
+            calcState.selections = {};
+            renderCalc();
+        }
+        
+        function calcToggleCat(cat) {
+            const body = document.getElementById('calcBody-' + cat.replace(/[^a-zA-Z]/g, ''));
+            if (body) body.classList.toggle('open');
+        }
+        
+        function calcSelectOpt(category, index) {
+            if (!calcState.selections[category]) calcState.selections[category] = new Set();
+            if (calcState.selections[category].has(index)) {
+                calcState.selections[category].delete(index);
+                if (calcState.selections[category].size === 0) delete calcState.selections[category];
+            } else {
+                calcState.selections[category].add(index);
+            }
+            updateCalcTotals();
+        }
+        
+        function updateCalcTotals() {
+            let totalCost = 0, itemCount = 0;
+            for (const [cat, indices] of Object.entries(calcState.selections)) {
+                const filtered = calcFilteredOptions(cat);
+                for (const idx of indices) {
+                    if (filtered[idx]) { totalCost += filtered[idx].cost; itemCount++; }
+                }
+            }
+            let customerPrice = totalCost * 2;
+            let minApplied = false;
+            if (itemCount >= 3 && customerPrice < 800) { customerPrice = 800; minApplied = true; }
+            
+            $('calcTotalCost').textContent = '$' + totalCost.toLocaleString();
+            $('calcTotalPrice').textContent = '$' + customerPrice.toLocaleString();
+            $('calcTotalPrice').style.textDecoration = minApplied ? 'underline' : 'none';
+            $('calcItemCount').textContent = itemCount;
+            $('calcMinNote').textContent = minApplied ? '$800 MINIMUM APPLIED' : '';
+            
+            // Update category price badges
+            for (const cat of Object.keys(CALC_PRICING)) {
+                const el = document.getElementById('calcPrice-' + cat.replace(/[^a-zA-Z]/g, ''));
+                if (!el) continue;
+                const indices = calcState.selections[cat];
+                if (indices && indices.size > 0) {
+                    const filtered = calcFilteredOptions(cat);
+                    let catTotal = 0;
+                    for (const idx of indices) { if (filtered[idx]) catTotal += filtered[idx].cost; }
+                    el.textContent = '$' + catTotal;
+                    el.closest('.calc-category').classList.add('active');
+                } else {
+                    el.textContent = '';
+                    el.closest('.calc-category')?.classList.remove('active');
+                }
+            }
+        }
+        
+        function resetCalc() {
+            calcState = { dressType: null, dressStyle: null, selections: {} };
+            renderCalc();
+        }
+        
+        function renderCalc() {
+            const app = $('altCalcApp');
+            if (!app) return;
+            const show = calcState.dressType && calcState.dressStyle;
+            let h = '';
+            
+            // Step 1: Dress Type
+            h += `<div class="card" style="margin-bottom:12px"><div class="card-body">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                    <div style="width:28px;height:28px;background:var(--charcoal);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+                    <div style="font-weight:600;font-size:15px">Dress Type</div>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    ${['plain|Plain Fabric','lace|Lace / Light Beaded','heavy|Heavy Beaded','vw|Vivienne Westwood'].map(o => {
+                        const [v,l] = o.split('|');
+                        return `<button class="btn btn-sm ${calcState.dressType===v?'btn-primary':'btn-secondary'}" onclick="calcSelectType('${v}')" style="border-radius:100px;padding:8px 18px;font-size:13px">${l}</button>`;
+                    }).join('')}
+                </div>
+            </div></div>`;
+            
+            // Step 2: Dress Style
+            if (calcState.dressType) {
+                h += `<div class="card" style="margin-bottom:12px"><div class="card-body">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                        <div style="width:28px;height:28px;background:var(--charcoal);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
+                        <div style="font-weight:600;font-size:15px">Dress Style</div>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px">
+                        ${['fitted|Fitted / A-Line','scallop|Fitted + Scallop Hem','ballgown|Ball Gown'].map(o => {
+                            const [v,l] = o.split('|');
+                            return `<button class="btn btn-sm ${calcState.dressStyle===v?'btn-primary':'btn-secondary'}" onclick="calcSelectStyle('${v}')" style="border-radius:100px;padding:8px 18px;font-size:13px">${l}</button>`;
+                        }).join('')}
+                    </div>
+                </div></div>`;
+            }
+            
+            // Step 3: Alterations (multi-select per category)
+            if (show) {
+                h += `<div class="card" style="margin-bottom:12px"><div class="card-body">
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                        <div style="width:28px;height:28px;background:var(--charcoal);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+                        <div style="font-weight:600;font-size:15px">Select Alterations</div>
+                        <div style="font-size:11px;color:var(--taupe);margin-left:auto">Select multiple per category</div>
+                    </div>`;
+                
+                for (const [category, options] of Object.entries(CALC_PRICING)) {
+                    const filtered = calcFilteredOptions(category);
+                    if (filtered.length === 0) continue;
+                    const catId = category.replace(/[^a-zA-Z]/g, '');
+                    const selectedSet = calcState.selections[category] || new Set();
+                    const hasSelected = selectedSet.size > 0;
+                    
+                    h += `<div class="calc-category ${hasSelected ? 'active' : ''}" style="border:1.5px solid ${hasSelected ? 'var(--accent)' : 'var(--border)'};border-radius:8px;margin-bottom:8px;overflow:hidden">
+                        <div onclick="calcToggleCat('${category}')" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;background:${hasSelected ? 'var(--accent-light)' : 'var(--bg)'}">
+                            <div style="font-weight:600;font-size:13px">${category} ${hasSelected ? '<span style=\\"font-size:10px;color:var(--accent)\\">(' + selectedSet.size + ')</span>' : ''}</div>
+                            <div style="font-weight:700;color:var(--accent);font-size:13px;min-width:50px;text-align:right" id="calcPrice-${catId}"></div>
+                        </div>
+                        <div id="calcBody-${catId}" class="${hasSelected ? 'open' : ''}" style="display:${hasSelected ? 'block' : 'none'};padding:0 16px 12px;background:white">`;
+                    
+                    filtered.forEach((opt, i) => {
+                        const sel = selectedSet.has(i);
+                        h += `<div onclick="calcSelectOpt('${category}',${i})" style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f0ece6;cursor:pointer;${sel ? 'padding-left:6px;' : ''}">
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <div style="width:16px;height:16px;border-radius:3px;border:2px solid ${sel ? 'var(--accent)' : 'var(--border)'};display:flex;align-items:center;justify-content:center;flex-shrink:0;background:${sel ? 'var(--accent)' : 'transparent'}">
+                                    ${sel ? '<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ''}
+                                </div>
+                                <div style="font-size:13px;${sel ? 'font-weight:600;color:var(--text)' : 'color:var(--text-secondary)'}">${opt.label}</div>
+                            </div>
+                            <div style="font-size:12px;font-weight:600;white-space:nowrap;${sel ? 'color:var(--accent)' : 'color:var(--text-secondary)'}">$${opt.cost} <span style="color:var(--taupe)">/ $${opt.cost*2}</span></div>
+                        </div>`;
+                    });
+                    h += `</div></div>`;
+                }
+                h += `</div></div>`;
+            }
+            
+            app.innerHTML = h;
+            updateCalcTotals();
+        }
+        
+        function calcToggleCat(cat) {
+            const body = document.getElementById('calcBody-' + cat.replace(/[^a-zA-Z]/g, ''));
+            if (body) {
+                const isOpen = body.style.display === 'block';
+                body.style.display = isOpen ? 'none' : 'block';
+            }
+        }
+        
+        function saveCalcToAlteration() {
+            let items = [];
+            let totalCost = 0, itemCount = 0;
+            for (const [cat, indices] of Object.entries(calcState.selections)) {
+                const filtered = calcFilteredOptions(cat);
+                for (const idx of indices) {
+                    if (filtered[idx]) {
+                        items.push({ category: cat, label: filtered[idx].label, cost: filtered[idx].cost, clientPrice: filtered[idx].cost * 2 });
+                        totalCost += filtered[idx].cost;
+                        itemCount++;
+                    }
+                }
+            }
+            if (items.length === 0) { toast('No alterations selected', 'error'); return; }
+            
+            let customerPrice = totalCost * 2;
+            if (itemCount >= 3 && customerPrice < 800) customerPrice = 800;
+            
+            const summary = items.map(i => `${i.label} — $${i.cost}/$${i.clientPrice}`).join('\n');
+            const text = `ALTERATION QUOTE\nDress: ${calcState.dressType} / ${calcState.dressStyle}\nItems: ${itemCount}\n\n${summary}\n\nOur Cost: $${totalCost}\nClient Price: $${customerPrice}${itemCount >= 3 && totalCost * 2 < 800 ? ' ($800 min applied)' : ''}`;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                toast(`Quote copied! ${itemCount} items, $${customerPrice} client price`, 'success');
+            }).catch(() => {
+                // Fallback: show in a prompt
+                prompt('Copy this quote:', text);
+            });
+        }
+
         // ========== REPORTING VIEW TOGGLE ==========
         let reportingView = 'analytics';
         
@@ -12932,17 +13369,10 @@ The {storeName} Team`
             const weddingDate = $('editBrideWeddingDate').value;
             const email = $('editBrideEmail').value;
             
-            await updateRecord('Clients', clientId, {
+            updateRecord('Clients', clientId, {
                 WeddingDate: weddingDate,
                 Email: email
             });
-            
-            // Update local data
-            const c = getClient(clientId);
-            if (c) {
-                c.WeddingDate = weddingDate;
-                c.Email = email;
-            }
             
             closeModal('editBride');
             toast('Updated!', 'success');
@@ -13095,8 +13525,39 @@ The {storeName} Team`
                 budget: c.Budget || ''
             };
             
-            // Check for saved draft
-            $('draftIndicator').style.display = hasDraft(c.ID) ? 'inline' : 'none';
+            // Check for saved draft — show prominent banner
+            const _hasDraft = hasDraft(c.ID);
+            $('draftBanner').style.display = _hasDraft ? 'block' : 'none';
+            if (_hasDraft) {
+                try {
+                    const _draft = JSON.parse(c.OrderDraft);
+                    const itemCount = _draft.items?.length || 0;
+                    const savedDate = new Date(_draft.savedAt);
+                    const timeAgo = getTimeAgo(savedDate);
+                    const total = _draft.items?.reduce((sum, item) => {
+                        let t = item.price || 0;
+                        if (item.customizations) t += item.customizations.reduce((s, cu) => s + (cu.price || 0), 0);
+                        return sum + t;
+                    }, 0) || 0;
+                    const stepNames = { 1: 'Measurements', 2: 'Add Items', 3: 'Order Details', 4: 'Review', 5: 'Sign', 6: 'Send' };
+                    const stepName = stepNames[_draft.step] || 'Step ' + _draft.step;
+                    let meta = `Saved ${timeAgo}`;
+                    if (itemCount > 0) meta += ` · ${itemCount} item${itemCount > 1 ? 's' : ''} · $${total.toLocaleString()}`;
+                    meta += ` · Left off at: ${stepName}`;
+                    $('draftBannerMeta').textContent = meta;
+                } catch (e) { $('draftBannerMeta').textContent = 'Tap to continue'; }
+            }
+            // Update She Said Yes button
+            const yesBtn = $('btnSheSaidYes');
+            if (yesBtn) {
+                if (_hasDraft) {
+                    yesBtn.textContent = '📝 Continue Draft';
+                    yesBtn.onclick = () => sheSaidYes(true);
+                } else {
+                    yesBtn.textContent = '💍 She Said Yes!';
+                    yesBtn.onclick = () => sheSaidYes();
+                }
+            }
             
             // Track page history
             if (!fromHistory && pageHistory[pageHistory.length - 1] !== 'consult') {
@@ -13525,8 +13986,7 @@ The {storeName} Team`
             const a = data.appointments.find(x => x.ID == id);
             if (!a) return;
             
-            a.Status = 'no-show';
-            await updateRecord('Appointments', id, { Status: 'no-show' });
+            updateRecord('Appointments', id, { Status: 'no-show' });
             
             renderClientAppts();
             renderDash();
@@ -14127,8 +14587,7 @@ The {storeName} Team`
             }
             
             // Save to client
-            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
             
             editingMeasurementIdx = null;
             closeModal('addMeasurement');
@@ -14185,8 +14644,7 @@ The {storeName} Team`
             measurements.push(measurement);
             
             // Save to client
-            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
             
             // Also store in currentOrder so it persists
             currentOrder.measurements = { ...measurement };
@@ -14208,8 +14666,7 @@ The {storeName} Team`
             
             measurements.splice(idx, 1);
             
-            await updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            currentClient.MeasurementHistory = JSON.stringify(measurements);
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
             
             renderClientMeasurements();
             toast('Measurement deleted', 'success', true);
@@ -14237,11 +14694,9 @@ The {storeName} Team`
             // Insert back at original position
             measurements.splice(idx, 0, measurement);
             
-            await updateRecord('Clients', clientId, { MeasurementHistory: JSON.stringify(measurements) });
-            client.MeasurementHistory = JSON.stringify(measurements);
+            updateRecord('Clients', clientId, { MeasurementHistory: JSON.stringify(measurements) });
             
             if (currentClient && currentClient.ID == clientId) {
-                currentClient.MeasurementHistory = JSON.stringify(measurements);
                 renderClientMeasurements();
             }
             
@@ -15163,13 +15618,19 @@ The {storeName} Team`
             const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value;
             
             if (hasItems || hasMeasurements) {
+                const itemCount = currentOrder.items?.length || 0;
+                let desc = '';
+                if (itemCount > 0 && hasMeasurements) desc = `${itemCount} item${itemCount > 1 ? 's' : ''} + measurements`;
+                else if (itemCount > 0) desc = `${itemCount} item${itemCount > 1 ? 's' : ''}`;
+                else desc = 'measurements';
+                
                 showChoiceDialog(
-                    'Unsaved Work',
-                    'You have unsaved work. What would you like to do?',
+                    'Save Your Work?',
+                    `You have unsaved work (${desc}). Save as a draft so you can pick up where you left off?`,
                     [
                         { label: '💾 Save Draft', style: 'primary', action: () => { closeModal('choice'); saveDraft(); } },
                         { label: '🗑️ Discard', style: 'danger', action: () => { closeModal('choice'); closeModal('yes'); } },
-                        { label: '← Go Back', style: 'secondary', action: () => { closeModal('choice'); } }
+                        { label: '← Keep Editing', style: 'secondary', action: () => { closeModal('choice'); } }
                     ]
                 );
             } else {
@@ -15273,6 +15734,10 @@ The {storeName} Team`
                 return;
             }
             
+            // Disable button immediately so they know it's working
+            const draftBtn = $('ySaveDraft');
+            if (draftBtn) { draftBtn.disabled = true; draftBtn.textContent = '💾 Saving...'; }
+            
             // Collect initials if on step 5
             let initials = {};
             if ($('init_bust')) initials.bust = $('init_bust').value || '';
@@ -15297,14 +15762,34 @@ The {storeName} Team`
             };
             
             console.log('Saving draft:', draft);
-            console.log('Items being saved:', draft.items);
             
-            // Save to Google Sheets (syncs across devices)
-            await updateRecord('Clients', currentClient.ID, { OrderDraft: JSON.stringify(draft) });
+            // 1. Save to local cache INSTANTLY (no wait)
             currentClient.OrderDraft = JSON.stringify(draft);
+            saveCachedData();
+            
+            // 2. Close modal & show confirmation IMMEDIATELY
             closeModal('yes');
-            toast('Draft saved! Available on all devices.', 'success');
+            
+            const itemCount = draft.items?.length || 0;
+            const total = draft.items?.reduce((sum, item) => {
+                let t = item.price || 0;
+                if (item.customizations) t += item.customizations.reduce((s, cu) => s + (cu.price || 0), 0);
+                return sum + t;
+            }, 0) || 0;
+            let msg = '💾 Draft saved!';
+            if (itemCount > 0) msg += ` (${itemCount} item${itemCount > 1 ? 's' : ''}, $${total.toLocaleString()})`;
+            msg += ` — Find it on the Dashboard or ${currentClient.FirstName}'s profile.`;
+            toast(msg, 'success');
+            
             renderClientProfile();
+            
+            // 3. Sync to Google Sheets in background (non-blocking)
+            updateRecord('Clients', currentClient.ID, { OrderDraft: JSON.stringify(draft) }).catch(e => {
+                console.warn('[DRAFT] Background sync to Google Sheets failed (draft safe locally):', e);
+            });
+            
+            // Re-enable button in case modal is reopened
+            if (draftBtn) { draftBtn.disabled = false; draftBtn.textContent = '💾 Save Draft'; }
         }
         
         function checkForDraft() {
@@ -15448,10 +15933,7 @@ The {storeName} Team`
         
         async function deleteDraft(clientId) {
             const id = clientId || currentClient.ID;
-            await updateRecord('Clients', id, { OrderDraft: '' });
-            if (currentClient && currentClient.ID == id) {
-                currentClient.OrderDraft = '';
-            }
+            updateRecord('Clients', id, { OrderDraft: '' });
         }
         
         function hasDraft(clientId) {
@@ -15500,10 +15982,17 @@ The {storeName} Team`
             const confirmed = await appConfirmDanger('Delete this draft?', 'Delete Draft');
             if (!confirmed) return;
             
-            await updateRecord('Clients', clientId, { OrderDraft: '' });
-            const client = data.clients.find(c => c.ID == clientId);
-            if (client) client.OrderDraft = '';
+            updateRecord('Clients', clientId, { OrderDraft: '' });
             renderDash();
+            toast('Draft deleted', 'success');
+        }
+        
+        async function deleteDraftFromProfile() {
+            const confirmed = await appConfirmDanger('Delete this draft? This cannot be undone.', 'Delete Draft');
+            if (!confirmed) return;
+            
+            updateRecord('Clients', currentClient.ID, { OrderDraft: '' });
+            if ($('draftBanner')) $('draftBanner').style.display = 'none';
             toast('Draft deleted', 'success');
         }
 
@@ -17438,7 +17927,7 @@ p{margin:6px 0;}
             if (success) {
                 // Delete draft since order is complete
                 deleteDraft(c.ID);
-                $('draftIndicator').style.display = 'none';
+                $('draftIndicator').style.display = 'none'; if($('draftBanner')) $('draftBanner').style.display = 'none';
                 
                 closeModal('yes');
                 toast('Order saved! Saving contract to Drive...', 'success');
@@ -17509,7 +17998,7 @@ p{margin:6px 0;}
             
             // Delete draft since order is complete
             deleteDraft(c.ID);
-            $('draftIndicator').style.display = 'none';
+            $('draftIndicator').style.display = 'none'; if($('draftBanner')) $('draftBanner').style.display = 'none';
             
             // Close modal
             closeModal('yes');
@@ -17561,7 +18050,7 @@ p{margin:6px 0;}
             
             // Delete draft since order is complete
             deleteDraft(c.ID);
-            $('draftIndicator').style.display = 'none';
+            $('draftIndicator').style.display = 'none'; if($('draftBanner')) $('draftBanner').style.display = 'none';
             
             // Close modal immediately for better UX
             closeModal('yes');
