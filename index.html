@@ -1265,6 +1265,7 @@
                                         <th style="cursor:pointer" onclick="sortOrdersBy('weddingDate')">Wedding <span id="sortArrow_weddingDate" style="opacity:0.3">↕</span></th>
                                         <th style="cursor:pointer" onclick="sortOrdersBy('arrivalDate')">ETA <span id="sortArrow_arrivalDate" style="opacity:0.3">↕</span></th>
                                         <th style="cursor:pointer" onclick="sortOrdersBy('status')">Status <span id="sortArrow_status" style="opacity:0.3">↕</span></th>
+                                        <th>Consultant</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -1331,6 +1332,7 @@
                         <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
                             <button class="btn btn-sm" id="viewAnalytics" onclick="setReportingView('analytics')" style="border:none;border-radius:0;background:var(--accent);color:white">Analytics</button>
                             <button class="btn btn-sm" id="viewReportBuilder" onclick="setReportingView('builder')" style="border:none;border-radius:0;background:white;color:var(--text)">Report Builder</button>
+                            <button class="btn btn-sm" id="viewCommission" onclick="setReportingView('commission')" style="border:none;border-radius:0;background:white;color:var(--text)">💰 Commission</button>
                         </div>
                         <select class="form-input" id="analyticsYear" onchange="renderAnalytics()" style="width:auto">
                             <option value="2024">2024</option>
@@ -1501,9 +1503,65 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Commission View -->
+                <div id="commissionViewContent" style="display:none">
+                    <!-- Controls -->
+                    <div class="card" style="margin-bottom:16px">
+                        <div class="card-body">
+                            <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Month</label>
+                                    <select class="form-input" id="commMonth" onchange="renderCommission()" style="width:auto">
+                                        <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+                                        <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+                                        <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+                                        <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Year</label>
+                                    <select class="form-input" id="commYear" onchange="renderCommission()" style="width:auto">
+                                        <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-secondary btn-sm" onclick="openCommissionSettings()" title="Set commission rates">⚙️ Rates</button>
+                                <button class="btn btn-secondary btn-sm" onclick="exportCommissionCSV()">📥 Export CSV</button>
+                                <button class="btn btn-secondary btn-sm" onclick="copyCommissionSummary()">📋 Copy Summary</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Commission Rates (collapsible) -->
+                    <div class="card" id="commRatesCard" style="margin-bottom:16px;display:none">
+                        <div class="card-header"><h2 class="card-title">⚙️ Transaction Fees</h2></div>
+                        <div class="card-body">
+                            <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px">These fees are deducted from the pre-tax sale amount before commission is calculated.</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Credit Card (tap/chip)</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardTap" value="2.5" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Credit Card (manual/keyed)</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardManual" value="2.9" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">Debit / Cash / E-Transfer</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeOther" value="0" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="$('commRatesCard').style.display='none';renderCommission()" style="margin-top:12px">Done</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Summary Cards -->
+                    <div id="commSummaryCards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px"></div>
+                    
+                    <!-- Per-Consultant Breakdown -->
+                    <div id="commBreakdown"></div>
+                </div>
             </section>
-
-            <!-- Consultants (hidden, moved to Settings) -->
             <section class="section" id="page-consultants" style="display:none">
                 <div class="header">
                     <div><h1 class="title">Consultants</h1><p class="subtitle">Manage team signatures</p></div>
@@ -2720,6 +2778,24 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                             <label class="form-label" style="font-size:11px">Date submitted</label>
                             <input type="date" class="form-input" id="newOrderSubmittedDate" style="font-size:12px">
                         </div>
+                    </div>
+                </div>
+                
+                <!-- Order Totals -->
+                <div style="background:var(--cream);padding:12px 16px;border-radius:8px;margin-bottom:16px">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="font-size:12px;color:var(--taupe)">Subtotal</span>
+                        <span style="font-size:13px;font-weight:600" id="newOrderSubtotal">$0</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                        <span style="font-size:12px;color:var(--taupe);display:flex;align-items:center;gap:6px">Tax 
+                            <input type="number" class="form-input" id="newOrderTaxRate" value="13" step="0.1" style="width:50px;font-size:11px;padding:2px 4px" oninput="updateNewOrderTotals()">%
+                        </span>
+                        <span style="font-size:13px" id="newOrderTax">$0</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1.5px solid var(--champagne);padding-top:8px">
+                        <span style="font-size:14px;font-weight:700">Total</span>
+                        <span style="font-size:16px;font-weight:700;color:var(--accent)" id="newOrderTotal">$0</span>
                     </div>
                 </div>
                 
@@ -7592,7 +7668,7 @@ The Estrelle Bridal Team`;
                 
                 // Apply search filter
                 if (searchTerm) {
-                    const searchStr = `${o.ClientName || ''} ${o.Dress || ''} ${o.Designer || ''} ${o.PO || ''}`.toLowerCase();
+                    const searchStr = `${o.ClientName || ''} ${o.Dress || ''} ${o.Designer || ''} ${o.PO || ''} ${o.SubmittedBy || ''}`.toLowerCase();
                     if (!searchStr.includes(searchTerm)) return false;
                 }
                 
@@ -7688,7 +7764,7 @@ The Estrelle Bridal Team`;
                     // Client header row with expand/collapse
                     html += `<tr class="client-group-header" style="background:var(--cream);cursor:pointer" onclick="toggleOrderGroup('${gid}')">
                         <td><input type="checkbox" class="order-group-checkbox" data-group="${gid}" onclick="event.stopPropagation();toggleGroupCheckboxes('${gid}', this.checked)"></td>
-                        <td colspan="9">
+                        <td colspan="10">
                             <div style="display:flex;align-items:center;gap:8px">
                                 <span class="order-group-arrow" id="arrow_${gid}" style="transition:transform 0.2s">▶</span>
                                 <span style="font-weight:600">${group.clientName}</span>
@@ -7718,6 +7794,7 @@ The Estrelle Bridal Team`;
                                     ${ORDER_STATUSES.map(s => `<option value="${s}" ${s === o.Status ? 'selected' : ''}>${s}</option>`).join('')}
                                 </select>
                             </td>
+                            <td style="font-size:11px;color:var(--text-secondary)">${o.SubmittedBy || '<span style="color:var(--taupe)">—</span>'}</td>
                             <td>
                                 ${needsQA ? `<button class="action-btn" onclick="openQAChecklist(${o.ID})" style="background:#e67e22;color:white;border-color:#e67e22">QA</button>` : ''}
                                 <button class="action-btn" onclick="viewOrderDetails(${o.ID})">Edit</button>
@@ -7747,6 +7824,7 @@ The Estrelle Bridal Team`;
                                 ${ORDER_STATUSES.map(s => `<option value="${s}" ${s === o.Status ? 'selected' : ''}>${s}</option>`).join('')}
                             </select>
                         </td>
+                        <td style="font-size:11px;color:var(--text-secondary)">${o.SubmittedBy || '<span style="color:var(--taupe)">—</span>'}</td>
                         <td>
                             ${(o.Status === 'arrived' || o.Status === 'arrived - pending QA') ? `<button class="action-btn" onclick="openQAChecklist(${o.ID})" style="background:#e67e22;color:white;border-color:#e67e22">QA</button>` : ''}
                             <button class="action-btn" onclick="viewOrderDetails(${o.ID})">Edit</button>
@@ -8177,7 +8255,7 @@ The Estrelle Bridal Team`;
         
         function addNewOrderItem() {
             const id = Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-            newOrderItems.push({ id, type: 'Veil', name: '', designer: '', size: '' });
+            newOrderItems.push({ id, type: 'Veil', name: '', designer: '', size: '', price: '' });
             renderNewOrderItems();
         }
         
@@ -8188,6 +8266,17 @@ The Estrelle Bridal Team`;
             }
             newOrderItems = newOrderItems.filter(i => i.id !== id);
             renderNewOrderItems();
+        }
+        
+        function updateNewOrderTotals() {
+            const subtotal = newOrderItems.reduce((s, i) => s + (parseFloat(i.price) || 0), 0);
+            const taxEl = $('newOrderTaxRate');
+            const taxRate = taxEl ? (parseFloat(taxEl.value) || 0) : 13;
+            const tax = subtotal * (taxRate / 100);
+            const total = subtotal + tax;
+            if ($('newOrderSubtotal')) $('newOrderSubtotal').textContent = money(subtotal);
+            if ($('newOrderTax')) $('newOrderTax').textContent = money(tax);
+            if ($('newOrderTotal')) $('newOrderTotal').textContent = money(total);
         }
         
         function renderNewOrderItems() {
@@ -8212,16 +8301,20 @@ The Estrelle Bridal Team`;
                             <input type="text" class="form-input" style="font-size:12px" placeholder="Item name" value="${item.name || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').name=this.value">
                         </div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
                         <div class="form-group" style="margin:0">
                             <input type="text" class="form-input" style="font-size:12px" placeholder="Designer/Brand" value="${item.designer || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').designer=this.value">
                         </div>
                         <div class="form-group" style="margin:0">
                             <input type="text" class="form-input" style="font-size:12px" placeholder="Size" value="${item.size || ''}" onchange="newOrderItems.find(i=>i.id==='${item.id}').size=this.value">
                         </div>
+                        <div class="form-group" style="margin:0">
+                            <input type="text" class="form-input" style="font-size:12px" placeholder="Price" value="${item.price || ''}" oninput="newOrderItems.find(i=>i.id==='${item.id}').price=this.value.replace(/[^0-9.]/g,'');updateNewOrderTotals()">
+                        </div>
                     </div>
                 </div>
             `).join('');
+            updateNewOrderTotals();
         }
         
         function searchClientsForNewOrder(query) {
@@ -8304,8 +8397,15 @@ The Estrelle Bridal Team`;
                 type: i.type,
                 name: i.name.trim(),
                 designer: i.designer.trim(),
-                size: i.size.trim()
+                size: i.size.trim(),
+                price: parseFloat(i.price) || 0
             }));
+            
+            // Calculate totals
+            const subtotal = items.reduce((s, i) => s + (i.price || 0), 0);
+            const taxRate = parseFloat($('newOrderTaxRate')?.value) || 13;
+            const hst = subtotal * (taxRate / 100);
+            const total = subtotal + hst;
             
             // Determine Dress and Accessories fields
             const dressItems = items.filter(i => i.type === 'Dress');
@@ -8323,6 +8423,9 @@ The Estrelle Bridal Team`;
                 Size: items.map(i => i.size).filter(s => s).join(', '),
                 Accessories: accessoryItems.map(i => `${i.type}: ${i.name}`).join(', ') || $('newOrderAccessories').value,
                 Items: JSON.stringify(items),
+                Subtotal: subtotal,
+                HST: hst,
+                Total: total,
                 Status: $('newOrderStatus').value,
                 ArrivalDate: $('newOrderArrival').value,
                 WeddingDate: $('newOrderWedding').value || (clientId ? (getClient(clientId)?.WeddingDate || '') : ''),
@@ -9267,7 +9370,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             let totalPreTax = 0;
             let totalTax = 0;
             yearOrders.forEach(o => {
-                totalPreTax += parseFloat(o.Subtotal) || parseFloat(o.Total) || 0;
+                totalPreTax += getOrderPreTax(o);
                 totalTax += parseFloat(o.HST) || 0;
             });
             const totalWithTax = totalPreTax + totalTax;
@@ -9285,7 +9388,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     const d = parseDate(o.OrderDate);
                     return d && d.getMonth() === i;
                 });
-                const preTax = monthOrders.reduce((s, o) => s + (parseFloat(o.Subtotal) || parseFloat(o.Total) || 0), 0);
+                const preTax = monthOrders.reduce((s, o) => s + (getOrderPreTax(o)), 0);
                 const tax = monthOrders.reduce((s, o) => s + (parseFloat(o.HST) || 0), 0);
                 return { month: m, orders: monthOrders.length, preTax, tax, total: preTax + tax };
             });
@@ -9489,7 +9592,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         const d = parseDate(o.OrderDate);
                         return d && d.getFullYear() === year && d.getMonth() === i;
                     });
-                    const preTax = monthOrders.reduce((s, o) => s + (parseFloat(o.Subtotal) || parseFloat(o.Total) || 0), 0);
+                    const preTax = monthOrders.reduce((s, o) => s + (getOrderPreTax(o)), 0);
                     const tax = monthOrders.reduce((s, o) => s + (parseFloat(o.HST) || 0), 0);
                     csvContent += `${m},${monthOrders.length},${preTax.toFixed(2)},${tax.toFixed(2)},${(preTax + tax).toFixed(2)}\n`;
                 });
@@ -11637,6 +11740,386 @@ The {StoreName} Team
             toast('Opening Gmail...', 'success');
         }
 
+        // ========== COMMISSION CALCULATOR ==========
+        function getCommissionSettings() {
+            try { return JSON.parse(localStorage.getItem('estrelle_commission') || '{}'); }
+            catch (e) { return {}; }
+        }
+        
+        function saveCommissionSettings() {
+            const settings = getCommissionSettings();
+            settings.feeCardTap = parseFloat($('feeCardTap')?.value) || 2.5;
+            settings.feeCardManual = parseFloat($('feeCardManual')?.value) || 2.9;
+            settings.feeOther = parseFloat($('feeOther')?.value) || 0;
+            localStorage.setItem('estrelle_commission', JSON.stringify(settings));
+            renderCommission();
+        }
+        
+        function openCommissionSettings() {
+            const card = $('commRatesCard');
+            const show = card.style.display === 'none';
+            card.style.display = show ? 'block' : 'none';
+            if (show) {
+                const s = getCommissionSettings();
+                $('feeCardTap').value = s.feeCardTap ?? 2.5;
+                $('feeCardManual').value = s.feeCardManual ?? 2.9;
+                $('feeOther').value = s.feeOther ?? 0;
+            }
+        }
+        
+        function getOrderPaymentMethod(order) { return order.PaymentMethod || ''; }
+        
+        function getOrderPreTax(o) {
+            let preTax = parseFloat(o.Subtotal) || parseFloat(o.Total) || 0;
+            if (!preTax && o.Items) {
+                try {
+                    const items = typeof o.Items === 'string' ? JSON.parse(o.Items) : (o.Items || []);
+                    preTax = items.reduce((s, item) => {
+                        let ip = parseFloat(item.price) || 0;
+                        if (item.customizations) ip += item.customizations.reduce((cs, c) => cs + (parseFloat(c.price) || 0), 0);
+                        return s + ip;
+                    }, 0);
+                } catch(e) {}
+            }
+            return preTax;
+        }
+        
+        function setOrderPaymentMethod(orderId, method) {
+            updateRecord('Orders', orderId, { PaymentMethod: method });
+            renderCommission();
+        }
+        
+        function toggleCommissionPaid(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            const newVal = order.CommissionPaid ? '' : new Date().toISOString().split('T')[0];
+            updateRecord('Orders', orderId, { CommissionPaid: newVal });
+            renderCommission();
+        }
+        
+        function markAllPaid(personName) {
+            const month = parseInt($('commMonth').value);
+            const year = parseInt($('commYear').value);
+            // Mark all orders where this person has a split AND it's this month or earlier unpaid
+            data.orders.forEach(o => {
+                if (o.CommissionPaid) return;
+                const d = parseDate(o.OrderDate);
+                if (!d) return;
+                if (d.getFullYear() > year || (d.getFullYear() === year && d.getMonth() > month)) return;
+                const splits = getOrderSplits(o);
+                if (splits.some(sp => sp.name === personName)) {
+                    updateRecord('Orders', o.ID, { CommissionPaid: new Date().toISOString().split('T')[0] });
+                }
+            });
+            renderCommission();
+            toast(`Marked all as paid for ${personName}`, 'success');
+        }
+        
+        function getOrderSplits(order) {
+            // CommissionSplits: JSON array of {name, rate}
+            // Migrate from old CommissionRate if exists
+            if (order.CommissionSplits) {
+                try { return JSON.parse(order.CommissionSplits); } catch(e) {}
+            }
+            // Legacy: single rate assigned to the selling consultant
+            if (order.CommissionRate && parseFloat(order.CommissionRate) > 0) {
+                const name = order.SubmittedBy || order.Consultant || '';
+                return name ? [{ name, rate: parseFloat(order.CommissionRate) }] : [];
+            }
+            return [];
+        }
+        
+        function saveOrderSplits(orderId, splits) {
+            updateRecord('Orders', orderId, { CommissionSplits: JSON.stringify(splits) });
+            renderCommission();
+        }
+        
+        function addCommSplit(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            const splits = getOrderSplits(order);
+            splits.push({ name: '', rate: 0 });
+            order.CommissionSplits = JSON.stringify(splits);
+            saveCachedData();
+            renderCommission();
+        }
+        
+        function updateCommSplit(orderId, idx, field, value) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            const splits = getOrderSplits(order);
+            if (!splits[idx]) return;
+            splits[idx][field] = field === 'rate' ? (parseFloat(value) || 0) : value;
+            order.CommissionSplits = JSON.stringify(splits);
+            saveCachedData();
+            updateRecord('Orders', orderId, { CommissionSplits: JSON.stringify(splits) });
+            renderCommission();
+        }
+        
+        function removeCommSplit(orderId, idx) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) return;
+            const splits = getOrderSplits(order);
+            splits.splice(idx, 1);
+            order.CommissionSplits = JSON.stringify(splits);
+            saveCachedData();
+            updateRecord('Orders', orderId, { CommissionSplits: JSON.stringify(splits) });
+            renderCommission();
+        }
+        
+        function renderCommission() {
+            if (!$('commMonth').dataset.init) {
+                $('commMonth').value = new Date().getMonth();
+                $('commYear').value = new Date().getFullYear();
+                $('commMonth').dataset.init = '1';
+            }
+            const month = parseInt($('commMonth').value);
+            const year = parseInt($('commYear').value);
+            
+            const settings = getCommissionSettings();
+            const feeCardTap = settings.feeCardTap ?? 2.5;
+            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeOther = settings.feeOther ?? 0;
+            
+            // Helper to calc one order's commission data
+            function calcOrder(o) {
+                const preTax = getOrderPreTax(o);
+                const pm = getOrderPaymentMethod(o);
+                let feeRate = 0;
+                if (pm === 'credit_tap') feeRate = feeCardTap;
+                else if (pm === 'credit_manual') feeRate = feeCardManual;
+                else if (pm === 'debit' || pm === 'cash' || pm === 'etransfer') feeRate = feeOther;
+                const fee = preTax * (feeRate / 100);
+                const base = preTax - fee;
+                const splits = getOrderSplits(o);
+                let orderComm = 0;
+                const splitDetails = splits.map(sp => {
+                    const comm = base * (sp.rate / 100);
+                    orderComm += comm;
+                    return { name: sp.name, rate: sp.rate, comm };
+                });
+                return { preTax, fee, base, pm, feeRate, splits, splitDetails, orderComm, paid: !!o.CommissionPaid };
+            }
+            
+            // Current month orders
+            const monthOrders = data.orders.filter(o => {
+                const d = parseDate(o.OrderDate);
+                return d && d.getMonth() === month && d.getFullYear() === year;
+            });
+            
+            // Unpaid orders from ALL previous months (before selected month)
+            const unpaidPrev = data.orders.filter(o => {
+                if (o.CommissionPaid) return false;
+                const d = parseDate(o.OrderDate);
+                if (!d) return false;
+                if (d.getFullYear() < year) return true;
+                if (d.getFullYear() === year && d.getMonth() < month) return true;
+                return false;
+            }).filter(o => {
+                // Only include if it has commission splits
+                const splits = getOrderSplits(o);
+                return splits.length > 0 && splits.some(sp => sp.rate > 0);
+            });
+            
+            // Build per-person totals
+            const byPerson = {};
+            let totalSales = 0, totalFees = 0, totalCommission = 0, totalUnpaidPrev = 0;
+            const salesCounted = new Set();
+            
+            // Process current month
+            const orderRows = monthOrders.map(o => {
+                const c = calcOrder(o);
+                c.splitDetails.forEach(sp => {
+                    if (sp.name) {
+                        if (!byPerson[sp.name]) byPerson[sp.name] = { thisMonth: 0, unpaidPrev: 0, unpaidPrevEntries: [], thisMonthEntries: [], paidThisMonth: 0 };
+                        byPerson[sp.name].thisMonth += sp.comm;
+                        byPerson[sp.name].thisMonthEntries.push({ order: o, ...sp });
+                        if (c.paid) byPerson[sp.name].paidThisMonth += sp.comm;
+                    }
+                });
+                if (!salesCounted.has(o.ID)) { totalSales += c.preTax; totalFees += c.fee; salesCounted.add(o.ID); }
+                totalCommission += c.orderComm;
+                return { ...o, _preTax: c.preTax, _fee: c.fee, _base: c.base, _pm: c.pm, _feeRate: c.feeRate, _splits: c.splits, _totalComm: c.orderComm, _paid: c.paid };
+            });
+            
+            // Process unpaid previous months
+            unpaidPrev.forEach(o => {
+                const c = calcOrder(o);
+                c.splitDetails.forEach(sp => {
+                    if (sp.name) {
+                        if (!byPerson[sp.name]) byPerson[sp.name] = { thisMonth: 0, unpaidPrev: 0, unpaidPrevEntries: [], thisMonthEntries: [], paidThisMonth: 0 };
+                        byPerson[sp.name].unpaidPrev += sp.comm;
+                        byPerson[sp.name].unpaidPrevEntries.push({ order: o, ...sp });
+                        totalUnpaidPrev += sp.comm;
+                    }
+                });
+            });
+            
+            // Summary cards
+            $('commSummaryCards').innerHTML = `
+                <div class="card"><div class="card-body" style="text-align:center;padding:14px"><div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">This Month Sales</div><div style="font-size:22px;font-weight:600">${money(totalSales)}</div></div></div>
+                <div class="card"><div class="card-body" style="text-align:center;padding:14px"><div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">This Month Commission</div><div style="font-size:22px;font-weight:600;color:var(--accent)">${money(totalCommission)}</div></div></div>
+                <div class="card" style="${totalUnpaidPrev > 0 ? 'border-left:3px solid #e74c3c' : ''}"><div class="card-body" style="text-align:center;padding:14px"><div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Unpaid Previous</div><div style="font-size:22px;font-weight:600;color:${totalUnpaidPrev > 0 ? '#e74c3c' : 'var(--text)'}">${money(totalUnpaidPrev)}</div></div></div>
+                <div class="card" style="border-left:3px solid var(--accent)"><div class="card-body" style="text-align:center;padding:14px"><div style="font-size:10px;text-transform:uppercase;color:var(--text-secondary)">Total Owed</div><div style="font-size:22px;font-weight:700;color:var(--accent)">${money(totalCommission + totalUnpaidPrev)}</div></div></div>`;
+            
+            // Payout summary per person
+            const sortedPeople = Object.keys(byPerson).sort((a, b) => (byPerson[b].thisMonth + byPerson[b].unpaidPrev) - (byPerson[a].thisMonth + byPerson[a].unpaidPrev));
+            let payoutHtml = '';
+            if (sortedPeople.length > 0) {
+                payoutHtml = `<div class="card" style="margin-bottom:16px"><div class="card-header"><h2 class="card-title">\u{1F4B0} Payout Summary</h2></div><div class="card-body" style="padding:0"><table class="table" style="font-size:13px">
+                    <thead><tr><th>Person</th><th>This Month</th><th style="color:#e74c3c">Unpaid Prev</th><th style="font-weight:700">Total Owed</th><th></th></tr></thead><tbody>`;
+                let grandThisMonth = 0, grandUnpaid = 0;
+                sortedPeople.forEach(name => {
+                    const p = byPerson[name];
+                    const totalOwed = p.thisMonth + p.unpaidPrev;
+                    const allPaidThisMonth = p.thisMonthEntries.length > 0 && p.thisMonthEntries.every(e => !!e.order.CommissionPaid);
+                    grandThisMonth += p.thisMonth;
+                    grandUnpaid += p.unpaidPrev;
+                    payoutHtml += `<tr>
+                        <td style="font-weight:600">${name}</td>
+                        <td>${money(p.thisMonth)}</td>
+                        <td style="color:${p.unpaidPrev > 0 ? '#e74c3c' : 'var(--taupe)'}">${p.unpaidPrev > 0 ? money(p.unpaidPrev) : '\u2014'}</td>
+                        <td style="font-weight:700;color:var(--accent)">${money(totalOwed)}</td>
+                        <td><button class="btn btn-sm" onclick="markAllPaid('${name}')" style="font-size:10px;padding:3px 10px;background:#27ae60;color:white;border:none;border-radius:4px">\u2713 Mark Paid</button></td>
+                    </tr>`;
+                });
+                payoutHtml += `<tr style="background:var(--cream);font-weight:700"><td>TOTAL</td><td>${money(grandThisMonth)}</td><td style="color:#e74c3c">${money(grandUnpaid)}</td><td style="color:var(--accent)">${money(grandThisMonth + grandUnpaid)}</td><td></td></tr>`;
+                payoutHtml += `</tbody></table></div></div>`;
+            }
+            
+            // Per-order breakdown
+            const pmOptions = `<option value="">Not set</option><option value="credit_tap">\u{1F4B3} Tap/Chip</option><option value="credit_manual">\u{1F4B3} Keyed</option><option value="debit">\u{1F4B3} Debit</option><option value="cash">\u{1F4B5} Cash</option><option value="etransfer">\u{1F4F1} E-Transfer</option>`;
+            const rateOpts = [0,1,2,3].map(r => `<option value="${r}">${r}%</option>`).join('');
+            const consultantNames = data.consultants.map(c => c.Name).filter(Boolean).sort();
+            const nameOpts = `<option value="">Select...</option>` + consultantNames.map(n => `<option value="${n}">${n}</option>`).join('');
+            
+            // Unpaid previous section
+            let unpaidHtml = '';
+            if (unpaidPrev.length > 0) {
+                unpaidHtml = `<div class="card" style="margin-bottom:16px;border-left:3px solid #e74c3c"><div class="card-header" style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"><h2 class="card-title" style="color:#e74c3c">\u26a0 Unpaid from Previous Months (${unpaidPrev.length} orders)</h2></div>
+                <div class="card-body" style="display:none;padding:0;overflow-x:auto"><table class="table" style="font-size:12px"><thead><tr><th>Client</th><th>PO</th><th>Order Date</th><th>Pre-Tax</th><th>Splits</th><th>Commission</th><th>Paid</th></tr></thead><tbody>`;
+                unpaidPrev.forEach(o => {
+                    const c = calcOrder(o);
+                    const splitText = c.splitDetails.filter(s => s.name).map(s => `${s.name} ${s.rate}% = ${money(s.comm)}`).join(', ');
+                    unpaidHtml += `<tr><td>${o.ClientName || '\u2014'}</td><td>${o.PO || '\u2014'}</td><td>${fmtDate(o.OrderDate)}</td><td>${money(c.preTax)}</td><td style="font-size:11px">${splitText}</td><td style="font-weight:600;color:var(--accent)">${money(c.orderComm)}</td>
+                        <td><button class="btn btn-sm" onclick="toggleCommissionPaid('${o.ID}')" style="font-size:10px;padding:3px 10px;background:#27ae60;color:white;border:none;border-radius:4px">\u2713 Paid</button></td></tr>`;
+                });
+                unpaidHtml += `</tbody></table></div></div>`;
+            }
+            
+            // Current month orders table
+            let orderHtml = `<div class="card"><div class="card-header"><h2 class="card-title">Order Details \u2014 This Month</h2></div><div class="card-body" style="padding:0;overflow-x:auto"><table class="table" style="font-size:12px">
+                <thead><tr><th>Client</th><th>PO</th><th>Pre-Tax</th><th>Payment</th><th>Fee</th><th>Base</th><th>Commission Splits</th><th>Total</th><th>Paid</th></tr></thead><tbody>`;
+            
+            orderRows.forEach(o => {
+                const noSplits = o._splits.length === 0;
+                const splitsHtml = o._splits.map((sp, si) => {
+                    return `<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+                        <select class="form-input" style="font-size:10px;padding:1px 3px;width:auto;max-width:100px" onchange="updateCommSplit('${o.ID}',${si},'name',this.value)">${nameOpts.replace('value="'+sp.name+'"', 'value="'+sp.name+'" selected')}</select>
+                        <select class="form-input" style="font-size:10px;padding:1px 3px;width:auto" onchange="updateCommSplit('${o.ID}',${si},'rate',this.value)">${rateOpts.replace('value="'+sp.rate+'"', 'value="'+sp.rate+'" selected')}</select>
+                        <span style="font-size:10px;color:var(--accent);font-weight:600;min-width:50px">${money(o._base * (sp.rate / 100))}</span>
+                        <button class="action-btn" onclick="removeCommSplit('${o.ID}',${si})" style="color:#e74c3c;font-size:10px;padding:0 3px" title="Remove">\u00d7</button>
+                    </div>`;
+                }).join('');
+                
+                const paidStyle = o._paid ? 'background:#f0faf0;' : (noSplits ? 'background:#fffbf0;' : '');
+                orderHtml += `<tr style="${paidStyle}">
+                    <td><div style="font-weight:500">${o.ClientName || '\u2014'}</div><div style="font-size:10px;color:var(--taupe)">${o.SubmittedBy || o.Consultant || ''}</div></td>
+                    <td>${o.PO || '\u2014'}</td>
+                    <td>${money(o._preTax)}</td>
+                    <td><select class="form-input" style="font-size:10px;padding:2px 4px;width:auto" onchange="setOrderPaymentMethod('${o.ID}',this.value)">${pmOptions.replace('value="'+o._pm+'"', 'value="'+o._pm+'" selected')}</select></td>
+                    <td style="color:#e74c3c">${o._feeRate > 0 ? '-'+money(o._fee) : '\u2014'}</td>
+                    <td>${money(o._base)}</td>
+                    <td style="min-width:220px">${splitsHtml}<button class="btn btn-sm btn-secondary" onclick="addCommSplit('${o.ID}')" style="font-size:9px;padding:2px 8px;margin-top:2px">+ Add person</button></td>
+                    <td style="font-weight:700;color:var(--accent)">${money(o._totalComm)}</td>
+                    <td>${o._paid
+                        ? `<span onclick="toggleCommissionPaid('${o.ID}')" style="cursor:pointer;color:#27ae60;font-weight:600;font-size:11px">\u2713 Paid</span>`
+                        : `<button class="btn btn-sm" onclick="toggleCommissionPaid('${o.ID}')" style="font-size:10px;padding:3px 8px;background:var(--blush);color:var(--text);border:1px solid var(--champagne);border-radius:4px">Unpaid</button>`
+                    }</td>
+                </tr>`;
+            });
+            
+            orderHtml += `</tbody></table></div></div>`;
+            
+            $('commBreakdown').innerHTML = payoutHtml + unpaidHtml + orderHtml;
+        }
+        
+        function exportCommissionCSV() {
+            const month = parseInt($('commMonth').value);
+            const year = parseInt($('commYear').value);
+            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const settings = getCommissionSettings();
+            const feeCardTap = settings.feeCardTap ?? 2.5;
+            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeOther = settings.feeOther ?? 0;
+            
+            const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
+            
+            let csv = 'Client,PO,Order Date,Sold By,Pre-Tax,Payment,Fee Rate,Fee,Base,Commission Person,Comm Rate,Commission\n';
+            monthOrders.forEach(o => {
+                const preTax = getOrderPreTax(o);
+                const pm = getOrderPaymentMethod(o);
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                const fee = preTax * (feeRate / 100);
+                const base = preTax - fee;
+                const splits = getOrderSplits(o);
+                const soldBy = o.SubmittedBy || o.Consultant || '';
+                if (splits.length === 0) {
+                    csv += `"${o.ClientName || ''}","${o.PO || ''}",${fmtDate(o.OrderDate)},"${soldBy}",${preTax.toFixed(2)},${pm || 'not set'},${feeRate}%,${fee.toFixed(2)},${base.toFixed(2)},,,\n`;
+                } else {
+                    splits.forEach(sp => {
+                        const comm = base * (sp.rate / 100);
+                        csv += `"${o.ClientName || ''}","${o.PO || ''}",${fmtDate(o.OrderDate)},"${soldBy}",${preTax.toFixed(2)},${pm || 'not set'},${feeRate}%,${fee.toFixed(2)},${base.toFixed(2)},"${sp.name}",${sp.rate}%,${comm.toFixed(2)}\n`;
+                    });
+                }
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `commission_${monthNames[month]}_${year}.csv`; a.click();
+            toast('CSV exported', 'success');
+        }
+        
+        function copyCommissionSummary() {
+            const month = parseInt($('commMonth').value);
+            const year = parseInt($('commYear').value);
+            const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+            const settings = getCommissionSettings();
+            const feeCardTap = settings.feeCardTap ?? 2.5;
+            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeOther = settings.feeOther ?? 0;
+            
+            const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
+            
+            const byPerson = {};
+            let totalComm = 0;
+            monthOrders.forEach(o => {
+                const preTax = getOrderPreTax(o);
+                const pm = getOrderPaymentMethod(o);
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                const base = preTax - (preTax * feeRate / 100);
+                const splits = getOrderSplits(o);
+                splits.forEach(sp => {
+                    if (!sp.name) return;
+                    if (!byPerson[sp.name]) byPerson[sp.name] = { entries: [], total: 0 };
+                    const comm = base * (sp.rate / 100);
+                    byPerson[sp.name].entries.push({ client: o.ClientName || '?', base, rate: sp.rate, comm });
+                    byPerson[sp.name].total += comm;
+                    totalComm += comm;
+                });
+            });
+            
+            let text = `COMMISSION SUMMARY \u2014 ${monthNames[month]} ${year}\n${'='.repeat(50)}\n\n`;
+            Object.keys(byPerson).sort().forEach(name => {
+                const p = byPerson[name];
+                text += `${name} \u2014 ${p.entries.length} order(s)\n`;
+                p.entries.forEach(e => { text += `  ${e.client}: $${e.base.toFixed(2)} \u00d7 ${e.rate}% = $${e.comm.toFixed(2)}\n`; });
+                text += `  PAYOUT: $${p.total.toFixed(2)}\n\n`;
+            });
+            text += `${'='.repeat(50)}\nTOTAL COMMISSION: $${totalComm.toFixed(2)}\n`;
+            
+            navigator.clipboard.writeText(text).then(() => toast('Summary copied!', 'success')).catch(() => prompt('Copy:', text));
+        }
+
         // ========== CONSULTANTS ==========
         let consultantSigPad = null;
         
@@ -12445,26 +12928,35 @@ The {StoreName} Team
         
         function setReportingView(view) {
             reportingView = view;
-            $('viewAnalytics').style.background = view === 'analytics' ? 'var(--accent)' : 'white';
-            $('viewAnalytics').style.color = view === 'analytics' ? 'white' : 'var(--text)';
-            $('viewReportBuilder').style.background = view === 'builder' ? 'var(--accent)' : 'white';
-            $('viewReportBuilder').style.color = view === 'builder' ? 'white' : 'var(--text)';
+            ['viewAnalytics','viewReportBuilder','viewCommission'].forEach(id => {
+                const el = $(id);
+                if (!el) return;
+                const match = (id === 'viewAnalytics' && view === 'analytics') || (id === 'viewReportBuilder' && view === 'builder') || (id === 'viewCommission' && view === 'commission');
+                el.style.background = match ? 'var(--accent)' : 'white';
+                el.style.color = match ? 'white' : 'var(--text)';
+            });
             
             $('analyticsViewContent').style.display = view === 'analytics' ? 'block' : 'none';
             $('reportBuilderContent').style.display = view === 'builder' ? 'block' : 'none';
+            $('commissionViewContent').style.display = view === 'commission' ? 'block' : 'none';
             
             if (view === 'analytics') {
                 $('reportingSubtitle').textContent = 'Sales trends & insights';
                 renderAnalytics();
-            } else {
+            } else if (view === 'builder') {
                 $('reportingSubtitle').textContent = 'Build custom reports';
                 initReportBuilder();
+            } else if (view === 'commission') {
+                $('reportingSubtitle').textContent = 'Monthly commission calculator';
+                renderCommission();
             }
         }
         
         function renderReporting() {
             if (reportingView === 'analytics') {
                 renderAnalytics();
+            } else if (reportingView === 'commission') {
+                renderCommission();
             } else {
                 initReportBuilder();
             }
@@ -14404,6 +14896,7 @@ The {storeName} Team`
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
                         <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}${m.takenBy ? ` <span style="font-weight:400;color:var(--taupe)">by ${m.takenBy}</span>` : ''}</div>
                         <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
+                            <button class="action-btn" onclick="copyMeasurement(${idx})" title="Copy for email">📋</button>
                             <button class="action-btn" onclick="editMeasurement(${idx})" title="Edit">✏️</button>
                             <button class="action-btn" onclick="deleteMeasurement(${idx})" title="Delete">×</button>
                         </div>
@@ -14421,6 +14914,38 @@ The {storeName} Team`
                     ${m.notes ? `<div style="font-size:10px;color:var(--taupe);margin-top:6px;font-style:italic">${m.notes}</div>` : ''}
                 </div>`;
             }).join('');
+        }
+        
+        function copyMeasurement(idx) {
+            const measurements = getClientMeasurements();
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const m = measurements[idx];
+            if (!m) return;
+            
+            const unit = m.unit || 'in';
+            const clientName = currentClient ? `${currentClient.FirstName} ${currentClient.LastName}` : '';
+            
+            const lines = [];
+            if (clientName) lines.push(`Client: ${clientName}`);
+            if (m.date) lines.push(`Date: ${fmtDate(m.date)}`);
+            if (m.takenBy) lines.push(`Measured by: ${m.takenBy}`);
+            lines.push('');
+            if (m.bust) lines.push(`Bust: ${m.bust} ${unit}`);
+            if (m.cup) lines.push(`Cup: ${m.cup}`);
+            if (m.waist) lines.push(`Waist: ${m.waist} ${unit}`);
+            if (m.hip) lines.push(`Hip: ${m.hip} ${unit}`);
+            if (m.height) lines.push(`Height: ${m.height} in`);
+            if (m.heels) lines.push(`Heels: ${m.heels} in`);
+            if (m.waistToFloor) lines.push(`Waist to Floor: ${m.waistToFloor} ${unit}`);
+            if (m.custom && m.custom.length > 0) {
+                m.custom.forEach(c => { if (c.value) lines.push(`${c.name}: ${c.value}`); });
+            }
+            if (m.notes) { lines.push(''); lines.push(`Notes: ${m.notes}`); }
+            
+            const text = lines.join('\n');
+            navigator.clipboard.writeText(text).then(() => {
+                toast('Measurements copied!', 'success');
+            }).catch(() => prompt('Copy measurements:', text));
         }
         
         let editingMeasurementIdx = null;
