@@ -253,8 +253,8 @@
         .contract th, .contract td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; font-size: 11px; }
 
         /* Toast - Updated */
-        .toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: calc(100vw - 48px); }
-        @media (max-width: 900px) { .toast { bottom: 82px; right: 12px; left: 12px; text-align: center; } }
+        .toast { position: fixed; bottom: 80px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: calc(100vw - 48px); }
+        @media (max-width: 900px) { .toast { bottom: 100px; right: 12px; left: 12px; text-align: center; } }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { background: linear-gradient(135deg, var(--sage) 0%, #8a9f82 100%); }
         .toast.error { background: linear-gradient(135deg, var(--red) 0%, #a05858 100%); }
@@ -1772,6 +1772,7 @@
                     <div>
                         <button class="btn btn-secondary" onclick="goBack()">← Back</button>
                         <button class="btn btn-success" onclick="sheSaidYes()" id="btnSheSaidYes">💍 She Said Yes!</button>
+                        <button class="btn btn-secondary" id="btnClientContract" onclick="viewClientContract()" style="display:none">📄 Contract</button>
                         <span id="draftIndicator" style="display:none"></span>
                     </div>
                     <!-- Draft Banner (shown when client has a saved draft) -->
@@ -1853,6 +1854,10 @@
                         <div class="card" style="margin-bottom:12px">
                             <div class="card-header"><h2 class="card-title">📏 Measurements</h2><button class="btn btn-sm btn-secondary" onclick="openAddMeasurementModal()">+ Add</button></div>
                             <div class="card-body" id="cMeasurements"></div>
+                        </div>
+                        <div class="card" id="contractsCard" style="margin-bottom:12px;display:none">
+                            <div class="card-header"><h2 class="card-title">📄 Contracts</h2><button class="btn btn-sm btn-secondary" onclick="sheSaidYes()">+ New</button></div>
+                            <div class="card-body" id="cContracts"></div>
                         </div>
                         <div class="card" style="margin-bottom:12px">
                             <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
@@ -3573,7 +3578,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div id="yStep6Save">
                         <div style="background:linear-gradient(135deg,#f0faf0,#e8f5e9);padding:16px;border-radius:10px;margin-bottom:16px;border:1.5px solid #a5d6a7">
                             <div style="font-size:15px;font-weight:700;color:#2e7d32;margin-bottom:4px">✓ Ready to Finalize</div>
-                            <div style="font-size:12px;color:#558b2f">This will save the order and contract to the app and Google Drive. You can email the bride after.</div>
+                            <div style="font-size:12px;color:#558b2f">This saves the order and contract to the app. Send for e-sign next so the customer can sign on their phone — once signed, the contract auto-saves to Google Drive.</div>
                         </div>
                         
                         <!-- Contract Preview -->
@@ -3591,20 +3596,33 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div id="yStep6Email" style="display:none">
                         <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);padding:14px;border-radius:10px;margin-bottom:16px;border:1.5px solid #81c784">
                             <div style="font-size:14px;font-weight:700;color:#2e7d32;margin-bottom:2px">✓ Contract Saved!</div>
-                            <div style="font-size:11px;color:#558b2f">Order and contract are safely saved. Edit the email below and send to the bride — the contract will be attached automatically.</div>
+                            <div style="font-size:11px;color:#558b2f">Order and contract saved. Now send for e-sign — the signed contract will auto-save to Google Drive once the customer signs.</div>
                         </div>
                         
-                        <div class="form-group"><label class="form-label">To</label><input type="email" class="form-input" id="emailTo" readonly style="background:#f5f5f5"></div>
-                        <div class="form-group"><label class="form-label">Subject</label><input type="text" class="form-input" id="emailSubject"></div>
-                        <div class="form-group"><label class="form-label">Message</label><textarea class="form-input" id="emailBody" style="min-height:120px;font-size:11px;line-height:1.5"></textarea></div>
-                        
-                        <div style="background:var(--cream);padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:11px;color:var(--taupe)">
-                            📎 The signed contract will be attached as a PDF to this email.
+                        <!-- E-Sign option (recommended) -->
+                        <div style="background:linear-gradient(135deg,#fdf8f0,#faf3e6);border:1.5px solid #C4A265;border-radius:10px;padding:16px;margin-bottom:16px">
+                            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                                <span style="font-size:24px">📱</span>
+                                <div>
+                                    <div style="font-weight:700;font-size:13px;color:#8B6914">Send for E-Signature</div>
+                                    <div style="font-size:11px;color:#a08030">Bride receives a link, reviews the contract, and signs on her phone. Signature auto-saves.</div>
+                                </div>
+                            </div>
+                            <button class="btn" id="btnESign" onclick="sendESignFromStep6()" style="width:100%;padding:12px;background:#C4A265;color:white;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer">📱 Send E-Sign Link to Bride</button>
                         </div>
                         
-                        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-                            <button class="btn btn-success" onclick="sendContractEmail()" style="padding:12px 32px;font-size:14px">📤 Send Email with Contract</button>
-                            <button class="btn btn-secondary" onclick="skipEmail()" style="padding:10px 24px">Skip — Don't Email</button>
+                        <!-- Or send PDF directly -->
+                        <div style="border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
+                            <div style="font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.05em">Or send contract PDF by email</div>
+                            <div class="form-group" style="margin-bottom:8px"><label class="form-label" style="font-size:10px">To</label><input type="email" class="form-input" id="emailTo" readonly style="background:#f5f5f5;font-size:12px"></div>
+                            <div class="form-group" style="margin-bottom:8px"><label class="form-label" style="font-size:10px">Subject</label><input type="text" class="form-input" id="emailSubject" style="font-size:12px"></div>
+                            <div class="form-group" style="margin-bottom:8px"><label class="form-label" style="font-size:10px">Message</label><textarea class="form-input" id="emailBody" style="min-height:80px;font-size:11px;line-height:1.5"></textarea></div>
+                            <div style="font-size:10px;color:var(--taupe);margin-bottom:10px">📎 Contract PDF will be attached.</div>
+                            <button class="btn btn-secondary" onclick="sendContractEmail()" style="width:100%;padding:10px;font-size:12px">📤 Send Email with PDF</button>
+                        </div>
+                        
+                        <div style="text-align:center">
+                            <button class="btn btn-secondary" onclick="skipEmail()" style="padding:10px 24px;font-size:12px">Skip — Don't Send Anything</button>
                         </div>
                     </div>
                 </div>
@@ -4276,27 +4294,33 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 saveCachedData();
             }
             
-            // Send to server in background
-            api('POST', { action: 'add', sheet, record })
-                .then(res => {
-                    // Update temp ID with real ID
-                    if (res && res.id && data[sheetKey]) {
-                        const idx = data[sheetKey].findIndex(r => r.ID === tempId);
-                        if (idx >= 0) data[sheetKey][idx].ID = res.id;
-                        saveCachedData();
+            // Send to server and WAIT for real ID
+            try {
+                const res = await api('POST', { action: 'add', sheet, record });
+                // Update temp ID with real ID from server
+                if (res && res.id && data[sheetKey]) {
+                    const idx = data[sheetKey].findIndex(r => r.ID === tempId);
+                    if (idx >= 0) {
+                        data[sheetKey][idx].ID = res.id;
+                        // Also update currentClient reference if applicable
+                        if (sheetKey === 'orders' && currentClient) {
+                            Object.assign(data[sheetKey][idx], { ID: res.id });
+                        }
                     }
-                })
-                .catch(e => {
-                    // Remove optimistic record on error
-                    if (data[sheetKey]) {
-                        const idx = data[sheetKey].findIndex(r => r.ID === tempId);
-                        if (idx >= 0) data[sheetKey].splice(idx, 1);
-                        saveCachedData();
-                    }
-                    toast('Save failed - please refresh', 'error');
-                });
-            
-            return { id: tempId };
+                    saveCachedData();
+                    return { id: res.id };
+                }
+                return { id: tempId };
+            } catch(e) {
+                // Remove optimistic record on error
+                if (data[sheetKey]) {
+                    const idx = data[sheetKey].findIndex(r => r.ID === tempId);
+                    if (idx >= 0) data[sheetKey].splice(idx, 1);
+                    saveCachedData();
+                }
+                toast('Save failed - please refresh', 'error');
+                return { id: tempId };
+            }
         }
 
         async function updateRecord(sheet, id, record) {
@@ -7751,9 +7775,9 @@ The Estrelle Bridal Team`;
             } else if (sortBy === 'arrivalDate') {
                 groupedOrders.sort((a, b) => dir * (a.primaryOrder.ArrivalDate || '9999').localeCompare(b.primaryOrder.ArrivalDate || '9999'));
             } else if (sortBy === 'orderDate') {
-                // Order date defaults to newest first (descending)
+                // Order date: desc = newest first (default), asc = oldest first
                 const orderDir = orderSortDirection[sortBy] === 'asc' ? 1 : -1;
-                groupedOrders.sort((a, b) => orderDir * (b.primaryOrder.OrderDate || '').localeCompare(a.primaryOrder.OrderDate || ''));
+                groupedOrders.sort((a, b) => orderDir * (a.primaryOrder.OrderDate || '').localeCompare(b.primaryOrder.OrderDate || ''));
             } else if (sortBy === 'clientName') {
                 groupedOrders.sort((a, b) => dir * a.clientName.localeCompare(b.clientName));
             }
@@ -7978,7 +8002,7 @@ The Estrelle Bridal Team`;
             highlightActiveStatCard('needsAttention');
         }
         
-        let orderSortDirection = {}; // Track sort direction for each column
+        let orderSortDirection = { orderDate: 'desc' }; // Default newest first
         
         function sortOrdersBy(field) {
             // Toggle direction if same field, otherwise default to ascending
@@ -8149,6 +8173,38 @@ The Estrelle Bridal Team`;
             openModal('orderDetails');
         }
         
+        function viewClientContract() {
+            if (!currentClient) return;
+            
+            // Find this client's orders, most recent first
+            const clientOrders = data.orders
+                .filter(o => String(o.ClientID) === String(currentClient.ID))
+                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            
+            if (clientOrders.length === 0) { toast('No orders found', 'error'); return; }
+            
+            if (clientOrders.length === 1) {
+                // Single order — open directly
+                viewOrderContractById(clientOrders[0].ID);
+            } else {
+                // Multiple orders — let them pick
+                showChoiceDialog(
+                    'Select Contract',
+                    `${currentClient.FirstName} has ${clientOrders.length} orders. Which contract would you like to view?`,
+                    clientOrders.map(o => ({
+                        label: `PO ${o.PO || '—'} · ${fmtDate(o.OrderDate)} · ${o.Dress || o.Designer || 'Order'}`,
+                        style: 'secondary',
+                        action: () => { closeModal('choice'); viewOrderContractById(o.ID); }
+                    }))
+                );
+            }
+        }
+        
+        function viewOrderContractById(orderId) {
+            $('btnViewContract').dataset.orderId = orderId;
+            viewOrderContract();
+        }
+        
         function viewOrderContract() {
             const orderId = $('btnViewContract').dataset.orderId;
             const order = data.orders.find(o => String(o.ID) === String(orderId));
@@ -8207,6 +8263,12 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
         function regenerateContractFromOrder(order) {
             const client = order.ClientID ? getClient(order.ClientID) : null;
             const clientName = order.ClientName || (client ? `${client.FirstName} ${client.LastName}` : 'Unknown');
+            const firstName = client?.FirstName || clientName.split(' ')[0] || '';
+            const lastName = client?.LastName || clientName.split(' ').slice(1).join(' ') || '';
+            const email = client?.Email || order.Email || '—';
+            const phone = client?.Phone || order.Phone || '—';
+            const weddingDate = order.WeddingDate ? fmtDate(order.WeddingDate) : (client?.WeddingDate ? fmtDate(client.WeddingDate) : '—');
+            const orderDate = order.OrderDate ? fmtDate(order.OrderDate) : '';
             
             let items = [];
             try { items = order.Items ? JSON.parse(order.Items) : []; } catch(e) { items = []; }
@@ -8215,74 +8277,220 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             try { measurements = order.Measurements ? JSON.parse(order.Measurements) : {}; } catch(e) { measurements = {}; }
             
             const subtotal = parseFloat(order.Subtotal) || getOrderPreTax(order) || 0;
-            const hst = parseFloat(order.HST) || 0;
-            const total = parseFloat(order.Total) || (subtotal + hst);
+            // Try saved HST, then calculate from total-subtotal, then default 13% if subtotal exists
+            let hst = parseFloat(order.HST) || 0;
+            if (!hst && subtotal > 0) {
+                const savedTotal = parseFloat(order.Total) || 0;
+                if (savedTotal > subtotal) {
+                    hst = Math.round((savedTotal - subtotal) * 100) / 100;
+                } else {
+                    // Default to 13% HST for Canadian orders
+                    hst = Math.round(subtotal * 0.13 * 100) / 100;
+                }
+            }
+            const total = subtotal + hst;
             const unit = measurements.unit || 'in';
-            const orderDate = order.OrderDate ? fmtDate(order.OrderDate) : '';
-            const weddingDate = order.WeddingDate ? fmtDate(order.WeddingDate) : (client?.WeddingDate ? fmtDate(client.WeddingDate) : '');
             
             // Build items table
             let itemsHtml = '';
             items.forEach(item => {
                 if (item.type === 'dress' || item.type === 'accessory') {
-                    itemsHtml += `<tr><td>${item.name || ''}</td><td>${item.designer || '—'}</td><td>${item.size || '—'}${item.color ? ', '+item.color : ''}</td><td>—</td><td>$${(item.price||0).toLocaleString()}</td></tr>`;
+                    itemsHtml += `<tr><td>${item.name || ''}</td><td>${item.designer || '—'}</td><td>${item.size || '—'}${item.color ? ', '+item.color : ''}</td><td>—</td><td>${money(item.price||0)}</td></tr>`;
                     if (item.customizations) {
                         item.customizations.forEach(c => {
-                            itemsHtml += `<tr style="font-size:10px;color:#666"><td style="padding-left:15px">↳ ${c.name}</td><td>${item.designer||''}</td><td>${c.delivery==='ondress'?'On dress':'Separate'}</td><td>Customization</td><td>$${(c.price||0).toLocaleString()}</td></tr>`;
+                            itemsHtml += `<tr style="font-size:10px;color:#666"><td style="padding-left:15px">↳ ${c.name}</td><td>${item.designer||''}</td><td>${c.delivery==='ondress'?'On dress':'Separate'}</td><td>Customization</td><td>${money(c.price||0)}</td></tr>`;
                         });
                     }
                 } else if (item.type === 'inhouse') {
-                    itemsHtml += `<tr><td>${item.name||''}</td><td>In-House</td><td>—</td><td>${item.notes||'—'}</td><td>$${(item.price||0).toLocaleString()}</td></tr>`;
+                    itemsHtml += `<tr><td>${item.name||''}</td><td>In-House</td><td>—</td><td>${item.notes||'—'}</td><td>${money(item.price||0)}</td></tr>`;
                 } else if (item.type === 'fee') {
-                    itemsHtml += `<tr style="font-size:10px"><td>${item.name||''}</td><td>—</td><td>—</td><td>${item.note||'—'}</td><td>$${(item.price||0).toLocaleString()}</td></tr>`;
+                    itemsHtml += `<tr style="font-size:10px"><td>${item.name||''}</td><td>—</td><td>—</td><td>${item.note||'—'}</td><td>${money(item.price||0)}</td></tr>`;
                 }
             });
             
-            // Build measurements
-            const measParts = [];
-            if (measurements.bust) measParts.push(`Bust: ${measurements.bust} ${unit}`);
-            if (measurements.cup) measParts.push(`Cup: ${measurements.cup}`);
-            if (measurements.waist) measParts.push(`Waist: ${measurements.waist} ${unit}`);
-            if (measurements.hip) measParts.push(`Hip: ${measurements.hip} ${unit}`);
-            if (measurements.height) measParts.push(`Height: ${measurements.height} in`);
-            if (measurements.heels) measParts.push(`Heels: ${measurements.heels} in`);
-            if (measurements.waistToFloor) measParts.push(`Waist to Floor: ${measurements.waistToFloor} ${unit}`);
-            if (measurements.custom) measurements.custom.forEach(c => { if (c.value) measParts.push(`${c.name}: ${c.value}`); });
+            let hstRows = hst > 0 ? `<tr><td colspan="4" style="text-align:right">Subtotal</td><td>${money(subtotal)}</td></tr><tr><td colspan="4" style="text-align:right">HST (13%)</td><td>${money(hst)}</td></tr>` : '';
             
-            let hstRows = hst > 0 ? `<tr><td colspan="4" style="text-align:right">Subtotal</td><td>$${subtotal.toLocaleString()}</td></tr><tr><td colspan="4" style="text-align:right">HST (13%)</td><td>$${hst.toLocaleString()}</td></tr>` : '';
+            // Build measurements table
+            const allMeas = [
+                { label: 'Bust', value: measurements.bust, u: unit },
+                { label: 'Cup Size', value: measurements.cup, u: '' },
+                { label: 'Waist', value: measurements.waist, u: unit },
+                { label: 'Hip', value: measurements.hip, u: unit },
+                { label: 'Height', value: measurements.height, u: unit },
+                { label: 'Waist to Floor', value: measurements.waistToFloor, u: unit },
+                { label: 'Heels', value: measurements.heels, u: '"' }
+            ];
+            if (measurements.custom) measurements.custom.forEach(m => { if (m.value) allMeas.push({ label: m.name, value: m.value, u: m.unit || '' }); });
+            
+            const measRows = allMeas.filter(m => m.value).map(m => `<tr><td>${m.label}</td><td>${m.value}${m.u ? ' ' + m.u : ''}</td><td></td></tr>`).join('');
             
             return `
-                <div style="text-align:center;margin-bottom:30px">
-                    <h1 style="font-size:24px;margin:0">BRIDAL ORDER CONTRACT</h1>
-                    <p style="color:#888;font-size:12px">Regenerated from order record</p>
+                <h1 style="text-align:center;font-size:16px;">SALES CONTRACT</h1>
+                
+                <div style="background:#f9f7f5;padding:10px;border-radius:4px;margin-bottom:15px">
+                    <h2 style="margin:0 0 8px 0;font-size:11px">CUSTOMER INFORMATION</h2>
+                    <table style="border:none;font-size:10px">
+                        <tr><td style="border:none;padding:2px"><b>Name:</b> ${clientName}</td><td style="border:none;padding:2px"><b>Email:</b> ${email}</td></tr>
+                        <tr><td style="border:none;padding:2px"><b>Phone:</b> ${phone}</td><td style="border:none;padding:2px"><b>Wedding Date:</b> ${weddingDate}</td></tr>
+                        <tr><td style="border:none;padding:2px" colspan="2"><b>Contract Date:</b> ${orderDate}</td></tr>
+                    </table>
                 </div>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:13px">
-                    <tr><td style="padding:6px 0"><strong>Client:</strong> ${clientName}</td><td style="padding:6px 0"><strong>Order Date:</strong> ${orderDate}</td></tr>
-                    <tr><td style="padding:6px 0"><strong>Email:</strong> ${client?.Email || order.Email || ''}</td><td style="padding:6px 0"><strong>Wedding Date:</strong> ${weddingDate}</td></tr>
-                    <tr><td style="padding:6px 0"><strong>Phone:</strong> ${client?.Phone || order.Phone || ''}</td><td style="padding:6px 0"><strong>PO:</strong> ${order.PO || ''}</td></tr>
+                
+                <h2>PARTIES</h2>
+                <p>This Sales Contract (hereinafter referred to as the "Contract") is entered into on <b>${orderDate}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${clientName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
+                
+                <h2>GOODS AND PRICE</h2>
+                <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
+                <table>
+                    <tr><th>Product</th><th>Designer/Source</th><th>Details</th><th>Notes</th><th>Price</th></tr>
+                    ${itemsHtml}
+                    ${hstRows}
+                    <tr><td colspan="4" style="text-align:right;font-weight:bold">TOTAL</td><td style="font-weight:bold">${money(total)}</td></tr>
                 </table>
-                ${measParts.length > 0 ? `<div style="background:#f9f6f2;padding:12px;border-radius:6px;margin-bottom:20px"><strong style="font-size:12px">Measurements:</strong><div style="font-size:12px;margin-top:6px">${measParts.join(' &nbsp;·&nbsp; ')}</div></div>` : ''}
-                <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:12px">
-                    <thead><tr style="background:#f0ece6"><th style="text-align:left;padding:8px">Item</th><th style="text-align:left;padding:8px">Designer</th><th style="text-align:left;padding:8px">Size</th><th style="text-align:left;padding:8px">Notes</th><th style="text-align:right;padding:8px">Price</th></tr></thead>
-                    <tbody>${itemsHtml}</tbody>
-                    <tfoot>${hstRows}<tr style="font-weight:bold;border-top:2px solid #333"><td colspan="4" style="text-align:right;padding:8px">TOTAL</td><td style="text-align:right;padding:8px">$${total.toLocaleString()}</td></tr></tfoot>
+                ${order.Notes ? `<p><b>Important ordering details:</b> ${order.Notes}</p>` : ''}
+                
+                <h2>MEASUREMENTS</h2>
+                ${measurements.takenBy ? `<p style="font-size:9px;margin-bottom:6px"><b>Measured by:</b> ${measurements.takenBy}</p>` : ''}
+                <table>
+                    <tr><th>Item</th><th>Measurement</th><th>Client's Initial</th></tr>
+                    ${measRows}
                 </table>
-                ${order.SignatureTimestamp ? `<div style="font-size:11px;color:#888;margin-top:30px">Signed: ${new Date(order.SignatureTimestamp).toLocaleString()}</div>` : ''}
+                ${measurements.notes ? `<p><b>Important measurement notes:</b> ${measurements.notes}</p>` : ''}
+                
+                <h2>PAYMENT TERMS</h2>
+                <p>The Customer agrees to make an initial deposit of at least 50% of the total purchase price upon placing the order, which is non-refundable.</p>
+                <p>The Seller will send a balance finalization request to the Buyer by the end of the production, and the Customer agrees to pay the remaining balance in full before shipment.</p>
+                
+                <h2>DELIVERY AND SHIPPING</h2>
+                <p>The delivery of the goods (hereinafter referred to as the "Delivery") will be at Estrelle Bridal.</p>
+                <p>The shipping method will be decided by the suppliers and Seller will be responsible for the costs of the shipment.</p>
+                
+                <h2>NO REFUNDS OR RETURNS</h2>
+                <p>The Customer acknowledges that the wedding dress is made-to-order or customized to their specifications. Therefore, NO returns or refunds will be accepted after the order has been confirmed and production has started.</p>
+                
+                <h2>CANCELLATION OF ORDERS</h2>
+                <p>The Customer who cancels their sales contract are NOT entitled to a refund of ANY monies paid up to and including the cancellation date. The Customer is required to make full payment as per the original order agreement, even in the event of order cancellation, costs will still be incurred to the suppliers and to the Seller regardless of any circumstance.</p>
+                
+                <h2>INSPECTION</h2>
+                <p>Hereby, the Customer acknowledges that it has relied solely on the investigations, examinations, and inspections that the Customer has chosen to make and that the Seller has afforded the Customer the opportunity for full and complete investigations, examinations, and inspections.</p>
+                
+                <h2>RISK OF LOSS AND TITLE</h2>
+                <p>The risk of loss or damage for the goods will be on the Seller until the goods pass upon delivery to the Customer or its designee.</p>
+                <p>The Title of the goods will also remain with the Seller until the goods pass upon delivery to the Customer or its designee.</p>
+                
+                <h2>DELAY OR FAILURE TO PERFORM AND FORCE MAJEURE</h2>
+                <p>Under no circumstances will the Seller be held liable to the Customer for any delay that may occur, non-delivery or an arising fault of this Agreement that may be due to any labour dispute, shortage in transportation, delay or shortage of materials to produce the Goods, fires, accidents, Acts of God, or any other causes outside Seller's control.</p>
+                
+                <h2>LIMITATION OF LIABILITY</h2>
+                <p>Under no circumstances will the Seller be liable for any indirect, special, consequential, or punitive damages (including lost profits) arising out of or relating to this Agreement or the transactions it contemplates.</p>
+                
+                <h2>FIT & BODY SIZE CHANGES</h2>
+                <p>The Customer acknowledges that the wedding dress is ordered based on measurements taken at the time of purchase. The Seller is not responsible for any changes in the Customer's body size or shape after the order is placed.</p>
+                
+                <h2>ENTIRE AGREEMENT</h2>
+                <p>This Agreement contains the entire agreement and understanding among the Parties hereto with respect to the subject matter hereof, and supersedes all prior agreements, understandings, inducements and conditions, express or implied, oral or written, of any nature whatsoever.</p>
+                
+                <h2>FORCE MAJEURE</h2>
+                <p>The Seller will not be liable for delays in performance or for non-performance due to unforeseen circumstances or causes beyond the Seller's reasonable control.</p>
+                
+                <h2>SIGNATURES</h2>
+                <div style="display:flex;gap:40px;margin-top:20px">
+                    <div style="flex:1">
+                        <p style="font-size:10px;margin-bottom:4px"><b>Customer Signature:</b></p>
+                        ${order.CustomerSignature ? `<img src="${order.CustomerSignature}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">` : '<div style="border-bottom:1px solid #333;height:60px"></div>'}
+                        <p style="font-size:9px;color:#666">${clientName}</p>
+                    </div>
+                    <div style="flex:1">
+                        <p style="font-size:10px;margin-bottom:4px"><b>Consultant Signature:</b></p>
+                        ${order.ConsultantSignature ? `<img src="${order.ConsultantSignature}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">` : '<div style="border-bottom:1px solid #333;height:60px"></div>'}
+                        <p style="font-size:9px;color:#666">${order.Consultant || ''}</p>
+                    </div>
+                </div>
+                ${order.SignatureTimestamp ? `<p style="font-size:9px;color:#666;margin-top:10px"><b>Date:</b> ${new Date(order.SignatureTimestamp).toLocaleDateString()}</p>` : ''}
             `;
         }
         
         function resendContract() {
             const orderId = $('btnResendContract').dataset.orderId;
+            resendContractById(orderId);
+        }
+        
+        function resendContractById(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
-            if (!order) return;
+            if (!order) { toast('Order not found', 'error'); return; }
             
             const client = order.ClientID ? getClient(order.ClientID) : null;
             const email = client?.Email || order.Email;
             if (!email) { toast('No email address', 'error'); return; }
             
-            const subject = encodeURIComponent(`Your Bridal Contract - ${order.ClientName || ''}`);
-            const body = encodeURIComponent(`Hi ${(order.ClientName || '').split(' ')[0]},\n\nPlease find your bridal contract attached.\n\nIf you have any questions, please don't hesitate to reach out.\n\nWarmly,\nThe Estrelle Team`);
-            window.open(`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(email)}&su=${subject}&body=${body}`, '_blank');
+            const clientName = order.ClientName || (client ? `${client.FirstName} ${client.LastName}` : '');
+            const firstName = clientName.split(' ')[0] || '';
+            const dress = order.Dress || order.Designer || getDressFromItems(order) || 'Order';
+            const total = parseFloat(order.Total) || parseFloat(order.Subtotal) || getOrderPreTax(order) || 0;
+            
+            const emailBody = `Hi ${firstName},\n\nPlease find your bridal sales contract attached.\n\nIf you have any questions, please don't hesitate to reach out.\n\nWarmly,\nThe Estrelle Team`;
+            
+            showChoiceDialog(
+                '📧 Send Contract PDF',
+                '',
+                [
+                    { label: '📤 Send Now', style: 'primary', action: () => { closeModal('choice'); doResendContract(orderId, order, client, email, clientName, emailBody); } },
+                    { label: 'Cancel', style: 'secondary', action: () => { closeModal('choice'); } }
+                ]
+            );
+            
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left;font-size:12px">
+                            <div style="background:var(--cream);padding:12px;border-radius:8px;margin-bottom:12px">
+                                <div style="margin-bottom:6px"><b>To:</b> ${email}</div>
+                                <div style="margin-bottom:6px"><b>Subject:</b> Your Bridal Contract - ${clientName}</div>
+                                <div><b>Order:</b> PO ${order.PO || '—'} · </div>
+                            </div>
+                            <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;white-space:pre-wrap;font-size:11px;line-height:1.6;color:#555">${emailBody}</div>
+                            <div style="margin-top:8px;font-size:10px;color:var(--taupe)">📎 The full signed contract will be attached as a PDF.</div>
+                        </div>`;
+                }
+            }, 50);
+        }
+        
+        function doResendContract(orderId, order, client, email, clientName, emailBody) {
+            let contractHtml = order.ContractHtml;
+            if (!contractHtml) contractHtml = regenerateContractFromOrder(order);
+            if (!contractHtml) { toast('No contract found', 'error'); return; }
+            
+            toast('Sending contract to ' + email + '...', 'success');
+            closeModal('orderDetails');
+            
+            const isSigned = !!(order.CustomerSignature && String(order.CustomerSignature).startsWith('data:image')) || !!order.ESignedDate;
+            
+            const contractData = {
+                brideName: clientName,
+                brideEmail: email,
+                consultantName: order.Consultant || '',
+                subject: `Your Bridal Contract - ${clientName}`,
+                body: emailBody,
+                contractHtml: contractHtml,
+                signatureData: order.CustomerSignature || null,
+                consultantSignatureData: order.ConsultantSignature || null,
+                weddingDate: client?.WeddingDate ? fmtDate(client.WeddingDate) : '',
+                phone: client?.Phone || order.Phone || '',
+                signDate: order.OrderDate ? fmtDate(order.OrderDate) : today(),
+                skipDrive: !isSigned
+            };
+            
+            api('POST', { action: 'sendContract', contractData })
+                .then(res => {
+                    toast('Contract sent to ' + email + '!', 'success');
+                    updateRecord('Orders', orderId, { ContractSentDate: new Date().toISOString() });
+                    renderClientContracts();
+                })
+                .catch(e => {
+                    console.error('Send failed:', e);
+                    toast('Failed to send. Please try again.', 'error');
+                });
         }
         
         function selectOrderItem(idx) {
@@ -11946,6 +12154,17 @@ The {StoreName} Team
         
         function getOrderPaymentMethod(order) { return order.PaymentMethod || ''; }
         
+        function getDressFromItems(order) {
+            try {
+                const items = typeof order.Items === 'string' ? JSON.parse(order.Items) : (order.Items || []);
+                const dress = items.find(i => i.type === 'dress');
+                if (dress) return dress.name || dress.style || '';
+                const first = items[0];
+                if (first) return first.name || first.style || '';
+            } catch(e) {}
+            return '';
+        }
+        
         function getOrderPreTax(o) {
             let preTax = parseFloat(o.Subtotal) || parseFloat(o.Total) || 0;
             if (!preTax && o.Items) {
@@ -14162,6 +14381,54 @@ The {storeName} Team`
         }
 
         // ========== CONSULTATION ==========
+        function renderClientProfile() {
+            if (!currentClient) return;
+            const c = currentClient;
+            
+            // Update draft banner
+            const _hasDraft = hasDraft(c.ID);
+            if ($('draftBanner')) $('draftBanner').style.display = _hasDraft ? 'block' : 'none';
+            if (_hasDraft) {
+                try {
+                    const _draft = JSON.parse(c.OrderDraft);
+                    const itemCount = _draft.items?.length || 0;
+                    const savedDate = new Date(_draft.savedAt);
+                    const timeAgo = getTimeAgo(savedDate);
+                    const total = _draft.items?.reduce((sum, item) => {
+                        let t = item.price || 0;
+                        if (item.customizations) t += item.customizations.reduce((s, cu) => s + (cu.price || 0), 0);
+                        return sum + t;
+                    }, 0) || 0;
+                    const stepNames = { 1: 'Measurements', 2: 'Add Items', 3: 'Order Details', 4: 'Review', 5: 'Sign', 6: 'Send' };
+                    const stepName = stepNames[_draft.step] || 'Step ' + _draft.step;
+                    let meta = `Saved ${timeAgo}`;
+                    if (itemCount > 0) meta += ` · ${itemCount} item${itemCount > 1 ? 's' : ''} · $${total.toLocaleString()}`;
+                    meta += ` · Left off at: ${stepName}`;
+                    if ($('draftBannerMeta')) $('draftBannerMeta').textContent = meta;
+                } catch (e) { if ($('draftBannerMeta')) $('draftBannerMeta').textContent = 'Tap to continue'; }
+            }
+            
+            // Update She Said Yes button
+            const yesBtn = $('btnSheSaidYes');
+            if (yesBtn) {
+                if (_hasDraft) {
+                    yesBtn.textContent = '📝 Continue Draft';
+                    yesBtn.onclick = () => sheSaidYes(true);
+                } else {
+                    yesBtn.textContent = '💍 She Said Yes!';
+                    yesBtn.onclick = () => sheSaidYes();
+                }
+            }
+            
+            // Update contract button
+            const clientOrders = data.orders.filter(o => String(o.ClientID) === String(c.ID));
+            if ($('btnClientContract')) $('btnClientContract').style.display = clientOrders.length > 0 ? 'inline-flex' : 'none';
+            
+            // Re-render sections
+            renderClientMeasurements();
+            renderClientContracts();
+        }
+        
         function openClient(id, fromHistory = false) {
             const c = getClient(id);
             if (!c) return;
@@ -14228,6 +14495,11 @@ The {storeName} Team`
                 }
             }
             
+            // Show contract button if client has orders
+            const clientOrders = data.orders.filter(o => String(o.ClientID) === String(c.ID));
+            const hasContractOrder = clientOrders.length > 0;
+            if ($('btnClientContract')) $('btnClientContract').style.display = hasContractOrder ? 'inline-flex' : 'none';
+            
             // Track page history
             if (!fromHistory && pageHistory[pageHistory.length - 1] !== 'consult') {
                 pageHistory.push('consult');
@@ -14239,6 +14511,7 @@ The {storeName} Team`
             renderClientOptions();
             renderClientPhotos();
             renderClientMeasurements();
+            renderClientContracts();
             renderVisitHistory();
             showPage('consult', true); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
@@ -14335,17 +14608,31 @@ The {storeName} Team`
                 rushTiers: [],
                 belowMin: { note: 'Inquiry required' },
                 minMonths: 5
+            },
+            {
+                name: 'Tina Valerdi',
+                standard: 5,
+                rushTiers: [],
+                belowMin: { note: 'Inquiry required' },
+                minMonths: 5
             }
         ];
         
         // Load designers from localStorage or use defaults
         let designerData = [];
         function loadDesignerData() {
+            // 1. Try Google Sheets first (most reliable, survives browser changes)
+            if (loadDesignerDataFromSheets()) {
+                // Merge any new defaults
+                mergeDefaultDesigners();
+                return;
+            }
+            
+            // 2. Try localStorage
             const saved = localStorage.getItem('estrelle_designers');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
-                    // Make sure we have valid data with items
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         designerData = parsed;
                     } else {
@@ -14358,21 +14645,25 @@ The {storeName} Team`
                 designerData = [...DEFAULT_DESIGNER_DATA];
             }
             
-            // Deduplicate — keep the last (most recently added/edited) entry for each name
-            const beforeCount = designerData.length;
+            // Deduplicate
             const seen = new Map();
             designerData.forEach((d, i) => {
                 const key = d.name.trim().toLowerCase();
-                seen.set(key, i); // last occurrence wins
+                seen.set(key, i);
             });
             if (seen.size < designerData.length) {
                 const keepIndices = new Set(seen.values());
                 designerData = designerData.filter((_, i) => keepIndices.has(i));
-                console.log(`Deduped designers: ${beforeCount} → ${designerData.length}`);
-                saveDesignerData(); // Persist the cleanup
+                saveDesignerData();
             }
             
-            // Merge any new default designers that aren't in localStorage yet
+            // Merge defaults
+            mergeDefaultDesigners();
+            
+            console.log('Loaded designerData:', designerData.length, 'designers');
+        }
+        
+        function mergeDefaultDesigners() {
             const existingNames = new Set(designerData.map(d => d.name.trim().toLowerCase()));
             let added = 0;
             for (const def of DEFAULT_DESIGNER_DATA) {
@@ -14383,14 +14674,31 @@ The {storeName} Team`
                 }
             }
             if (added > 0) {
-                console.log(`Merged ${added} new default designer(s) into localStorage`);
+                console.log(`Merged ${added} new default designer(s)`);
                 saveDesignerData();
             }
-            
-            console.log('Loaded designerData:', designerData.length, 'designers');
         }
         function saveDesignerData() {
             localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
+            // Also save to Google Sheets so it persists across browsers/downloads
+            updateRecord('Announcements', 'DESIGNERS_CONFIG', { Title: 'DESIGNERS_CONFIG', Details: JSON.stringify(designerData), Type: 'system' });
+        }
+        
+        function loadDesignerDataFromSheets() {
+            // Try to load from Announcements (system config)
+            const config = (data.announcements || []).find(a => a.Title === 'DESIGNERS_CONFIG' || a.ID === 'DESIGNERS_CONFIG');
+            if (config && config.Details) {
+                try {
+                    const parsed = JSON.parse(config.Details);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        designerData = parsed;
+                        localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
+                        console.log('Loaded designers from Google Sheets:', designerData.length);
+                        return true;
+                    }
+                } catch(e) {}
+            }
+            return false;
         }
         
         // Rename constant to DEFAULT
@@ -15049,6 +15357,339 @@ The {storeName} Team`
             } catch (e) {
                 return [];
             }
+        }
+        
+        function renderClientContracts() {
+            if (!currentClient) return;
+            const clientOrders = data.orders.filter(o => String(o.ClientID) === String(currentClient.ID));
+            
+            $('contractsCard').style.display = 'block';
+            
+            if (clientOrders.length === 0) {
+                $('cContracts').innerHTML = '<div class="empty" style="font-size:12px;padding:12px">No contracts yet. Click "+ New" to start.</div>';
+                return;
+            }
+            
+            const sorted = [...clientOrders].sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            
+            $('cContracts').innerHTML = sorted.map(o => {
+                const hasContract = !!(o.ContractHtml || o.Items);
+                const hasCustSig = !!(o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image'));
+                const hasESigned = !!o.ESignedDate;
+                const isSigned = hasCustSig || hasESigned;
+                const wasSent = !!(o.ContractSentDate);
+                const eSignSent = !!o.ESignLinkSent;
+                
+                let statusBadge = '';
+                let statusNote = '';
+                if (isSigned) {
+                    statusBadge = '<span style="background:#e8f5e9;color:#2e7d32;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600">✓ Signed by Customer</span>';
+                    statusNote = '<div style="font-size:10px;color:#2e7d32;margin-top:4px">✓ Saved to Google Drive</div>';
+                } else if (eSignSent) {
+                    statusBadge = '<span style="background:#fff3cd;color:#856404;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600">📱 Sent for E-Sign — Waiting</span>';
+                    statusNote = '<div style="font-size:10px;color:#856404;margin-top:4px">Bride has received the link. Will save to Drive once signed.</div>';
+                } else if (hasContract) {
+                    statusBadge = '<span style="background:#fce4ec;color:#c62828;padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600">⚠ Unsigned — Needs Customer Signature</span>';
+                    statusNote = '<div style="font-size:10px;color:#c62828;margin-top:4px">Send for e-sign so the customer can sign on their phone.</div>';
+                } else {
+                    statusBadge = '<span style="background:var(--bg);color:var(--taupe);padding:3px 10px;border-radius:10px;font-size:10px">No Contract</span>';
+                }
+                
+                const dress = o.Dress || o.Designer || getDressFromItems(o) || 'Order';
+                const total = parseFloat(o.Total) || parseFloat(o.Subtotal) || getOrderPreTax(o) || 0;
+                const signedDate = o.ESignedDate ? ' · Signed ' + fmtDate(o.ESignedDate.split('T')[0]) : '';
+                
+                // Show different primary action based on status
+                let primaryAction = '';
+                if (isSigned) {
+                    primaryAction = `<button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View Signed</button>
+                        <button class="btn btn-sm btn-secondary" onclick="resendContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📧 Re-send</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editContract('${o.ID}')" style="font-size:10px;padding:4px 10px">✏️ Edit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="deleteOrderFromContracts('${o.ID}')" style="font-size:10px;padding:4px 10px;color:#c00">🗑</button>`;
+                } else {
+                    primaryAction = `<button class="btn btn-sm" onclick="sendForESign('${o.ID}')" style="font-size:10px;padding:5px 14px;background:#C4A265;color:white;border:none;border-radius:6px;font-weight:600">📱 Send for E-Sign</button>
+                        <button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View</button>
+                        <button class="btn btn-sm btn-secondary" onclick="copyESignLink('${o.ID}')" style="font-size:10px;padding:4px 10px" title="Copy signing link">🔗 Link</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editContract('${o.ID}')" style="font-size:10px;padding:4px 10px">✏️ Edit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="deleteOrderFromContracts('${o.ID}')" style="font-size:10px;padding:4px 10px;color:#c00">🗑</button>`;
+                }
+                
+                return `<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+                        <span style="font-weight:600;font-size:13px">PO ${o.PO || '—'}</span>
+                        ${statusBadge}
+                    </div>
+                    <div style="font-size:11px;color:var(--taupe)">${dress} · ${fmtDate(o.OrderDate)} · ${money(total)}${signedDate}</div>
+                    ${statusNote}
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                        ${primaryAction}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        function editContract(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) { toast('Order not found', 'error'); return; }
+            
+            // Open Say Yes flow
+            sheSaidYes(false);
+            
+            // Load order data into the flow after modal opens
+            setTimeout(() => {
+                // Restore items
+                let items = [];
+                try { items = order.Items ? JSON.parse(order.Items) : []; } catch(e) {}
+                if (items.length > 0) {
+                    currentOrder.items = items;
+                    renderOrderItems();
+                }
+                
+                // Restore measurements from order or client
+                let measurements = {};
+                try { measurements = order.Measurements ? JSON.parse(order.Measurements) : {}; } catch(e) {}
+                if (!measurements.bust && !measurements.waist) {
+                    // Try client's measurements
+                    const clientMeas = getClientMeasurements();
+                    if (clientMeas.length > 0) measurements = clientMeas[clientMeas.length - 1];
+                }
+                if (measurements.bust || measurements.waist || measurements.hip) {
+                    currentOrder.measurements = measurements;
+                    if ($('mBust')) $('mBust').value = measurements.bust || '';
+                    if ($('mCup')) $('mCup').value = measurements.cup || '';
+                    if ($('mWaist')) $('mWaist').value = measurements.waist || '';
+                    if ($('mHip')) $('mHip').value = measurements.hip || '';
+                    if ($('mHeight')) $('mHeight').value = measurements.height || '';
+                    if ($('mHeels')) $('mHeels').value = measurements.heels || '';
+                    if ($('mWaistToFloor')) $('mWaistToFloor').value = measurements.waistToFloor || '';
+                    if ($('mNotes')) $('mNotes').value = measurements.notes || '';
+                    if ($('mTakenBy')) $('mTakenBy').value = measurements.takenBy || '';
+                    if (measurements.unit) { measUnit = measurements.unit; setMeasUnit(measurements.unit); }
+                    if (measurements.custom && measurements.custom.length > 0) {
+                        customMeasurements = [...measurements.custom];
+                        renderCustomMeas();
+                    }
+                }
+                
+                // Restore order details
+                if ($('oiPO')) $('oiPO').value = order.PO || '';
+                if ($('oiArrivalDate')) $('oiArrivalDate').value = order.ArrivalDate || '';
+                if ($('oiDetails')) $('oiDetails').value = order.Notes || '';
+                
+                // Restore tax
+                const hst = parseFloat(order.HST) || 0;
+                if (hst > 0) {
+                    if ($('taxHst')) $('taxHst').checked = true;
+                } else {
+                    if ($('taxNone')) $('taxNone').checked = true;
+                }
+                
+                // Store the original order ID so we can update instead of create new
+                currentOrder._editingOrderId = orderId;
+                
+                toast('Editing contract — make changes and save', 'success');
+            }, 300);
+        }
+        
+        async function deleteOrderFromContracts(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            const label = order ? `PO ${order.PO || '—'} (${order.ClientName || ''})` : 'this order';
+            const confirmed = await appConfirmDanger(`Delete ${label} and its contract? This cannot be undone.`, 'Delete Order');
+            if (!confirmed) return;
+            
+            deleteRecord('Orders', orderId);
+            renderClientContracts();
+            renderOrders();
+            renderDash();
+            toast('Order & contract deleted', 'success');
+        }
+        
+        function generateSignToken(orderId) {
+            // Simple hash — must match the Apps Script generateSignToken
+            // Using a basic string hash since we can't use SHA-256 easily client-side
+            // The real security is on the server side
+            const secret = 'estrelle-esign-2024';
+            const raw = orderId + '-' + secret;
+            let hash = 0;
+            for (let i = 0; i < raw.length; i++) {
+                const chr = raw.charCodeAt(i);
+                hash = ((hash << 5) - hash) + chr;
+                hash |= 0;
+            }
+            return Math.abs(hash).toString(36).substring(0, 20);
+        }
+        
+        function getESignLink(orderId) {
+            return API_URL + '?action=esign&id=' + orderId + '&token=' + generateSignToken(orderId);
+        }
+        
+        function getESignLinkForEmail(orderId) {
+            // For emails: wrap in redirect to prevent Gmail from intercepting script.google.com
+            const directLink = API_URL + '?action=esign&id=' + orderId + '&token=' + generateSignToken(orderId);
+            return directLink;
+        }
+        
+        async function sendForESign(orderId) {
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) { toast('Order not found', 'error'); return; }
+            
+            const client = order.ClientID ? getClient(order.ClientID) : null;
+            const email = client?.Email || order.Email;
+            if (!email) { toast('No email address for this client', 'error'); return; }
+            
+            const clientName = order.ClientName || '';
+            const firstName = clientName.split(' ')[0] || '';
+            const signLink = getESignLink(orderId);
+            const dress = order.Dress || order.Designer || getDressFromItems(order) || 'Order';
+            const total = parseFloat(order.Total) || parseFloat(order.Subtotal) || getOrderPreTax(order) || 0;
+            
+            const emailBody = `<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:32px 20px">
+<div style="text-align:center;margin-bottom:24px">
+<div style="font-family:sans-serif;font-size:11px;letter-spacing:3px;color:#C4A265;text-transform:uppercase">Estrelle Bridal</div>
+</div>
+<div style="background:white;border-radius:12px;padding:32px;border:1px solid #eee">
+<p style="font-size:16px;margin:0 0 16px">Hi ${firstName},</p>
+<p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 20px">Thank you for choosing Estrelle Bridal! Please review and sign your contract by tapping the button below.</p>
+<div style="text-align:center;margin:24px 0">
+<a href="${signLink}" style="display:inline-block;background:#C4A265;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:sans-serif;font-size:15px;font-weight:600;letter-spacing:0.5px" target="_blank">Review & Sign Contract</a>
+</div>
+<p style="font-size:13px;color:#888;line-height:1.5;margin:0 0 8px">Simply tap the button, review your contract on your phone, and sign with your finger at the bottom.</p>
+<p style="font-size:13px;color:#888;line-height:1.5;margin:0">If you have any questions, please don't hesitate to reach out.</p>
+<p style="font-size:14px;color:#555;margin:20px 0 0">Warmly,<br>The Estrelle Team</p>
+</div>
+<p style="text-align:center;color:#aaa;font-size:11px;margin-top:24px">Estrelle Bridal · 55 Avenue Road #201.5, Toronto · estrelle.com</p>
+</div>`;
+            
+            const emailBodyPlain = 'Hi ' + firstName + ',\n\nThank you for choosing Estrelle Bridal! Please review and sign your contract using the link below:\n\n' + signLink + '\n\nWarmly,\nThe Estrelle Team';
+            
+            showChoiceDialog(
+                '📱 Send E-Sign Link',
+                '',
+                [
+                    { label: '📤 Send Now', style: 'primary', action: () => { closeModal('choice'); doSendESign(orderId, email, clientName, emailBody, signLink); } },
+                    { label: 'Cancel', style: 'secondary', action: () => { closeModal('choice'); } }
+                ]
+            );
+            
+            // Inject preview into the choice dialog after it renders
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left;font-size:12px">
+                            <div style="background:var(--cream);padding:12px;border-radius:8px;margin-bottom:12px">
+                                <div style="margin-bottom:6px"><b>To:</b> ${email}</div>
+                                <div style="margin-bottom:6px"><b>Subject:</b> Please Sign Your Bridal Contract — Estrelle Bridal</div>
+                                <div><b>Order:</b> PO ${order.PO || '—'} · </div>
+                            </div>
+                            <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:12px;max-height:200px;overflow-y:auto;font-size:11px;line-height:1.6;color:#555">${emailBody}</div>
+                            <div style="margin-top:8px;font-size:10px;color:var(--taupe)">📱 The bride will open a link on her phone to review the full contract, initial measurements, and sign.</div>
+                        </div>`;
+                }
+            }, 50);
+        }
+        
+        function doSendESign(orderId, email, clientName, emailBody, signLink) {
+            console.log('doSendESign called:', { orderId, email, clientName });
+            toast('📧 Sending e-sign link to ' + email + '...', 'success');
+            
+            // Use dedicated backend endpoint — it builds the email with proper link formatting
+            api('POST', { 
+                action: 'sendESignEmail', 
+                orderId: orderId, 
+                token: generateSignToken(orderId),
+                brideEmail: email, 
+                brideName: clientName 
+            })
+                .then(res => {
+                    console.log('E-sign send SUCCESS:', res);
+                    updateRecord('Orders', orderId, { ContractSentDate: new Date().toISOString(), ESignLinkSent: new Date().toISOString() });
+                    renderClientContracts();
+                    // Show success dialog
+                    showChoiceDialog(
+                        '✓ E-Sign Link Sent!',
+                        '',
+                        [
+                            { label: '✓ Done', style: 'primary', action: () => closeModal('choice') }
+                        ]
+                    );
+                    setTimeout(() => {
+                        const msgEl = $('choiceMessage');
+                        if (msgEl) {
+                            msgEl.innerHTML = `
+                                <div style="text-align:center">
+                                    <div style="width:50px;height:50px;background:#e8f5e9;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px">📧</div>
+                                    <div style="font-size:13px;margin-bottom:8px">Email sent to <b>${email}</b></div>
+                                    <div style="font-size:11px;color:var(--taupe);line-height:1.5">
+                                        The bride will receive a link to review and sign the contract on her phone.<br>
+                                        You'll get an email notification at <b>info@estrellebridal.com</b> once she signs.<br>
+                                        The status on this page will update to <span style="background:#e8f5e9;color:#2e7d32;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600">✓ Signed</span> automatically.
+                                    </div>
+                                </div>`;
+                        }
+                    }, 50);
+                })
+                .catch(e => {
+                    console.error('Send e-sign failed:', e);
+                    toast('Failed to send: ' + (e.message || e), 'error');
+                });
+        }
+        
+        function copyESignLink(orderId) {
+            const link = getESignLink(orderId);
+            navigator.clipboard.writeText(link)
+                .then(() => toast('Signing link copied!', 'success'))
+                .catch(() => prompt('Copy this link:', link));
+        }
+        
+        function sendESignFromStep6() {
+            // Find the most recent order for this client (just created by finalizeContract)
+            const clientOrders = data.orders
+                .filter(o => String(o.ClientID) === String(currentClient.ID))
+                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            
+            if (clientOrders.length === 0) {
+                toast('No order found', 'error');
+                return;
+            }
+            
+            const orderId = clientOrders[0].ID;
+            const email = currentClient.Email;
+            if (!email) { toast('No email address for this client', 'error'); return; }
+            
+            const firstName = currentClient.FirstName || '';
+            const signLink = getESignLink(orderId);
+            
+            const btn = $('btnESign');
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+            
+            const contractData = {
+                brideName: `${currentClient.FirstName} ${currentClient.LastName}`,
+                brideEmail: email,
+                subject: 'Please Sign Your Bridal Contract — Estrelle Bridal',
+                body: `Hi ${firstName},\n\nThank you for choosing Estrelle Bridal! Please review and sign your contract using the link below:\n\n${signLink}\n\nSimply tap the link, review your contract, and sign with your finger at the bottom.\n\nIf you have any questions, please don't hesitate to reach out.\n\nWarmly,\nThe Estrelle Team`,
+                contractHtml: '<p>Please use the signing link to view and sign your contract.</p>',
+                skipAttachment: true,
+                signDate: today()
+            };
+            
+            api('POST', { action: 'sendContract', contractData })
+                .then(res => {
+                    toast('E-sign link sent to ' + email + '!', 'success');
+                    updateRecord('Orders', orderId, { ContractSentDate: new Date().toISOString(), ESignLinkSent: new Date().toISOString() });
+                    closeModal('yes');
+                    stopDraftAutoSave();
+                    if (currentClient) { renderClientProfile(); renderClientPhotos(); }
+                    renderClients();
+                    renderDash();
+                })
+                .catch(e => {
+                    console.error('Send e-sign failed:', e);
+                    toast('Failed to send. Please try again.', 'error');
+                    btn.disabled = false;
+                    btn.textContent = '📱 Send E-Sign Link to Bride';
+                });
         }
         
         function renderClientMeasurements() {
@@ -16152,52 +16793,52 @@ The {storeName} Team`
         }
 
         function sheSaidYes(autoLoadDraft = false) {
+          try {
             yStep = 1;
             currentOrder = { items: [], measurements: {}, hst: false };
             customMeasurements = [];
             measUnit = 'in';
-            setMeasUnit('in');
+            
+            // Null-safe unit buttons
+            if ($('unitCm')) { $('unitCm').className = 'btn btn-sm btn-secondary'; $('unitCm').style.background = ''; $('unitCm').style.color = ''; }
+            if ($('unitIn')) { $('unitIn').className = 'btn btn-sm'; $('unitIn').style.background = 'var(--charcoal)'; $('unitIn').style.color = 'white'; }
+            document.querySelectorAll('[data-unit]').forEach(el => el.textContent = 'in');
+            
             pendingPhotos = [];
-            renderPhotoPreview();
+            if ($('photoPreviewGrid')) $('photoPreviewGrid').innerHTML = '';
             
             // Populate saved measurements dropdown
             populateSavedMeasurementsDropdown();
             
             // Populate "measured by" consultant dropdown
-            $('mTakenBy').innerHTML = '<option value="">Select consultant...</option>' + 
+            if ($('mTakenBy')) $('mTakenBy').innerHTML = '<option value="">Select consultant...</option>' + 
                 data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
             
             // Populate designer dropdown for step 2
             populateDesignerDropdown();
             
             // Clear measurement fields
-            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
-            $('mNotes').value = '';
-            $('customMeasList').innerHTML = '';
-            $('selectSavedMeasurement').value = '';
-            $('mTakenBy').value = '';
+            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => { if ($(id)) $(id).value = ''; });
+            if ($('mNotes')) $('mNotes').value = '';
+            if ($('customMeasList')) $('customMeasList').innerHTML = '';
+            if ($('selectSavedMeasurement')) $('selectSavedMeasurement').value = '';
+            if ($('mTakenBy')) $('mTakenBy').value = '';
             
-            $('orderItems').innerHTML = '';
-            $('orderTotal').textContent = '$0';
-            // Default to 13% HST
-            $('taxHst').checked = true;
-            $('taxCustom').checked = false;
-            $('taxNone').checked = false;
-            $('customTaxRate').value = '';
-            $('orderSubtotal').style.display = 'none';
-            $('orderHstRow').style.display = 'none';
-            $('yDate').value = today();
+            if ($('orderItems')) $('orderItems').innerHTML = '';
+            if ($('orderTotal')) $('orderTotal').textContent = '$0';
+            if ($('taxHst')) $('taxHst').checked = true;
+            if ($('taxCustom')) $('taxCustom').checked = false;
+            if ($('taxNone')) $('taxNone').checked = false;
+            if ($('customTaxRate')) $('customTaxRate').value = '';
+            if ($('orderSubtotal')) $('orderSubtotal').style.display = 'none';
+            if ($('orderHstRow')) $('orderHstRow').style.display = 'none';
+            if ($('yDate')) $('yDate').value = today();
             
-            // Clear PO - consultant will enter
-            $('oiPO').value = '';
+            if ($('oiPO')) $('oiPO').value = '';
+            if ($('oiArrivalDate')) $('oiArrivalDate').value = '';
+            if ($('arrivalDateHint')) { $('arrivalDateHint').textContent = 'Enter expected arrival date'; $('arrivalDateHint').style.color = 'var(--taupe)'; }
             
-            // Clear arrival date
-            $('oiArrivalDate').value = '';
-            $('arrivalDateHint').textContent = 'Enter expected arrival date';
-            $('arrivalDateHint').style.color = 'var(--taupe)';
-            
-            // Reset item type to dress
-            $('oiType').value = 'dress';
+            if ($('oiType')) $('oiType').value = 'dress';
             toggleOrderItemFields();
             
             updateYSteps();
@@ -16226,6 +16867,10 @@ The {storeName} Team`
                 // Show dialog asking if they want to load
                 checkForDraft();
             }
+          } catch(err) {
+            console.error('sheSaidYes error:', err);
+            alert('Error opening Say Yes: ' + err.message);
+          }
         }
         
         function generateNextPO() {
@@ -16318,12 +16963,20 @@ The {storeName} Team`
         function closeYesModal() {
             stopDraftAutoSave();
             
+            // If we're in Phase 2 of Step 6 (contract already saved), just close
+            if (yStep === 6 && $('yStep6Email')?.style.display === 'block') {
+                closeModal('yes');
+                renderClientProfile();
+                renderDash();
+                return;
+            }
+            
             // Check if there's any data entered
             const hasItems = currentOrder.items && currentOrder.items.length > 0;
-            const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value;
+            const hasMeasurements = $('mBust')?.value || $('mWaist')?.value || $('mHip')?.value;
             
             if (hasItems || hasMeasurements) {
-                // Auto-save silently first so nothing is lost even if they click Discard
+                // Auto-save silently first so nothing is lost
                 autoSaveDraft();
                 
                 const itemCount = currentOrder.items?.length || 0;
@@ -16345,15 +16998,17 @@ The {storeName} Team`
             }
         }
         
+        var _choiceActions = [];
         function showChoiceDialog(title, message, buttons) {
             $('choiceTitle').textContent = title;
             $('choiceMessage').textContent = message;
             $('choiceInput').style.display = 'none';
-            $('choiceButtons').innerHTML = buttons.map(btn => {
+            _choiceActions = buttons.map(btn => btn.action);
+            $('choiceButtons').innerHTML = buttons.map((btn, idx) => {
                 const btnClass = btn.style === 'primary' ? 'btn btn-primary' : 
                                  btn.style === 'danger' ? 'btn btn-secondary' : 'btn btn-secondary';
                 const extraStyle = btn.style === 'danger' ? 'background:#e74c3c;color:white;border-color:#e74c3c' : '';
-                return `<button class="${btnClass}" style="width:100%;padding:12px;${extraStyle}" onclick="(${btn.action.toString()})()">${btn.label}</button>`;
+                return `<button class="${btnClass}" style="width:100%;padding:12px;${extraStyle}" onclick="_choiceActions[${idx}]()">${btn.label}</button>`;
             }).join('');
             openModal('choice');
         }
@@ -16751,8 +17406,7 @@ The {storeName} Team`
             $('yPrev').style.display = yStep > 1 ? 'inline-flex' : 'none';
             $('yNext').style.display = yStep < 5 ? 'inline-flex' : 'none';
             $('ySaveOnly').style.display = yStep === 5 ? 'inline-flex' : 'none';
-            $('yGmail').style.display = 'none'; // Now inline in step 6
-            $('yDone').style.display = 'none'; // Now inline in step 6
+            if ($('yDone')) $('yDone').style.display = 'none';
             
             // On step 5, show "Next" to go to email step (but don't require signatures)
             if (yStep === 5) {
@@ -17686,15 +18340,25 @@ The {storeName} Team`
                 }
             });
             
-            const hst = o.hst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
+            // Calculate HST - check currentOrder.hst, tax radio, or taxRate
+            let hstRate = 0;
+            if (o.hst || o.taxRate > 0) {
+                hstRate = o.taxRate || 0.13;
+            } else if ($('taxHst')?.checked) {
+                hstRate = 0.13;
+            } else if ($('taxCustom')?.checked && $('customTaxRate')?.value) {
+                hstRate = parseFloat($('customTaxRate').value) / 100;
+            }
+            const hst = hstRate > 0 ? Math.round(subtotal * hstRate * 100) / 100 : 0;
             const total = subtotal + hst;
             const unit = measUnit;
+            const taxLabel = hstRate === 0.13 ? 'HST (13%)' : ('Tax (' + Math.round(hstRate * 100) + '%)');
             
             let hstRows = '';
-            if (o.hst) {
+            if (hst > 0) {
                 hstRows = `
                     <tr><td colspan="4" style="text-align:right">Subtotal</td><td>${money(subtotal)}</td></tr>
-                    <tr><td colspan="4" style="text-align:right">HST (13%)</td><td>${money(hst)}</td></tr>
+                    <tr><td colspan="4" style="text-align:right">${taxLabel}</td><td>${money(hst)}</td></tr>
                 `;
             }
             
@@ -18095,9 +18759,20 @@ The {storeName} Team`
                 source: 'order' // Mark as coming from Say Yes
             };
             
-            // Get existing measurements and add new one
+            // Get existing measurements and add new one (only if not a duplicate)
             const existingMeasurements = getClientMeasurements();
-            existingMeasurements.push(measurementRecord);
+            
+            // Check if these exact measurements already exist (same bust/waist/hip/date)
+            const isDuplicate = existingMeasurements.some(m => 
+                m.bust === measurementRecord.bust && 
+                m.waist === measurementRecord.waist && 
+                m.hip === measurementRecord.hip &&
+                m.date === measurementRecord.date
+            );
+            
+            if (!isDuplicate && (measurementRecord.bust || measurementRecord.waist || measurementRecord.hip)) {
+                existingMeasurements.push(measurementRecord);
+            }
             
             const record = {
                 ClientID: c.ID,
@@ -18124,15 +18799,28 @@ The {storeName} Team`
                 Measurements: JSON.stringify(o.measurements),
                 FittingPhotos: JSON.stringify(fittingPhotos),
                 SignatureTimestamp: new Date().toISOString(),
-                ContractHtml: typeof getContractHtml === 'function' ? getContractHtml() : ''
+                ContractHtml: o._capturedContractHtml || (typeof getContractHtml === 'function' ? getContractHtml() : ''),
+                CustomerSignature: o.signatureData || '',
+                ConsultantSignature: o.consultantSignatureData || '',
+                InitialSignature: o.initialSignature || ''
             };
             try {
-                await saveRecord('Orders', record);
+                if (o._editingOrderId) {
+                    // Update existing order
+                    await updateRecord('Orders', o._editingOrderId, record);
+                    // Update local data
+                    const idx = data.orders.findIndex(r => String(r.ID) === String(o._editingOrderId));
+                    if (idx >= 0) Object.assign(data.orders[idx], record);
+                    toast('Order updated!', 'success');
+                } else {
+                    // Create new order
+                    await saveRecord('Orders', record);
+                }
                 await updateRecord('Clients', c.ID, { 
                     Status: 'ordered', 
                     Measurements: JSON.stringify(o.measurements), 
                     MeasurementHistory: JSON.stringify(existingMeasurements),
-                    OrderDraft: '', // Clear draft after successful order
+                    OrderDraft: '',
                     SaidYes: 'TRUE',
                     SaidYesDate: today(),
                     LastVisit: today() 
@@ -18377,6 +19065,21 @@ p{margin:6px 0;}
                 
                 <h2>FORCE MAJEURE</h2>
                 <p>The Seller will not be liable for delays in performance or for non-performance due to unforeseen circumstances or causes beyond the Seller's reasonable control.</p>
+                
+                <h2>SIGNATURES</h2>
+                <div style="display:flex;gap:40px;margin-top:20px">
+                    <div style="flex:1">
+                        <p style="font-size:10px;margin-bottom:4px"><b>Customer Signature:</b></p>
+                        ${o.signatureData ? `<img src="${o.signatureData}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">` : '<div style="border-bottom:1px solid #333;height:60px"></div>'}
+                        <p style="font-size:9px;color:#666">${c.FirstName} ${c.LastName}</p>
+                    </div>
+                    <div style="flex:1">
+                        <p style="font-size:10px;margin-bottom:4px"><b>Consultant Signature:</b></p>
+                        ${o.consultantSignatureData ? `<img src="${o.consultantSignatureData}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">` : '<div style="border-bottom:1px solid #333;height:60px"></div>'}
+                        <p style="font-size:9px;color:#666">${o.consultant || ''}</p>
+                    </div>
+                </div>
+                <p style="font-size:9px;color:#666;margin-top:10px"><b>Date:</b> ${fmtDate(today())}</p>
             `;
         }
         
@@ -18663,6 +19366,7 @@ p{margin:6px 0;}
             
             // Capture everything before any state changes
             const contractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
+            currentOrder._capturedContractHtml = contractHtml;
             let sigData = currentOrder.signatureData;
             let consultantSigData = currentOrder.consultantSignatureData;
             if (sigData && sigData.length > 500000) sigData = null;
@@ -18690,21 +19394,6 @@ p{margin:6px 0;}
             // Delete draft
             deleteDraft(c.ID);
             if ($('draftBanner')) $('draftBanner').style.display = 'none';
-            
-            // Save contract to Google Drive in background
-            const contractData = {
-                brideName: `${c.FirstName} ${c.LastName}`,
-                contractHtml: contractHtml,
-                signatureData: sigData,
-                consultantSignatureData: consultantSigData,
-                signDate: $('yDate')?.value || today(),
-                skipEmail: true
-            };
-            api('POST', { action: 'sendContract', contractData })
-                .then(res => {
-                    if (res.driveLink) toast('Contract saved to Google Drive!', 'success');
-                })
-                .catch(e => console.error('Drive save failed:', e));
             
             toast('✓ Order & contract saved!', 'success');
             
@@ -18834,7 +19523,7 @@ p{margin:6px 0;}
             stopDraftAutoSave();
             toast('Sending email to ' + brideEmail + '...', 'success');
             
-            // Send email (contract already saved to Drive in finalizeContract)
+            // Send email only — don't save unsigned contract to Drive
             const contractData = {
                 brideName: `${c.FirstName} ${c.LastName}`,
                 brideEmail: brideEmail,
@@ -18846,12 +19535,18 @@ p{margin:6px 0;}
                 consultantSignatureData: consultantSigData,
                 weddingDate: weddingDate,
                 phone: phone,
-                signDate: signDate
+                signDate: signDate,
+                skipDrive: true
             };
             
             api('POST', { action: 'sendContract', contractData })
                 .then(res => {
                     toast('Email sent to ' + brideEmail + '!', 'success');
+                    // Mark the most recent order for this client as sent
+                    const clientOrders = data.orders.filter(o => String(o.ClientID) === String(c.ID)).sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                    if (clientOrders.length > 0) {
+                        updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
+                    }
                 })
                 .catch(e => {
                     console.error('Email send failed:', e);
