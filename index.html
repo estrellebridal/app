@@ -4679,7 +4679,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 const isNoShow = a.Status === 'no-show';
                 const isFittingAppt = (a.Type||'').toLowerCase().includes('fitting');
                 const clickAction = isFittingAppt ? `openAlterationForClient('${a.ClientID}')` : `openClient('${a.ClientID}')`;
-                return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" >
+                return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="${clickAction}">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
@@ -4772,7 +4772,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 }
                 
                 return `<div class="list-item" style="${statusStyle}flex-direction:column;align-items:stretch;gap:8px">
-                    <div style="display:flex;align-items:center;gap:10px" onclick="${clickAction}">
+                    <div style="display:flex;align-items:center;gap:10px" onclick="openClient('${a.ClientID}')">
                         <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                         <div class="item-info" style="flex:1">
                             <div class="item-name">${c.FirstName} ${c.LastName}</div>
