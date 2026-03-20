@@ -10085,7 +10085,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         
                         const fittings = data.appointments.filter(a => 
                             a.ClientID == c.ID && 
-                            (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                            ((a.Type||'').toLowerCase().includes('fitting'))
                         ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
                         
                         // Load alt items - localStorage FIRST (has existing data), then Google Sheets
@@ -10147,7 +10147,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     
                     const fittings = data.appointments.filter(a => 
                         String(a.ClientID) === clientId && 
-                        (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                        ((a.Type||'').toLowerCase().includes('fitting'))
                     ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
                     
                     // Get order for this client
@@ -10472,7 +10472,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Fittings list
             const fittings = data.appointments.filter(a => 
                 a.ClientID == clientId && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                ((a.Type||'').toLowerCase().includes('fitting'))
             ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
             
             renderAltFittingsList(fittings);
@@ -10748,7 +10748,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function addPricedAltItem(label, cost) {
             const fittings = data.appointments.filter(a => 
                 a.ClientID == currentAltClientId && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                ((a.Type||'').toLowerCase().includes('fitting'))
             );
             const pastFittings = fittings.filter(f => parseDate(f.Date) < new Date());
             
@@ -10781,7 +10781,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             const fittings = data.appointments.filter(a => 
                 a.ClientID == currentAltClientId && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                ((a.Type||'').toLowerCase().includes('fitting'))
             );
             const pastFittings = fittings.filter(f => parseDate(f.Date) < new Date());
             
@@ -11062,7 +11062,7 @@ ${store.phone || ''}`;
             // Count fittings to determine which fitting this is
             const fittings = data.appointments.filter(a => 
                 a.ClientID == currentAltClientId && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                ((a.Type||'').toLowerCase().includes('fitting'))
             );
             const pastFittings = fittings.filter(f => parseDate(f.Date) <= new Date());
             const fittingNum = pastFittings.length || 1;
@@ -11240,7 +11240,7 @@ www.estrellebridal.com`;
             // Check for existing upcoming fitting
             const nextFitting = data.appointments.find(a => 
                 String(a.ClientID) === String(currentAltClientId) && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
+                ((a.Type||'').toLowerCase().includes('fitting')) &&
                 parseDate(a.Date) >= tomorrow
             );
             
@@ -11348,7 +11348,7 @@ www.estrellebridal.com`;
             // Refresh the fitting list at top of modal
             const fittings = data.appointments.filter(a => 
                 String(a.ClientID) === String(currentAltClientId) && 
-                (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting')
+                ((a.Type||'').toLowerCase().includes('fitting'))
             ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
             renderAltFittingsList(fittings);
             
@@ -11414,7 +11414,7 @@ www.estrellebridal.com`;
             const upcoming = data.appointments
                 .filter(a => 
                     String(a.ClientID) === String(clientId) && 
-                    (a.Type === 'first fitting' || a.Type === 'fitting' || a.Type === 'final fitting') &&
+                    ((a.Type||'').toLowerCase().includes('fitting')) &&
                     parseDate(a.Date) >= tomorrow
                 )
                 .sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
