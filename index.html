@@ -10756,6 +10756,17 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         
+        function saveAltItemsLocal() {
+            if (!currentAltClientId) return;
+            const json = JSON.stringify(currentAltItems);
+            localStorage.setItem(`alts_${currentAltClientId}`, json);
+            // Also sync to Google Sheets
+            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            if (altRecord) {
+                updateRecord('Alterations', altRecord.ID, { AlterationItems: json });
+            }
+        }
+        
         function submitSimpleAltItem() {
             const name = $('newAltItemName')?.value.trim();
             if (!name) { toast('Enter an item name', 'error'); return; }
