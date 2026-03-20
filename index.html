@@ -4677,7 +4677,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isNoShow = a.Status === 'no-show';
-                return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="openClient('${a.ClientID}')">
+                const isFittingAppt = (a.Type||'').toLowerCase().includes('fitting');
+                const clickAction = isFittingAppt ? `openAlterationForClient('${a.ClientID}')` : `openClient('${a.ClientID}')`;
+                return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" >
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
@@ -4770,7 +4772,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 }
                 
                 return `<div class="list-item" style="${statusStyle}flex-direction:column;align-items:stretch;gap:8px">
-                    <div style="display:flex;align-items:center;gap:10px" onclick="openClient('${a.ClientID}')">
+                    <div style="display:flex;align-items:center;gap:10px" onclick="${clickAction}">
                         <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                         <div class="item-info" style="flex:1">
                             <div class="item-name">${c.FirstName} ${c.LastName}</div>
@@ -10446,6 +10448,12 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             openModal('newAppt');
         }
         
+        function openAlterationForClient(clientId) {
+            showPage('orders');
+            // Small delay to let the page render, then open alteration detail
+            setTimeout(() => openAlterationDetail(clientId), 100);
+        }
+        
         function openAlterationDetail(clientId) {
             const c = getClient(clientId);
             if (!c) return;
@@ -10658,7 +10666,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         
         function renderAltItems() {
             if (currentAltItems.length === 0) {
-                $('altItemsList').innerHTML = '<div class="empty" style="font-size:11px">No alteration items yet. Click "+ Add Item" to browse pricing or add a custom item.</div>';
+                $('altItemsList').innerHTML = '<div class="empty" style="font-size:11px">No alteration items yet. Click "+ Add Item" to add.</div>';
                 if ($('altTotalsBar')) $('altTotalsBar').style.display = 'none';
                 return;
             }
@@ -10666,29 +10674,48 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('altItemsList').innerHTML = currentAltItems.map((item, idx) => {
                 const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : item.status === 'needs-adjustment' ? '#e67e22' : 'var(--taupe)';
                 const statusBg = item.status === 'done' ? '#27ae6020' : item.status === 'in-progress' ? '#f39c1220' : item.status === 'needs-adjustment' ? '#e67e2220' : 'var(--blush)';
-                const costDisplay = item.cost ? `<span style="font-size:10px;font-weight:600;color:var(--accent)">$${item.cost} / $${item.cost * 2}</span>` : '<span style="font-size:10px;color:var(--taupe);font-style:italic">no price</span>';
+                const needsAdj = item.status === 'needs-adjustment';
                 
-                return `<div style="display:flex;align-items:flex-start;gap:8px;padding:8px;background:${statusBg};border-radius:4px;margin-bottom:6px;border-left:3px solid ${statusColor}">
-                    <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px" onchange="updateAltItemStatus(${idx}, this.value)">
-                        <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
-                        <option value="in-progress" ${item.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                        <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
-                        <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
-                    </select>
-                    <div style="flex:1">
-                        <div style="font-size:12px;font-weight:500;display:flex;justify-content:space-between;align-items:center">
-                            <span>${item.name}</span>
-                            ${costDisplay}
+                let noteHtml = '';
+                if (item.note) {
+                    noteHtml = `<div style="font-size:10px;color:#e67e22;margin-top:4px;padding:4px 6px;background:#fef3e2;border-radius:4px">📝 ${item.note}</div>`;
+                }
+                if (needsAdj) {
+                    noteHtml += `<div style="margin-top:6px"><input type="text" class="form-input" placeholder="What needs adjusting?" value="${(item.note || '').replace(/"/g, '&quot;')}" onchange="saveAltItemNote(${idx}, this.value)" style="font-size:10px;padding:4px 8px;border-color:#e67e22"></div></div>`;
+                }
+                
+                return `<div style="padding:8px;background:${statusBg};border-radius:4px;margin-bottom:6px;border-left:3px solid ${statusColor}">
+                    <div style="display:flex;align-items:flex-start;gap:8px">
+                        <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px" onchange="updateAltItemStatus(${idx}, this.value)">
+                            <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
+                            <option value="in-progress" ${item.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
+                            <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
+                        </select>
+                        <div style="flex:1">
+                            <div style="font-size:12px;font-weight:500">${item.name}</div>
+                            ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
                         </div>
-                        ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
-                        <div style="font-size:9px;color:var(--taupe)">Added: Fitting ${item.addedAtFitting || 1}</div>
+                        <button class="action-btn" onclick="editAltItem(${idx})" title="Edit">✏️</button>
+                        <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
                     </div>
-                    <button class="action-btn" onclick="editAltItem(${idx})" title="Edit">✏️</button>
-                    <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
+                    ${noteHtml}
                 </div>`;
             }).join('');
             
-            updateAltTotals();
+            // Simple progress count instead of cost totals
+            const done = currentAltItems.filter(i => i.status === 'done').length;
+            const total = currentAltItems.length;
+            if ($('altTotalsBar')) {
+                $('altTotalsBar').style.display = 'flex';
+                $('altTotalsBar').innerHTML = `<span style="font-size:12px">${done}/${total} items complete</span>`;
+            }
+        }
+        
+        function saveAltItemNote(idx, note) {
+            if (!currentAltItems[idx]) return;
+            currentAltItems[idx].note = note.trim();
+            saveAltItemsLocal();
         }
         
         async function editAltItem(idx) {
@@ -10712,12 +10739,39 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         function addAlterationItem() {
-            $('addAltItemForm').style.display = 'block';
-            setAltAddTab('browse');
-            $('altItemSearch').value = '';
-            renderAltPricingCatList();
-            // Scroll into view
-            $('addAltItemForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            const form = $('addAltItemForm');
+            form.style.display = 'block';
+            form.innerHTML = `
+                <div style="padding:12px">
+                    <div style="font-size:12px;font-weight:600;margin-bottom:8px">Add Alteration Item</div>
+                    <input type="text" class="form-input" id="newAltItemName" placeholder="e.g. Hem, Bustle, Take in waist 2 inches..." style="margin-bottom:6px">
+                    <input type="text" class="form-input" id="newAltItemDetails" placeholder="Details / inches (optional)" style="margin-bottom:8px">
+                    <div style="display:flex;gap:8px">
+                        <button class="btn btn-primary" onclick="submitSimpleAltItem()" style="font-size:11px;padding:6px 16px">+ Add</button>
+                        <button class="btn btn-secondary" onclick="$('addAltItemForm').style.display='none'" style="font-size:11px;padding:6px 16px">Cancel</button>
+                    </div>
+                </div>
+            `;
+            setTimeout(() => $('newAltItemName')?.focus(), 50);
+            form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        function submitSimpleAltItem() {
+            const name = $('newAltItemName')?.value.trim();
+            if (!name) { toast('Enter an item name', 'error'); return; }
+            const details = $('newAltItemDetails')?.value.trim() || '';
+            
+            currentAltItems.push({
+                name: name,
+                details: details,
+                status: 'pending',
+                addedAt: new Date().toISOString()
+            });
+            
+            saveAltItemsLocal();
+            renderAltItems();
+            $('addAltItemForm').style.display = 'none';
+            toast('Item added', 'success');
         }
         
         function setAltAddTab(tab) {
