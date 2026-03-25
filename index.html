@@ -18547,13 +18547,13 @@ The {storeName} Team`
                 ${o.measurements.takenBy ? `<p style="font-size:11px;margin-bottom:8px"><b>Measured by:</b> ${o.measurements.takenBy}</p>` : ''}
                 <table>
                     <tr><th>Item</th><th>Measurement</th><th style="width:80px">Client's Initial</th></tr>
-                    <tr><td>Bust</td><td>${o.measurements.bust||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Cup Size</td><td>${o.measurements.cup||'—'}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Waist</td><td>${o.measurements.waist||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Hip</td><td>${o.measurements.hip||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
-                    <tr><td>Height</td><td>${o.measurements.height||'—'} ${unit}</td><td style="border:1px solid #ccc"></td></tr>
+                    ${o.measurements.bust ? `<tr><td>Bust</td><td>${o.measurements.bust} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.cup ? `<tr><td>Cup Size</td><td>${o.measurements.cup}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.waist ? `<tr><td>Waist</td><td>${o.measurements.waist} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.hip ? `<tr><td>Hip</td><td>${o.measurements.hip} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.height ? `<tr><td>Height</td><td>${o.measurements.height} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.waistToFloor ? `<tr><td>Waist to Floor</td><td>${o.measurements.waistToFloor} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
-                    <tr><td>Heels</td><td>${o.measurements.heels||'—'}"</td><td style="border:1px solid #ccc"></td></tr>
+                    ${o.measurements.heels ? `<tr><td>Heels</td><td>${o.measurements.heels}"</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${customMeasRows}
                 </table>
                 ${o.measurements.notes ? `<p><b>Important measurement notes:</b> ${o.measurements.notes}</p>` : ''}
