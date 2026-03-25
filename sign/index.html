@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estrelle Bridal — Loading Contract...</title>
+<style>
+body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f9f7f4; text-align: center; }
+.card { padding: 40px 24px; max-width: 360px; }
+.spin { width: 40px; height: 40px; border: 3px solid #eee; border-top: 3px solid #C4A265; border-radius: 50%; animation: s 1s linear infinite; margin: 0 auto 20px; }
+@keyframes s { to { transform: rotate(360deg); } }
+.brand { font-size: 11px; letter-spacing: 3px; color: #C4A265; text-transform: uppercase; margin-bottom: 16px; }
+p { color: #666; font-size: 14px; line-height: 1.5; }
+a { display: inline-block; background: #C4A265; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; margin-top: 16px; }
+</style>
+<script>
+// Get parameters from URL
+var params = new URLSearchParams(window.location.search);
+var id = params.get('id');
+var token = params.get('token');
+
+// Your Apps Script deployment URL - UPDATE THIS after each deploy
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxh6qeTRhQI047aN28it9f-BgKdUNkc1zW793oVrLuvuEs2yoJVScuvhp-xhKoVxCZbEA/exec';
+
+if (id && token) {
+  var url = SCRIPT_URL + '?action=sign&id=' + id + '&token=' + token;
+  // Use location.replace so back button doesn't loop
+  window.location.replace(url);
+} else {
+  document.getElementById('msg').textContent = 'Invalid link. Please contact Estrelle Bridal for a new signing link.';
+  document.getElementById('spin').style.display = 'none';
+}
+</script>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Estrelle Bridal</div>
+  <div class="spin" id="spin"></div>
+  <p id="msg">Loading your contract...</p>
+  <noscript>
+    <p>Please enable JavaScript or <a href="mailto:info@estrellebridal.com">contact us</a> for help.</p>
+  </noscript>
+</div>
+</body>
+</html>
