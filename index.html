@@ -3632,7 +3632,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 <button class="btn btn-secondary" id="ySaveDraft" onclick="saveDraft()" title="Save and continue later">💾 Save Draft</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" id="yNext" onclick="yNext()">Next →</button>
-                <button class="btn btn-secondary" id="ySaveOnly" onclick="saveOrderOnly()" style="display:none" title="Save order without emailing">💾 Save Order</button>
+                <button class="btn btn-secondary" id="ySaveOnly" onclick="saveOrderOnly()" style="display:none" title="Save without sending">💾 Save Only</button>
+                <button class="btn btn-primary" id="ySaveAndSend" onclick="saveAndSendSigned()" style="display:none;background:#2e7d32;border-color:#2e7d32" title="Save and send signed contract to customer">✓ Save & Send Signed Copy</button>
+                <button class="btn btn-primary" id="ySaveAndESign" onclick="saveAndSendESign()" style="display:none;background:#C4A265;border-color:#C4A265" title="Save order and send e-sign link">📱 Save & Send E-Sign</button>
                 <button class="btn btn-success" id="yDone" style="display:none"></button>
             </div>
         </div>
@@ -17505,12 +17507,13 @@ The {storeName} Team`
             $('yPrev').style.display = yStep > 1 ? 'inline-flex' : 'none';
             $('yNext').style.display = yStep < 5 ? 'inline-flex' : 'none';
             $('ySaveOnly').style.display = yStep === 5 ? 'inline-flex' : 'none';
+            if ($('ySaveAndESign')) $('ySaveAndESign').style.display = yStep === 5 ? 'inline-flex' : 'none';
+            if ($('ySaveAndSend')) $('ySaveAndSend').style.display = yStep === 5 ? 'inline-flex' : 'none';
             if ($('yDone')) $('yDone').style.display = 'none';
             
-            // On step 5, show "Next" to go to email step (but don't require signatures)
+            // On step 5, hide Next (no more Step 6)
             if (yStep === 5) {
-                $('yNext').style.display = 'inline-flex';
-                $('yNext').textContent = 'Email →';
+                $('yNext').style.display = 'none';
             } else {
                 $('yNext').textContent = 'Next →';
             }
@@ -19515,6 +19518,193 @@ p{margin:6px 0;}
             renderClients();
         }
         
+        async function saveAndSendSigned() {
+            const c = currentClient;
+            if (!c) return;
+            
+            const email = c.Email;
+            if (!email) { toast('No email address for this client. Add their email first.', 'error'); return; }
+            
+            // Capture contract HTML with signatures
+            const contractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
+            currentOrder._capturedContractHtml = contractHtml;
+            let sigData = currentOrder.signatureData;
+            let consultantSigData = currentOrder.consultantSignatureData;
+            if (sigData && sigData.length > 500000) sigData = null;
+            if (consultantSigData && consultantSigData.length > 500000) consultantSigData = null;
+            
+            toast('Saving order...', 'success');
+            
+            // Upload photos if any
+            if (pendingPhotos.length > 0) {
+                const photoUrls = await uploadPhotos();
+                if (photoUrls.length > 0) {
+                    const existingPhotos = c.Photos ? (typeof c.Photos === 'string' ? JSON.parse(c.Photos) : c.Photos) : [];
+                    const allPhotos = [...existingPhotos, ...photoUrls];
+                    updateRecord('Clients', c.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                }
+                pendingPhotos = [];
+            }
+            
+            // Save order
+            const success = await completeOrder();
+            if (!success) { toast('Failed to save order', 'error'); return; }
+            
+            // Delete draft
+            deleteDraft(c.ID);
+            if ($('draftBanner')) $('draftBanner').style.display = 'none';
+            
+            // Close modal
+            closeModal('yes');
+            stopDraftAutoSave();
+            
+            toast('📧 Sending signed contract to ' + email + '...', 'success');
+            
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            const firstName = c.FirstName || '';
+            
+            // Send signed contract PDF + save to Drive
+            const contractData = {
+                brideName: clientName,
+                brideEmail: email,
+                consultantName: currentOrder.consultant || '',
+                subject: `Your Signed Bridal Contract — Estrelle Bridal`,
+                body: `Hi ${firstName},\n\nThank you for visiting Estrelle Bridal! Your signed contract is attached.\n\nA copy is on file with us. If you have any questions about your order, we're here to help.\n\nWarmly,\nThe Estrelle Team`,
+                contractHtml: contractHtml,
+                signatureData: sigData,
+                consultantSignatureData: consultantSigData,
+                signDate: today()
+            };
+            
+            api('POST', { action: 'sendContract', contractData })
+                .then(res => {
+                    // Mark as sent
+                    const clientOrders = data.orders
+                        .filter(o => String(o.ClientID) === String(c.ID))
+                        .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                    if (clientOrders.length > 0) {
+                        updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
+                    }
+                    
+                    renderClientProfile();
+                    renderDash();
+                    
+                    showChoiceDialog(
+                        '✓ Saved & Sent!',
+                        '',
+                        [{ label: '✓ Done', style: 'primary', action: () => closeModal('choice') }]
+                    );
+                    setTimeout(() => {
+                        const msgEl = $('choiceMessage');
+                        if (msgEl) {
+                            msgEl.innerHTML = `
+                                <div style="text-align:center">
+                                    <div style="width:50px;height:50px;background:#e8f5e9;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px">✓</div>
+                                    <div style="font-size:13px;margin-bottom:8px">Order saved & signed contract sent to <b>${email}</b></div>
+                                    <div style="font-size:11px;color:var(--taupe)">The signed contract PDF has been emailed to the customer and saved to Google Drive.</div>
+                                </div>`;
+                        }
+                    }, 50);
+                })
+                .catch(e => {
+                    toast('Order saved but email failed: ' + (e.message || e), 'error');
+                    renderClientProfile();
+                    renderDash();
+                });
+        }
+        
+        async function saveAndSendESign() {
+            const c = currentClient;
+            if (!c) return;
+            
+            const email = c.Email;
+            if (!email) { toast('No email address for this client. Save the order first, then add their email.', 'error'); return; }
+            
+            // Capture contract HTML before any state changes
+            currentOrder._capturedContractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
+            
+            toast('Saving order...', 'success');
+            
+            // Upload photos if any
+            if (pendingPhotos.length > 0) {
+                const photoUrls = await uploadPhotos();
+                if (photoUrls.length > 0) {
+                    const existingPhotos = c.Photos ? (typeof c.Photos === 'string' ? JSON.parse(c.Photos) : c.Photos) : [];
+                    const allPhotos = [...existingPhotos, ...photoUrls];
+                    updateRecord('Clients', c.ID, { Photos: JSON.stringify(allPhotos) });
+                    currentClient.Photos = JSON.stringify(allPhotos);
+                }
+                pendingPhotos = [];
+            }
+            
+            // Save order
+            const success = await completeOrder();
+            if (!success) { toast('Failed to save order', 'error'); return; }
+            
+            // Delete draft
+            deleteDraft(c.ID);
+            if ($('draftBanner')) $('draftBanner').style.display = 'none';
+            
+            // Find the just-saved order (most recent for this client)
+            const clientOrders = data.orders
+                .filter(o => String(o.ClientID) === String(c.ID))
+                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            
+            if (clientOrders.length === 0) {
+                toast('Order saved but could not find it to send e-sign. Send from the client profile.', 'error');
+                closeModal('yes');
+                renderClientProfile();
+                return;
+            }
+            
+            const orderId = clientOrders[0].ID;
+            const token = generateSignToken(orderId);
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            
+            // Close modal
+            closeModal('yes');
+            stopDraftAutoSave();
+            
+            toast('📧 Sending e-sign link to ' + email + '...', 'success');
+            
+            // Send e-sign email via dedicated backend
+            api('POST', { 
+                action: 'sendESignEmail', 
+                orderId: orderId, 
+                token: token,
+                brideEmail: email, 
+                brideName: clientName 
+            })
+            .then(res => {
+                updateRecord('Orders', orderId, { ContractSentDate: new Date().toISOString(), ESignLinkSent: new Date().toISOString() });
+                renderClientProfile();
+                renderDash();
+                
+                showChoiceDialog(
+                    '✓ Saved & E-Sign Sent!',
+                    '',
+                    [{ label: '✓ Done', style: 'primary', action: () => closeModal('choice') }]
+                );
+                setTimeout(() => {
+                    const msgEl = $('choiceMessage');
+                    if (msgEl) {
+                        msgEl.innerHTML = `
+                            <div style="text-align:center">
+                                <div style="width:50px;height:50px;background:#e8f5e9;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px">📧</div>
+                                <div style="font-size:13px;margin-bottom:8px">Order saved & e-sign link sent to <b>${email}</b></div>
+                                <div style="font-size:11px;color:var(--taupe)">The bride will receive a link to review and sign the contract on her phone. You'll get a notification when she signs.</div>
+                            </div>`;
+                    }
+                }, 50);
+            })
+            .catch(e => {
+                toast('Order saved but e-sign failed: ' + (e.message || e), 'error');
+                renderClientProfile();
+                renderDash();
+            });
+        }
+        
         async function saveOrderOnly() {
             const c = currentClient;
             
@@ -19540,40 +19730,20 @@ p{margin:6px 0;}
             if (success) {
                 // Delete draft since order is complete
                 deleteDraft(c.ID);
-                $('draftIndicator').style.display = 'none'; if($('draftBanner')) $('draftBanner').style.display = 'none';
+                if ($('draftIndicator')) $('draftIndicator').style.display = 'none'; 
+                if ($('draftBanner')) $('draftBanner').style.display = 'none';
                 
                 closeModal('yes');
-                toast('Order saved! Saving contract to Drive...', 'success');
+                stopDraftAutoSave();
+                toast('✓ Order & contract saved!', 'success');
                 
-                // Save contract to Google Drive (no email)
-                let sigData = currentOrder.signatureData;
-                let consultantSigData = currentOrder.consultantSignatureData;
-                if (sigData && sigData.length > 500000) sigData = null;
-                if (consultantSigData && consultantSigData.length > 500000) consultantSigData = null;
-                
-                const contractData = {
-                    brideName: `${c.FirstName} ${c.LastName}`,
-                    contractHtml: getContractHtml(),
-                    signatureData: sigData,
-                    consultantSignatureData: consultantSigData,
-                    signDate: $('yDate').value || today(),
-                    skipEmail: true
-                };
-                
-                api('POST', { action: 'sendContract', contractData })
-                    .then(res => {
-                        if (res.driveLink) {
-                            toast('Contract saved to Drive!', 'success');
-                        }
-                    })
-                    .catch(e => console.error('Drive save failed:', e));
-                
-                // Render client profile and clients list to show 💍 icon
+                // Render client profile and clients list
                 if (currentClient) {
                     renderClientProfile();
                     renderClientPhotos();
                 }
                 renderClients();
+                renderDash();
             } else {
                 toast('Failed to save order', 'error');
             }
