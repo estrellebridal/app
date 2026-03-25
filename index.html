@@ -8358,7 +8358,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 initialImg = `<img src="${initSig}" style="width:70px;height:35px;object-fit:contain">`;
             }
             
-            const measRows = allMeas.filter(m => m.value).map(m => `<tr><td>${m.label}</td><td>${m.value}${m.u ? ' ' + m.u : ''}</td><td style="text-align:center">${initialImg}</td></tr>`).join('');
+            const measRows = allMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim()).map(m => `<tr><td>${m.label}</td><td>${m.value}${m.u ? ' ' + m.u : ''}</td><td style="text-align:center">${initialImg}</td></tr>`).join('');
             
             return `
                 <h1 style="text-align:center;font-size:16px;">SALES CONTRACT</h1>
@@ -18631,12 +18631,12 @@ The {storeName} Team`
                 });
             }
             
-            const otherWithValues = otherMeasurements.filter(m => m.value);
+            const otherWithValues = otherMeasurements.filter(m => m.value && m.value !== '—' && String(m.value).trim());
             
             let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-size:10px;color:var(--rose)">* Required initials</div><button class="btn btn-sm btn-secondary" onclick="initialAll()" style="font-size:10px">✍️ Initial All</button></div>';
             
             // Core measurements with individual initials
-            coreMeasurements.filter(m => m.value).forEach(m => {
+            coreMeasurements.filter(m => m.value && m.value !== '—' && String(m.value).trim()).forEach(m => {
                 html += `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--champagne)">
                     <span style="font-size:12px;font-weight:500">${m.label}: ${m.value} ${m.unit}</span>
                     <input type="text" class="form-input init-field" style="width:60px;padding:4px;text-align:center;font-size:12px;border:2px solid var(--dusty)" placeholder="Initial *" id="init_${m.key}" maxlength="4" required>
@@ -19079,14 +19079,14 @@ p{margin:6px 0;}
                 });
             }
             
-            const coreRows = coreMeas.filter(m => m.value).map(m => {
+            const coreRows = coreMeas.filter(m => m.value && m.value !== '—' && m.value.trim()).map(m => {
                 const initialHtml = o.initialSignature ? 
                     `<img src="${o.initialSignature}" style="width:70px;height:35px;object-fit:contain">` : 
                     (initials[m.key] || '');
                 return `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center">${initialHtml}</td></tr>`;
             }).join('');
             
-            const otherWithValues = otherMeas.filter(m => m.value);
+            const otherWithValues = otherMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim());
             let otherRow = '';
             if (otherWithValues.length > 0) {
                 const otherInitialHtml = o.initialSignature ? 
@@ -19357,7 +19357,7 @@ p{margin:6px 0;}
                 `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center">${blankInitial}</td></tr>`
             ).join('');
             
-            const otherWithValues = otherMeas.filter(m => m.value);
+            const otherWithValues = otherMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim());
             let otherRow = '';
             if (otherWithValues.length > 0) {
                 otherRow = `<tr><td>Other</td><td>${otherWithValues.map(m => `${m.label}: ${m.value}${m.u}`).join(', ')}</td><td style="text-align:center">${blankInitial}</td></tr>`;
