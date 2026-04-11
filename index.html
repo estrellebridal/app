@@ -2144,8 +2144,12 @@
                 
                 <!-- Notes -->
                 <div class="form-group">
-                    <label class="form-label">Seamstress Notes</label>
-                    <textarea class="form-input" id="altNotes" style="min-height:60px" placeholder="Notes for seamstress..."></textarea>
+                    <label class="form-label">Notes for Bride</label>
+                    <textarea class="form-input" id="altBrideNotes" style="min-height:50px" placeholder="Notes to include in the email to bride (e.g. Your dress is looking beautiful! We adjusted the bodice for a perfect fit.)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Internal Notes (seamstress/consultant)</label>
+                    <textarea class="form-input" id="altNotes" style="min-height:50px" placeholder="Internal notes — not sent to bride"></textarea>
                 </div>
                 
                 <!-- Schedule Next Fitting -->
@@ -4151,7 +4155,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         visitnotes: parsed.visitnotes || [],
                         announcements: parsed.announcements || []
                     };
-                    renderDash();
+                    try { renderDash(); } catch(e) { console.error('renderDash from cache error:', e); }
                     return true;
                 }
             } catch (e) {
@@ -4407,6 +4411,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         }
         
         function showPage(name, skipUnsavedCheck = false) {
+          try {
             // Check for unsaved changes when leaving consult page
             const currentPage = document.querySelector('.section.active')?.id;
             if (!skipUnsavedCheck && currentPage === 'page-consult' && name !== 'consult') {
@@ -4430,21 +4435,21 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
-            if (name === 'clients') setClientsView(clientsView || 'all');
-            if (name === 'schedule') setScheduleView(scheduleView || 'week');
+            try { if (name === 'clients') setClientsView(clientsView || 'all'); } catch(e) { console.error('clients view error:', e); }
+            try { if (name === 'schedule') setScheduleView(scheduleView || 'week'); } catch(e) { console.error('schedule view error:', e); }
             if (name === 'orders') { 
-                // Render immediately with cached data
-                setOrdersView(ordersView || 'orders');
-                // Then refresh data in background
+                try { setOrdersView(ordersView || 'orders'); } catch(e) { console.error('orders view error:', e); }
                 loadData().then(() => {
-                    if (ordersView === 'orders') renderOrders();
-                    else renderAlts();
+                    try { if (ordersView === 'orders') renderOrders(); else renderAlts(); } catch(e) { console.error('orders render error:', e); }
                 });
             }
-            if (name === 'reporting') renderReporting();
-            if (name === 'settings') renderSettings();
+            try { if (name === 'reporting') renderReporting(); } catch(e) { console.error('reporting error:', e); }
+            try { if (name === 'settings') renderSettings(); } catch(e) { console.error('settings error:', e); }
             
             updateFloatingBackButton();
+          } catch(e) {
+            console.error('showPage error:', e);
+          }
         }
 
         function openModal(n) { 
@@ -5344,6 +5349,11 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 saveRecord('Clients', record);
                 toast('Saved!', 'success');
             }
+            
+            // Re-render all views so changes appear everywhere
+            renderClients();
+            renderDash();
+            if (currentClient) renderClientProfile();
             
             $('editClientId').value = '';
             $('clientModalTitle').textContent = 'New Client';
@@ -10534,6 +10544,16 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             $('altNotes').value = notes;
             
+            // Load bride notes
+            let brideNotes = '';
+            if (altRecord && altRecord.BrideNotes) {
+                brideNotes = altRecord.BrideNotes;
+                localStorage.setItem(`alts_bridenotes_${clientId}`, brideNotes);
+            } else {
+                brideNotes = localStorage.getItem(`alts_bridenotes_${clientId}`) || '';
+            }
+            if ($('altBrideNotes')) $('altBrideNotes').value = brideNotes;
+            
             // Load dress needed by - Google Sheets first, then localStorage, then default
             let neededBy = '';
             if (altRecord && altRecord.DueDate) {
@@ -10674,30 +10694,38 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             
             $('altItemsList').innerHTML = currentAltItems.map((item, idx) => {
-                const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : item.status === 'needs-adjustment' ? '#e67e22' : 'var(--taupe)';
-                const statusBg = item.status === 'done' ? '#27ae6020' : item.status === 'in-progress' ? '#f39c1220' : item.status === 'needs-adjustment' ? '#e67e2220' : 'var(--blush)';
+                const statusColor = item.status === 'done' ? '#27ae60' : item.status === 'in-progress' ? '#f39c12' : item.status === 'needs-adjustment' ? '#e67e22' : '#999';
+                const statusBg = item.status === 'done' ? '#e8f5e920' : item.status === 'in-progress' ? '#fff3cd40' : item.status === 'needs-adjustment' ? '#fef3e250' : 'var(--blush)';
+                const statusIcon = item.status === 'done' ? '✓' : item.status === 'in-progress' ? '🔧' : item.status === 'needs-adjustment' ? '⚠️' : '○';
                 const needsAdj = item.status === 'needs-adjustment';
+                const isDone = item.status === 'done';
                 
+                // Note section — show saved note as badge, show input only when needs-adjustment
                 let noteHtml = '';
-                if (item.note) {
-                    noteHtml = `<div style="font-size:10px;color:#e67e22;margin-top:4px;padding:4px 6px;background:#fef3e2;border-radius:4px">📝 ${item.note}</div>`;
-                }
                 if (needsAdj) {
-                    noteHtml += `<div style="margin-top:6px"><input type="text" class="form-input" placeholder="What needs adjusting?" value="${(item.note || '').replace(/"/g, '&quot;')}" onchange="saveAltItemNote(${idx}, this.value)" style="font-size:10px;padding:4px 8px;border-color:#e67e22"></div></div>`;
+                    noteHtml = `<div style="margin-top:6px">
+                        <input type="text" class="form-input" placeholder="What needs adjusting? (e.g. Take in 1 more inch at waist)" 
+                            value="${(item.note || '').replace(/"/g, '&quot;')}" 
+                            onchange="saveAltItemNote(${idx}, this.value)" 
+                            style="font-size:11px;padding:6px 8px;border-color:#e67e22;background:#fff8f0">
+                    </div>`;
+                } else if (item.note) {
+                    noteHtml = `<div style="font-size:10px;color:#e67e22;margin-top:4px;padding:4px 8px;background:#fef3e2;border-radius:4px;border-left:2px solid #e67e22">📝 ${item.note}</div>`;
                 }
                 
-                return `<div style="padding:8px;background:${statusBg};border-radius:4px;margin-bottom:6px;border-left:3px solid ${statusColor}">
-                    <div style="display:flex;align-items:flex-start;gap:8px">
-                        <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px" onchange="updateAltItemStatus(${idx}, this.value)">
+                return `<div style="padding:10px;background:${statusBg};border-radius:6px;margin-bottom:8px;border-left:3px solid ${statusColor};${isDone ? 'opacity:0.7;' : ''}">
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:14px;min-width:20px">${statusIcon}</span>
+                        <div style="flex:1">
+                            <div style="font-size:13px;font-weight:600;${isDone ? 'text-decoration:line-through;color:#999;' : ''}">${item.name}</div>
+                            ${item.details ? `<div style="font-size:11px;color:var(--taupe);margin-top:2px">${item.details}</div>` : ''}
+                        </div>
+                        <select class="form-input" style="width:auto;font-size:10px;padding:3px 6px;border-radius:4px" onchange="updateAltItemStatus(${idx}, this.value)">
                             <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>Pending</option>
                             <option value="in-progress" ${item.status === 'in-progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="done" ${item.status === 'done' ? 'selected' : ''}>Done</option>
                             <option value="needs-adjustment" ${item.status === 'needs-adjustment' ? 'selected' : ''}>Needs Adjustment</option>
+                            <option value="done" ${item.status === 'done' ? 'selected' : ''}>✓ Done</option>
                         </select>
-                        <div style="flex:1">
-                            <div style="font-size:12px;font-weight:500">${item.name}</div>
-                            ${item.details ? `<div style="font-size:10px;color:var(--taupe)">${item.details}</div>` : ''}
-                        </div>
                         <button class="action-btn" onclick="editAltItem(${idx})" title="Edit">✏️</button>
                         <button class="action-btn" style="color:#e74c3c" onclick="removeAltItem(${idx})" title="Delete">×</button>
                     </div>
@@ -10705,12 +10733,32 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 </div>`;
             }).join('');
             
-            // Simple progress count instead of cost totals
+            // Visual progress bar
             const done = currentAltItems.filter(i => i.status === 'done').length;
+            const inProgress = currentAltItems.filter(i => i.status === 'in-progress').length;
+            const needsAdj = currentAltItems.filter(i => i.status === 'needs-adjustment').length;
+            const pending = currentAltItems.filter(i => i.status === 'pending').length;
             const total = currentAltItems.length;
+            const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+            
             if ($('altTotalsBar')) {
                 $('altTotalsBar').style.display = 'flex';
-                $('altTotalsBar').innerHTML = `<span style="font-size:12px">${done}/${total} items complete</span>`;
+                $('altTotalsBar').style.flexDirection = 'column';
+                $('altTotalsBar').style.gap = '8px';
+                $('altTotalsBar').innerHTML = `
+                    <div style="display:flex;justify-content:space-between;font-size:12px">
+                        <span><b>${done}/${total}</b> complete</span>
+                        <span>${pct}%</span>
+                    </div>
+                    <div style="height:6px;background:rgba(255,255,255,0.2);border-radius:3px;overflow:hidden">
+                        <div style="height:100%;width:${pct}%;background:#27ae60;border-radius:3px;transition:width 0.3s"></div>
+                    </div>
+                    <div style="display:flex;gap:12px;font-size:10px;opacity:0.8">
+                        ${pending > 0 ? `<span>○ ${pending} pending</span>` : ''}
+                        ${inProgress > 0 ? `<span>🔧 ${inProgress} in progress</span>` : ''}
+                        ${needsAdj > 0 ? `<span style="color:#ffc107">⚠️ ${needsAdj} needs adjustment</span>` : ''}
+                    </div>
+                `;
             }
         }
         
@@ -10945,6 +10993,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function updateAltItemStatus(idx, status) {
             if (currentAltItems[idx]) {
                 currentAltItems[idx].status = status;
+                saveAltItemsLocal();
                 renderAltItems();
             }
         }
@@ -10953,6 +11002,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             const confirmed = await appConfirmDanger('Remove this alteration item?', 'Remove Item');
             if (confirmed) {
                 currentAltItems.splice(idx, 1);
+                saveAltItemsLocal();
                 renderAltItems();
             }
         }
@@ -10962,11 +11012,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             const itemsJson = JSON.stringify(currentAltItems);
             const notes = $('altNotes').value;
+            const brideNotes = $('altBrideNotes')?.value || '';
             const neededBy = $('altDressNeededBy').value;
             
-            // ALWAYS save to localStorage FIRST (this is the safe, working storage)
+            // ALWAYS save to localStorage FIRST
             localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
             localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
+            localStorage.setItem(`alts_bridenotes_${currentAltClientId}`, brideNotes);
             if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
             
             console.log(`[ALTS] Saved to localStorage for client ${currentAltClientId}:`, {
@@ -10988,7 +11040,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     // Update existing record - preserve existing DueDate if not changed
                     const updates = {
                         AlterationItems: itemsJson,
-                        Notes: notes
+                        Notes: notes,
+                        BrideNotes: brideNotes
                     };
                     if (neededBy) updates.DueDate = neededBy;
                     
@@ -11172,8 +11225,14 @@ ${store.phone || ''}`;
             // Build summary
             const doneItems = currentAltItems.filter(i => i.status === 'done').map(i => `  ✓ ${i.name}${i.details ? ' – ' + i.details : ''}`).join('\n');
             const inProgressItems = currentAltItems.filter(i => i.status === 'in-progress').map(i => `  → ${i.name}${i.details ? ' – ' + i.details : ''} (in progress)`).join('\n');
-            const pendingItems = currentAltItems.filter(i => i.status === 'pending' || i.status === 'needs-adjustment').map(i => `  ○ ${i.name}${i.details ? ' – ' + i.details : ''}${i.status === 'needs-adjustment' ? ' (needs adjustment)' : ''}`).join('\n');
+            const pendingItems = currentAltItems.filter(i => i.status === 'pending' || i.status === 'needs-adjustment').map(i => {
+                let line = `  ○ ${i.name}${i.details ? ' – ' + i.details : ''}`;
+                if (i.status === 'needs-adjustment' && i.note) line += ` (adjustment: ${i.note})`;
+                else if (i.status === 'needs-adjustment') line += ' (needs adjustment)';
+                return line;
+            }).join('\n');
             const notes = $('altNotes').value;
+            const brideNotes = $('altBrideNotes')?.value || '';
             
             // Get wedding date info
             const weddingDate = c.WeddingDate ? fmtDate(c.WeddingDate) : null;
@@ -11189,7 +11248,7 @@ ${'─'.repeat(30)}
             if (doneItems) body += `\nCompleted:\n${doneItems}\n`;
             if (inProgressItems) body += `\nIn Progress:\n${inProgressItems}\n`;
             if (pendingItems) body += `\nRemaining:\n${pendingItems}\n`;
-            if (notes) body += `\nSeamstress Notes:\n${notes}\n`;
+            if (brideNotes) body += `\nNote from your consultant:\n${brideNotes}\n`;
             
             body += `\n${'─'.repeat(30)}`;
             
@@ -11215,9 +11274,40 @@ Toronto, Ontario
 (647) 333-6582
 www.estrellebridal.com`;
             
-            // Use Gmail compose URL (works better than mailto)
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.Email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            window.open(gmailUrl, '_blank');
+            // Show editable preview before sending
+            showChoiceDialog('📧 Email Fitting Summary', '', [
+                { label: '📤 Send Email', style: 'primary', action: () => {
+                    const finalTo = document.getElementById('fittingEmailTo').value;
+                    const finalSubject = document.getElementById('fittingEmailSubject').value;
+                    const finalBody = document.getElementById('fittingEmailBody').value;
+                    closeModal('choice');
+                    sendEmailViaPreferredMethod(finalTo, finalSubject, finalBody, () => {
+                        toast('Fitting summary sent to ' + finalTo, 'success');
+                    });
+                }},
+                { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+            ]);
+            
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left;font-size:12px">
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">To</label>
+                                <input type="email" class="form-input" id="fittingEmailTo" value="${c.Email}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">Subject</label>
+                                <input type="text" class="form-input" id="fittingEmailSubject" value="${subject}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label" style="font-size:10px">Email Body <span style="color:var(--taupe)">(edit before sending)</span></label>
+                                <textarea class="form-input" id="fittingEmailBody" style="min-height:250px;font-size:11px;line-height:1.5;white-space:pre-wrap;font-family:inherit">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                            </div>
+                        </div>`;
+                }
+            }, 50);
         }
         
         function copySeamstressText() {
@@ -16820,6 +16910,11 @@ The {storeName} Team`
             } else {
                 toast('Saved!', 'success');
             }
+            
+            // Update other views
+            saveCachedData();
+            renderClients();
+            renderDash();
         }
 
         // ========== VISIT NOTES ==========
@@ -18425,6 +18520,9 @@ The {storeName} Team`
                 
                 // Refresh contract preview
                 genContract();
+                renderClientProfile();
+                renderClients();
+                renderDash();
                 toast('Client info updated!', 'success');
             }
         }
