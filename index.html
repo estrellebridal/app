@@ -45,7 +45,7 @@
         .logo-text { font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
         .nav { flex: 1; padding: 0; }
         .nav-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); padding: 0 14px; margin: 20px 0 8px; font-weight: 600; }
-        .nav-item { display: flex; align-items: center; gap: 14px; padding: 13px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; transition: all 0.2s ease; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 13px 14px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; transition: all 0.2s ease; touch-action: manipulation; -webkit-tap-highlight-color: rgba(196,162,101,0.2); }
         .nav-item:hover { color: var(--text); background: var(--accent-light); }
         .nav-item.active { color: var(--accent); background: var(--accent-medium); }
         .nav-item svg { width: 20px; height: 20px; stroke-width: 1.75; }
@@ -61,7 +61,7 @@
         .subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
 
         /* Buttons - Option 6 Style */
-        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s ease; }
+        .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all 0.2s ease; touch-action: manipulation; }
         .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, #8a7356 100%); color: white; box-shadow: 0 4px 14px rgba(166, 139, 106, 0.25); }
         .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(166, 139, 106, 0.35); }
         .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
@@ -254,7 +254,8 @@
 
         /* Toast - Updated */
         .toast { position: fixed; bottom: 80px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: calc(100vw - 48px); }
-        @media (max-width: 900px) { .toast { bottom: 100px; right: 12px; left: 12px; text-align: center; } }
+        @media (max-width: 900px) { .toast { bottom: 80px; right: 12px; left: auto; text-align: center; } }
+        @media (max-width: 600px) { .toast { bottom: 100px; right: 12px; left: 12px; text-align: center; } }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { background: linear-gradient(135deg, var(--sage) 0%, #8a9f82 100%); }
         .toast.error { background: linear-gradient(135deg, var(--red) 0%, #a05858 100%); }
@@ -321,47 +322,25 @@
         /* Mobile Responsive */
         @media (max-width: 900px) {
             .sidebar { 
-                width: 100%; 
-                height: 70px;
-                position: fixed;
-                bottom: 0;
-                top: auto;
-                left: 0;
-                flex-direction: row;
-                border-right: none;
-                border-top: 1px solid var(--border);
-                z-index: 1000;
-                padding: 0;
-                background: var(--card);
+                width: 72px;
+                padding: 16px 8px;
             }
-            .sidebar .logo { display: none; }
-            .sidebar .nav { 
-                display: flex; 
-                flex-direction: row; 
-                padding: 0; 
-                width: 100%;
-                justify-content: space-around;
-                align-items: center;
-                height: 100%;
-                gap: 0;
-            }
+            .sidebar .logo .logo-text { display: none; }
+            .sidebar .logo { justify-content: center; }
             .sidebar .nav-item { 
                 flex-direction: column; 
-                padding: 8px 4px; 
+                padding: 10px 6px; 
                 font-size: 9px;
-                flex: 1;
                 text-align: center;
-                gap: 2px;
-                border-radius: 0;
-                min-width: 0;
+                gap: 4px;
+                justify-content: center;
             }
             .sidebar .nav-item span { display: block; font-size: 9px; }
             .sidebar .nav-item svg { width: 20px; height: 20px; }
             .sidebar .nav-label { display: none; }
-            .sidebar .sync-status { display: none; }
+            .sidebar .sync-status { font-size: 8px; text-align: center; }
             .main { 
-                margin-left: 0; 
-                margin-bottom: 80px;
+                margin-left: 72px; 
                 padding: 16px; 
             }
             .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -457,6 +436,48 @@
             .stats { grid-template-columns: 1fr 1fr; }
             .grid-3, .grid-4 { grid-template-columns: 1fr; }
             .meas-grid { grid-template-columns: 1fr 1fr; }
+        }
+        
+        /* Phone only: bottom navigation bar */
+        @media (max-width: 600px) {
+            .sidebar { 
+                width: 100% !important; 
+                height: 70px !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                top: auto !important;
+                left: 0 !important;
+                flex-direction: row !important;
+                border-right: none !important;
+                border-top: 1px solid var(--border) !important;
+                z-index: 1000;
+                padding: 0 !important;
+                padding-bottom: env(safe-area-inset-bottom) !important;
+            }
+            .sidebar .logo { display: none !important; }
+            .sidebar .nav { 
+                display: flex !important; 
+                flex-direction: row !important; 
+                padding: 0 !important; 
+                width: 100%;
+                justify-content: space-around;
+                align-items: center;
+                height: 100%;
+                gap: 0;
+            }
+            .sidebar .nav-item { 
+                flex-direction: column !important; 
+                padding: 8px 4px !important; 
+                flex: 1;
+                text-align: center;
+                border-radius: 0 !important;
+                min-width: 0;
+            }
+            .sidebar .sync-status { display: none !important; }
+            .main { 
+                margin-left: 0 !important; 
+                margin-bottom: 80px !important;
+            }
         }
         
         /* Mobile: Schedule week view - compact buttons */
@@ -1937,7 +1958,13 @@
                     <div class="form-row" style="margin-bottom:12px"><div class="form-group" style="margin-bottom:0"><label class="form-label">Date</label><input type="date" class="form-input" id="aDate" onchange="updateFollowUpDate()"></div><div class="form-group" style="margin-bottom:0"><label class="form-label">Time</label><select class="form-input" id="aTime"><option value="">Select...</option><option value="09:00">9:00 AM</option><option value="09:15">9:15 AM</option><option value="09:30">9:30 AM</option><option value="09:45">9:45 AM</option><option value="10:00">10:00 AM</option><option value="10:15">10:15 AM</option><option value="10:30">10:30 AM</option><option value="10:45">10:45 AM</option><option value="11:00">11:00 AM</option><option value="11:15">11:15 AM</option><option value="11:30">11:30 AM</option><option value="11:45">11:45 AM</option><option value="12:00">12:00 PM</option><option value="12:15">12:15 PM</option><option value="12:30">12:30 PM</option><option value="12:45">12:45 PM</option><option value="13:00">1:00 PM</option><option value="13:15">1:15 PM</option><option value="13:30">1:30 PM</option><option value="13:45">1:45 PM</option><option value="14:00">2:00 PM</option><option value="14:15">2:15 PM</option><option value="14:30">2:30 PM</option><option value="14:45">2:45 PM</option><option value="15:00">3:00 PM</option><option value="15:15">3:15 PM</option><option value="15:30">3:30 PM</option><option value="15:45">3:45 PM</option><option value="16:00">4:00 PM</option><option value="16:15">4:15 PM</option><option value="16:30">4:30 PM</option><option value="16:45">4:45 PM</option><option value="17:00">5:00 PM</option><option value="17:15">5:15 PM</option><option value="17:30">5:30 PM</option><option value="17:45">5:45 PM</option><option value="18:00">6:00 PM</option><option value="18:15">6:15 PM</option><option value="18:30">6:30 PM</option><option value="18:45">6:45 PM</option><option value="19:00">7:00 PM</option><option value="19:15">7:15 PM</option><option value="19:30">7:30 PM</option><option value="19:45">7:45 PM</option><option value="20:00">8:00 PM</option></select></div></div>
                     <div class="form-row">
                         <div class="form-group" style="margin-bottom:0"><label class="form-label">Type</label><select class="form-input custom-hidden" id="aType" onchange="toggleConsultationReason()"></select><div class="custom-select" id="aTypeCustom"><div class="custom-select-trigger" onclick="toggleCustomSelect('aTypeCustom')"><span class="trigger-label" id="aTypeCustomLabel">Bridal Consultation</span><svg class="trigger-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></div><div class="custom-select-options" id="aTypeCustomOptions"></div></div></div>
-                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input" id="aConsultant"><option value="">Select...</option></select></div>
+                        <div class="form-group" style="margin-bottom:0"><label class="form-label">Consultant</label><select class="form-input custom-hidden" id="aConsultant"><option value="">Select...</option></select></div>
+                    </div>
+                    
+                    <!-- Consultant Quick Select -->
+                    <div id="consultantQuickSelect" style="margin-top:12px">
+                        <label class="form-label" style="font-size:10px">Consultant</label>
+                        <div id="consultantButtons" style="display:flex;flex-wrap:wrap;gap:6px"></div>
                     </div>
                     
                     <!-- Reason for Visit (only for consultations) -->
@@ -4416,9 +4443,8 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             const currentPage = document.querySelector('.section.active')?.id;
             if (!skipUnsavedCheck && currentPage === 'page-consult' && name !== 'consult') {
                 if (hasUnsavedClientNotes()) {
-                    if (!confirm('You have unsaved notes. Leave without saving?')) {
-                        return; // Stay on current page
-                    }
+                    // Auto-save instead of blocking with confirm
+                    saveClientNotes(true);
                 }
                 // Clear currentClient when leaving consult
                 currentClient = null;
@@ -6955,6 +6981,7 @@ The Estrelle Bridal Team`;
             // Populate consultant dropdown
             $('aConsultant').innerHTML = '<option value="">Select...</option>' + 
                 data.consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            renderConsultantButtons('');
             
             if (forClientId) {
                 // Adding appointment for specific client - show fixed client name, NO new client option
@@ -6976,6 +7003,55 @@ The Estrelle Bridal Team`;
         function toggleNewClientFields() {
             const isNew = $('aClient').value === 'new';
             $('newClientFields').style.display = isNew ? 'block' : 'none';
+        }
+        
+        function getConsultantStyle(name) {
+            if (!name) return 'background:#fff3e0;color:#e67e22;';
+            const colours = [
+                { bg: '#e8f5e9', color: '#2e7d32' },  // green
+                { bg: '#e3f2fd', color: '#1565c0' },  // blue
+                { bg: '#fce4ec', color: '#c62828' },  // pink/red
+                { bg: '#f3e5f5', color: '#7b1fa2' },  // purple
+                { bg: '#fff8e1', color: '#f57f17' },  // amber
+                { bg: '#e0f7fa', color: '#00838f' },  // teal
+            ];
+            const consultants = (data.consultants || []).map(c => c.Name);
+            const idx = consultants.indexOf(name);
+            const c = colours[idx >= 0 ? idx % colours.length : 0];
+            return `background:${c.bg};color:${c.color};`;
+        }
+        
+        function quickUpdateConsultant(apptId, consultantName) {
+            const appt = data.appointments.find(a => String(a.ID) === String(apptId));
+            if (!appt) return;
+            appt.Consultant = consultantName;
+            updateRecord('Appointments', apptId, { Consultant: consultantName });
+            renderClientAppts();
+            renderDash();
+            renderWeek();
+            toast(consultantName ? `Assigned to ${consultantName}` : 'Consultant removed', 'success');
+        }
+        
+        function renderConsultantButtons(selectedName) {
+            const container = $('consultantButtons');
+            if (!container) return;
+            const consultants = data.consultants || [];
+            container.innerHTML = consultants.map(c => {
+                const isSelected = c.Name === selectedName;
+                return `<button type="button" onclick="selectConsultant('${c.Name.replace(/'/g, "\\'")}')" 
+                    style="padding:10px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:2px solid ${isSelected ? 'var(--accent)' : 'var(--champagne)'};background:${isSelected ? 'var(--accent)' : 'white'};color:${isSelected ? 'white' : 'var(--text)'};touch-action:manipulation;transition:all 0.15s;flex:1;min-width:80px;text-align:center">${c.Name}</button>`;
+            }).join('');
+            
+            // Highlight border if none selected
+            const wrapper = $('consultantQuickSelect');
+            if (wrapper) {
+                wrapper.style.borderColor = selectedName ? 'var(--champagne)' : '#e67e22';
+            }
+        }
+        
+        function selectConsultant(name) {
+            $('aConsultant').value = name;
+            renderConsultantButtons(name);
         }
         
         function toggleConsultationReason() {
@@ -9523,6 +9599,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             $('aConsultant').innerHTML = '<option value="">Select...</option>' + 
                 data.consultants.map(con => `<option value="${con.Name}">${con.Name}</option>`).join('');
             $('aConsultant').value = '';
+            renderConsultantButtons('');
         }
         
         function viewAlterations(clientId) {
@@ -10445,6 +10522,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('aConsultant').innerHTML = '<option value="">Select...</option>' + 
                 data.consultants.map(con => `<option value="${con.Name}">${con.Name}</option>`).join('');
             $('aConsultant').value = '';
+            renderConsultantButtons('');
         }
         
         function openAddAlterationItem() {
@@ -10684,6 +10762,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('aConsultant').innerHTML = '<option value="">Select...</option>' + 
                 data.consultants.map(con => `<option value="${con.Name}">${con.Name}</option>`).join('');
             $('aConsultant').value = appt.Consultant || '';
+            renderConsultantButtons(appt.Consultant || '');
         }
         
         function renderAltItems() {
@@ -11174,36 +11253,83 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 previousAltStatus
             });
             
-            toast(`${clientName} marked as picked up! 🎉`, 'success', true);
+            toast(`${clientName} marked as picked up!`, 'success', true);
             
-            // Offer to send email after a short delay
-            setTimeout(() => {
-                if (c.Email && confirm(`Send pickup confirmation email to ${c.Email}?`)) {
-                    sendPickupEmail(clientId);
-                }
-            }, 500);
+            // Offer to send email
+            if (c.Email) {
+                setTimeout(() => {
+                    showChoiceDialog(
+                        'Send Pickup Confirmation?',
+                        '',
+                        [
+                            { label: '📧 Send Email', style: 'primary', action: () => { closeModal('choice'); sendPickupEmail(clientId); } },
+                            { label: 'Skip', style: 'secondary', action: () => closeModal('choice') }
+                        ]
+                    );
+                    setTimeout(() => {
+                        const msgEl = $('choiceMessage');
+                        if (msgEl) {
+                            msgEl.innerHTML = `<div style="text-align:center;font-size:13px">Send a pickup confirmation email to <b>${c.Email}</b>?</div>`;
+                        }
+                    }, 50);
+                }, 500);
+            }
         }
         
         function sendPickupEmail(clientId) {
             const c = getClient(clientId);
             if (!c || !c.Email) return;
             
-            const storeName = store.name || 'Estrelle Bridal';
-            const subject = `Your dress is ready for pickup! 👰`;
-            const body = `Hi ${c.FirstName},
+            const subject = 'Your dress is ready! - Estrelle Bridal';
+            const body = `Dear ${c.FirstName},
 
 Great news! Your dress alterations are complete and your gown is ready for pickup.
 
 Please contact us to schedule a convenient time to pick up your dress.
 
-We can't wait to see you!
+We can't wait to see you on your big day!
 
-${storeName}
-${store.phone || ''}`;
+Warm regards,
+
+Estrelle Bridal
+55 Avenue Road, Suite 201.5
+Toronto, Ontario
+(647) 333-6582
+www.estrellebridal.com`;
             
-            // Open Gmail
-            const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.Email)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            window.open(gmailUrl, '_blank');
+            showChoiceDialog('📧 Pickup Confirmation Email', '', [
+                { label: '📤 Send Email', style: 'primary', action: () => {
+                    const finalTo = document.getElementById('pickupEmailTo').value;
+                    const finalSubject = document.getElementById('pickupEmailSubject').value;
+                    const finalBody = document.getElementById('pickupEmailBody').value;
+                    closeModal('choice');
+                    sendEmailViaPreferredMethod(finalTo, finalSubject, finalBody, () => {
+                        toast('Pickup email sent to ' + finalTo, 'success');
+                    });
+                }},
+                { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+            ]);
+            
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left;font-size:12px">
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">To</label>
+                                <input type="email" class="form-input" id="pickupEmailTo" value="${c.Email}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">Subject</label>
+                                <input type="text" class="form-input" id="pickupEmailSubject" value="${subject}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label" style="font-size:10px">Email Body <span style="color:var(--taupe)">(edit before sending)</span></label>
+                                <textarea class="form-input" id="pickupEmailBody" style="min-height:200px;font-size:11px;line-height:1.5;white-space:pre-wrap;font-family:inherit">${body.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                            </div>
+                        </div>`;
+                }
+            }, 50);
         }
         
         function sendFittingSummary() {
@@ -15035,7 +15161,7 @@ The {storeName} Team`
                                 ${isNoShow ? ' <span style="font-size:10px;color:var(--red);font-weight:600">NO-SHOW</span>' : ''}
                                 ${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}
                             </div>
-                            <div class="appt-meta">${normalizeApptType(a.Type)} · ${a.Consultant||''}</div>
+                            <div class="appt-meta">${normalizeApptType(a.Type)} · <select class="form-input" style="display:inline-block;width:auto;font-size:11px;padding:3px 8px;border-radius:12px;cursor:pointer;font-weight:600;border:none;appearance:auto;-webkit-appearance:menulist;${getConsultantStyle(a.Consultant)}" onchange="quickUpdateConsultant('${a.ID}', this.value)" onclick="event.stopPropagation()"><option value="" ${!a.Consultant ? 'selected' : ''}>⚠ Assign</option>${(data.consultants||[]).map(con => `<option value="${con.Name}" ${con.Name === a.Consultant ? 'selected' : ''}>${con.Name}</option>`).join('')}</select></div>
                             ${rescheduledFrom ? `<div style="font-size:9px;color:var(--taupe);margin-top:2px">↩️ Rescheduled from ${rescheduledFrom}</div>` : ''}
                         </div>
                         <div class="appt-actions" onclick="event.stopPropagation()">
@@ -19925,7 +20051,15 @@ p{margin:6px 0;}
         }
 
         // ========== INIT ==========
-        document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => { if (n.dataset.page) showPage(n.dataset.page); }));
+        document.querySelectorAll('.nav-item').forEach(n => {
+            // Use both click and touchend for responsive iPad taps
+            function handleNav(e) {
+                e.preventDefault();
+                if (n.dataset.page) showPage(n.dataset.page);
+            }
+            n.addEventListener('click', handleNav);
+            n.addEventListener('touchend', handleNav, { passive: false });
+        });
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
         
         // Load cached data first for instant UI, then fetch fresh from server
