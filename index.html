@@ -4706,7 +4706,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     seenIds.add(a.ID);
                     return true;
                 })
-                .sort((a,b) => (a.Time||'').localeCompare(b.Time||''));
+                .sort((a,b) => (a.Time||'00:00').padStart(5,'0').localeCompare((b.Time||'00:00').padStart(5,'0')));
             $('dashToday').innerHTML = appts.length ? appts.map(a => {
                 const c = getClient(a.ClientID);
                 const isNoShow = a.Status === 'no-show';
@@ -5588,7 +5588,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 .sort((a,b) => {
                     const dateCompare = getDateStr(a.Date).localeCompare(getDateStr(b.Date));
                     if (dateCompare !== 0) return dateCompare;
-                    return (a.Time||'').localeCompare(b.Time||'');
+                    return (a.Time||'00:00').padStart(5,'0').localeCompare((b.Time||'00:00').padStart(5,'0'));
                 });
             
             if (!weekAppts.length) {
@@ -16588,12 +16588,17 @@ The {storeName} Team`
                             console.log('Found client in same batch:', emailClean, '-> batch index:', batchClientIdx);
                         }
                         
-                        // Check existing appointment (use String comparison for IDs)
+                        // Check existing appointment - match by client + date (time may have changed)
                         let existingAppt = null;
-                        if (existingClient && apptDate && apptTime && data && data.appointments) {
+                        let apptTimeChanged = false;
+                        if (existingClient && apptDate && data && data.appointments) {
                             for (let a of data.appointments) {
-                                if (String(a.ClientID) === String(existingClient.ID) && getDateStr(a.Date) === apptDate && a.Time === apptTime) {
+                                if (String(a.ClientID) === String(existingClient.ID) && getDateStr(a.Date) === apptDate) {
                                     existingAppt = a;
+                                    if (a.Time !== apptTime) {
+                                        apptTimeChanged = true;
+                                        console.log('Appointment time changed:', a.Time, '->', apptTime);
+                                    }
                                     console.log('Found existing appointment:', a.ID);
                                     break;
                                 }
@@ -16603,12 +16608,14 @@ The {storeName} Team`
                         // Determine action
                         let action = 'new_client';
                         if (existingClient && existingAppt) {
-                            // Only mark_noshow if it was a no-show, otherwise skip (already exists)
                             if (status === 'did-not-show' && existingAppt.Status !== 'no-show') {
                                 action = 'mark_noshow';
+                            } else if (apptTimeChanged) {
+                                action = 'update_time'; // Time was rescheduled in Timely
+                                console.log('UPDATE_TIME: Appointment rescheduled for', firstName, lastName, 'on', apptDate, ':', existingAppt.Time, '->', apptTime);
                             } else {
-                                action = 'skip'; // Already exists, no changes needed
-                                console.log('SKIP: Appointment already exists for', firstName, lastName, 'on', apptDate, 'at', apptTime, '- Existing appt ID:', existingAppt.ID);
+                                action = 'skip';
+                                console.log('SKIP: Appointment already exists for', firstName, lastName, 'on', apptDate, 'at', apptTime);
                             }
                         } else if (existingClient) {
                             action = 'add_appt';
@@ -16702,6 +16709,7 @@ The {storeName} Team`
                 'add_appt': '<span style="color:var(--dusty)">+ Add Appt</span>',
                 'add_appt_to_batch': '<span style="color:var(--dusty)">+ Add Appt</span>',
                 'update': '<span style="color:var(--taupe)">Update</span>',
+                'update_time': '<span style="color:#1565c0">🔄 Rescheduled</span>',
                 'mark_noshow': '<span style="color:var(--rose)">No-Show</span>'
             };
             
@@ -16719,6 +16727,7 @@ The {storeName} Team`
             // Stats
             const newClients = timelyImportData.filter(function(i) { return i.action === 'new_client'; }).length;
             const addAppts = timelyImportData.filter(function(i) { return i.action === 'add_appt' || i.action === 'add_appt_to_batch'; }).length;
+            const rescheduled = timelyImportData.filter(function(i) { return i.action === 'update_time'; }).length;
             const noShows = timelyImportData.filter(function(i) { return i.action === 'mark_noshow'; }).length;
             const withDates = timelyImportData.filter(function(i) { return i.date; }).length;
             
@@ -16727,6 +16736,7 @@ The {storeName} Team`
                 '<strong>Summary:</strong> ' +
                 newClients + ' new clients, ' +
                 (addAppts + newClients) + ' new appointments, ' +
+                (rescheduled > 0 ? rescheduled + ' rescheduled, ' : '') +
                 noShows + ' no-shows' +
                 (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '');
         }
@@ -16855,45 +16865,71 @@ The {storeName} Team`
                         const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
                         if (appt) appt.Status = 'no-show';
                     }
+                    
+                    // Handle rescheduled appointments (time changed)
+                    if (item.action === 'update_time' && item.existingApptId) {
+                        await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, record: { Time: item.time } });
+                        const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
+                        if (appt) appt.Time = item.time;
+                        apptsCreated++; // count as updated
+                    }
                 }
                 
-                // AUTO-DELETE: Find appointments in app that are within Timely date range but not in Timely file
+                // SMART AUTO-DELETE: Only remove consultation-type appointments within the 
+                // Timely date range that are NOT in the Timely file. Never delete fittings,
+                // measurements, or other internally-created appointment types.
                 let apptsDeleted = 0;
                 const deletedAppts = [];
+                
+                // Collect IDs of appointments we just updated (time changes) so we don't delete them
+                const updatedApptIds = new Set();
+                for (const item of timelyImportData) {
+                    if (item.action === 'update_time' && item.existingApptId) {
+                        updatedApptIds.add(String(item.existingApptId));
+                    }
+                }
                 
                 if (minDate && maxDate) {
                     const apptsToDelete = data.appointments.filter(a => {
                         const apptDate = getDateStr(a.Date);
-                        // Only consider appointments within the Timely file's date range
+                        // Only within Timely file's date range
                         if (apptDate < minDate || apptDate > maxDate) return false;
                         
-                        // Never auto-delete appointments created internally (from alteration modal, etc.)
+                        // Never delete appointments we just updated
+                        if (updatedApptIds.has(String(a.ID))) return false;
+                        
+                        // Never delete appointments created internally
                         if (a.Source === 'estrelle') return false;
                         
-                        // Check if this appointment exists in Timely
-                        const key = `${a.ClientID}|${apptDate}|${a.Time}`;
-                        return !timelyApptKeys.has(key);
+                        // Only delete consultation-type appointments (these come from Timely)
+                        const type = (a.Type || '').toLowerCase();
+                        if (type.includes('fitting') || type.includes('measurement') || type.includes('pickup') || type.includes('alteration')) return false;
+                        
+                        // Check if this appointment exists in Timely (by client + date)
+                        // Use client+date match since time may have changed
+                        let foundInTimely = false;
+                        for (const tk of timelyApptKeys) {
+                            const parts = tk.split('|');
+                            if (parts[0] === String(a.ClientID) && parts[1] === apptDate) {
+                                foundInTimely = true;
+                                break;
+                            }
+                        }
+                        return !foundInTimely;
                     });
                     
-                    console.log('Appointments to delete (not in Timely):', apptsToDelete.length);
+                    if (apptsToDelete.length > 0) {
+                        console.log('Appointments to delete (cancelled in Timely):', apptsToDelete.map(a => `${a.ClientName || a.ClientID} on ${getDateStr(a.Date)} at ${a.Time}`));
+                    }
                     
                     for (const appt of apptsToDelete) {
-                        // Save for undo
                         deletedAppts.push({ ...appt });
-                        
-                        // Remove from local data
                         const idx = data.appointments.findIndex(a => String(a.ID) === String(appt.ID));
-                        if (idx >= 0) {
-                            data.appointments.splice(idx, 1);
-                        }
-                        
-                        // Delete from server
+                        if (idx >= 0) data.appointments.splice(idx, 1);
                         api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID }).catch(() => {});
-                        
                         apptsDeleted++;
                     }
                     
-                    // Add to undo stack if any were deleted
                     if (deletedAppts.length > 0) {
                         addUndo({ type: 'bulk_delete_appointments', records: deletedAppts });
                     }
