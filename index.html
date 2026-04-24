@@ -152,7 +152,7 @@
         /* Modals - Updated */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(44,40,37,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; visibility: hidden; transition: all 0.2s; }
         .modal-overlay.active { opacity: 1; visibility: visible; }
-        .modal { background: var(--card); border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+        .modal { background: var(--card); border-radius: 16px; width: 100%; max-width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.15); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
         .modal.wide { max-width: 800px; }
         .modal.full { max-width: 95vw; max-height: 92vh; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--card); z-index: 10; }
@@ -2171,12 +2171,12 @@
                 
                 <!-- Notes -->
                 <div class="form-group">
-                    <label class="form-label">Notes for Bride</label>
-                    <textarea class="form-input" id="altBrideNotes" style="min-height:50px" placeholder="Notes to include in the email to bride (e.g. Your dress is looking beautiful! We adjusted the bodice for a perfect fit.)"></textarea>
+                    <label class="form-label">Notes for Bride & Seamstress</label>
+                    <textarea class="form-input" id="altBrideNotes" style="min-height:50px" placeholder="Notes included in emails to bride and seamstress copy (e.g. Your dress is looking beautiful! We adjusted the bodice for a perfect fit.)"></textarea>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Internal Notes (seamstress/consultant)</label>
-                    <textarea class="form-input" id="altNotes" style="min-height:50px" placeholder="Internal notes — not sent to bride"></textarea>
+                    <label class="form-label">Internal Notes (not sent)</label>
+                    <textarea class="form-input" id="altNotes" style="min-height:50px" placeholder="Private notes — not sent to anyone"></textarea>
                 </div>
                 
                 <!-- Schedule Next Fitting -->
@@ -3727,7 +3727,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                 } else if (action.type === 'mark_followup_done') {
                     // Undo mark done
-                    await api('POST', { action: 'update', sheet: 'Appointments', id: action.id, updates: { FollowUpDone: false } });
+                    await api('POST', { action: 'update', sheet: 'Appointments', id: action.id, record: { FollowUpDone: false } });
                     const appt = data.appointments.find(a => a.ID == action.id);
                     if (appt) appt.FollowUpDone = false;
                     renderDash();
@@ -3735,7 +3735,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                 } else if (action.type === 'edit_client') {
                     // Restore previous client data
-                    await api('POST', { action: 'update', sheet: 'Clients', id: action.id, updates: action.previous });
+                    await api('POST', { action: 'update', sheet: 'Clients', id: action.id, record: action.previous });
                     const client = data.clients.find(c => c.ID == action.id);
                     if (client) Object.assign(client, action.previous);
                     renderClients();
@@ -3747,7 +3747,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                 } else if (action.type === 'edit_appointment') {
                     // Restore previous appointment data
-                    await api('POST', { action: 'update', sheet: 'Appointments', id: action.id, updates: action.previous });
+                    await api('POST', { action: 'update', sheet: 'Appointments', id: action.id, record: action.previous });
                     const appt = data.appointments.find(a => a.ID == action.id);
                     if (appt) Object.assign(appt, action.previous);
                     renderAllAppointments();
@@ -4457,42 +4457,37 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         
         function showPage(name, skipUnsavedCheck = false) {
           try {
-            // Check for unsaved changes when leaving consult page
+            // Auto-save unsaved notes when leaving consult page
             const currentPage = document.querySelector('.section.active')?.id;
             if (!skipUnsavedCheck && currentPage === 'page-consult' && name !== 'consult') {
-                if (hasUnsavedClientNotes()) {
-                    // Auto-save instead of blocking with confirm
-                    saveClientNotes(true);
-                }
-                // Clear currentClient when leaving consult
+                if (hasUnsavedClientNotes()) saveClientNotes(true);
                 currentClient = null;
             }
             
-            // Track page history (don't add duplicates)
+            // Track page history
             if (!skipUnsavedCheck && pageHistory[pageHistory.length - 1] !== name) {
                 pageHistory.push(name);
-                // Limit history size
                 if (pageHistory.length > 20) pageHistory.shift();
             }
             
+            // Switch active page — do this FIRST for instant visual feedback
             document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
             
-            // Always scroll to top when switching pages
+            // Scroll to top
             window.scrollTo(0, 0);
             document.querySelector('.main')?.scrollTo(0, 0);
-            try { if (name === 'clients') setClientsView(clientsView || 'all'); } catch(e) { console.error('clients view error:', e); }
-            try { if (name === 'schedule') setScheduleView(scheduleView || 'week'); } catch(e) { console.error('schedule view error:', e); }
-            if (name === 'orders') { 
-                try { setOrdersView(ordersView || 'orders'); } catch(e) { console.error('orders view error:', e); }
-                loadData().then(() => {
-                    try { if (ordersView === 'orders') renderOrders(); else renderAlts(); } catch(e) { console.error('orders render error:', e); }
-                });
-            }
-            try { if (name === 'reporting') renderReporting(); } catch(e) { console.error('reporting error:', e); }
-            try { if (name === 'settings') renderSettings(); } catch(e) { console.error('settings error:', e); }
+            
+            // Render page content from cached data (no server calls)
+            try {
+                if (name === 'clients') setClientsView(clientsView || 'all');
+                else if (name === 'schedule') setScheduleView(scheduleView || 'week');
+                else if (name === 'orders') setOrdersView(ordersView || 'orders');
+                else if (name === 'reporting') renderReporting();
+                else if (name === 'settings') renderSettings();
+            } catch(e) { console.error('Page render error:', e); }
             
             updateFloatingBackButton();
           } catch(e) {
@@ -5363,6 +5358,13 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             
             // Close modal immediately
             closeModal('newClient');
+            
+            // Return to alteration if we came from there
+            if (window._returnToAlteration) {
+                const altClientId = window._returnToAlteration;
+                window._returnToAlteration = null;
+                setTimeout(() => openAlterationDetail(altClientId), 200);
+            }
             toast('Saving...', '');
             
             if (id) {
@@ -10560,6 +10562,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             openModal('newAppt');
         }
         
+        function editClientFromAlteration(clientId) {
+            // Store that we came from alteration so we can return
+            window._returnToAlteration = clientId;
+            closeModal('alteration');
+            editClient(clientId);
+        }
+        
         function openAlterationForClient(clientId) {
             // Open alteration detail directly without switching pages
             openAlterationDetail(clientId);
@@ -10611,7 +10620,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             $('altClientInfo').innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center">
-                    <div style="cursor:pointer" onclick="closeModal('alteration');openClient(${clientId})">
+                    <div style="cursor:pointer" onclick="editClientFromAlteration('${clientId}')">
                         <div style="font-weight:600;font-size:16px">${c.FirstName} ${c.LastName} <span style="font-size:11px;color:var(--dusty)">✏️</span></div>
                         <div style="font-size:11px;color:var(--taupe)">Wedding: ${fmtDate(c.WeddingDate)} · ${daysToWedding} days away</div>
                     </div>
@@ -10642,6 +10651,12 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 notes = localStorage.getItem(`alts_notes_${clientId}`) || '';
             }
             $('altNotes').value = notes;
+            
+            // Strip auto-created import notes (not useful for consultants)
+            if (notes && notes.includes('Auto-created from Timely')) {
+                notes = notes.replace(/Auto-created from Timely.*$/gm, '').trim();
+                $('altNotes').value = notes;
+            }
             
             // Load bride notes
             let brideNotes = '';
@@ -10680,6 +10695,12 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             renderAltNextFitting();
             
             openModal('alteration');
+            
+            // Scroll modal content to top
+            setTimeout(() => {
+                const modal = document.querySelector('#modal-alteration .modal-content');
+                if (modal) modal.scrollTop = 0;
+            }, 50);
         }
         
         function saveAltNeededBy() {
@@ -11369,15 +11390,16 @@ www.estrellebridal.com`;
             const fittingNum = pastFittings.length || 1;
             const nextFitting = getNextFittingForClient(currentAltClientId);
             
-            // Build summary
+            // Build summary — only show what's been done and what's actively being worked on
+            // Don't show pending items — those haven't been started yet
             const doneItems = currentAltItems.filter(i => i.status === 'done').map(i => `  ✓ ${i.name}${i.details ? ' – ' + i.details : ''}`).join('\n');
-            const inProgressItems = currentAltItems.filter(i => i.status === 'in-progress').map(i => `  → ${i.name}${i.details ? ' – ' + i.details : ''} (in progress)`).join('\n');
-            const pendingItems = currentAltItems.filter(i => i.status === 'pending' || i.status === 'needs-adjustment').map(i => {
-                let line = `  ○ ${i.name}${i.details ? ' – ' + i.details : ''}`;
-                if (i.status === 'needs-adjustment' && i.note) line += ` (adjustment: ${i.note})`;
-                else if (i.status === 'needs-adjustment') line += ' (needs adjustment)';
+            const inProgressItems = currentAltItems.filter(i => i.status === 'in-progress').map(i => `  → ${i.name}${i.details ? ' – ' + i.details : ''}`).join('\n');
+            const adjustmentItems = currentAltItems.filter(i => i.status === 'needs-adjustment').map(i => {
+                let line = `  → ${i.name}${i.details ? ' – ' + i.details : ''}`;
+                if (i.note) line += ` (${i.note})`;
                 return line;
             }).join('\n');
+            const pendingItems = currentAltItems.filter(i => i.status === 'pending').map(i => `  ○ ${i.name}${i.details ? ' – ' + i.details : ''}`).join('\n');
             const notes = $('altNotes').value;
             const brideNotes = $('altBrideNotes')?.value || '';
             
@@ -11394,7 +11416,8 @@ ${'─'.repeat(30)}
 `;
             if (doneItems) body += `\nCompleted:\n${doneItems}\n`;
             if (inProgressItems) body += `\nIn Progress:\n${inProgressItems}\n`;
-            if (pendingItems) body += `\nRemaining:\n${pendingItems}\n`;
+            if (adjustmentItems) body += `\nAdjustments Needed:\n${adjustmentItems}\n`;
+            if (pendingItems) body += `\nUpcoming:\n${pendingItems}\n`;
             if (brideNotes) body += `\nNote from your consultant:\n${brideNotes}\n`;
             
             body += `\n${'─'.repeat(30)}`;
@@ -11428,9 +11451,10 @@ www.estrellebridal.com`;
                     const finalSubject = document.getElementById('fittingEmailSubject').value;
                     const finalBody = document.getElementById('fittingEmailBody').value;
                     closeModal('choice');
-                    sendEmailViaPreferredMethod(finalTo, finalSubject, finalBody, () => {
-                        toast('Fitting summary sent to ' + finalTo, 'success');
-                    });
+                    toast('Sending email to ' + finalTo + '...', 'success');
+                    api('POST', { action: 'sendEmail', to: finalTo, subject: finalSubject, body: finalBody })
+                        .then(() => toast('✓ Email sent to ' + finalTo, 'success'))
+                        .catch(e => toast('Failed to send: ' + (e.message || e), 'error'));
                 }},
                 { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
             ]);
@@ -11511,7 +11535,11 @@ www.estrellebridal.com`;
             
             if (needsAdj.length > 0) {
                 text += `NEEDS ADJUSTMENT:\n`;
-                needsAdj.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
+                needsAdj.forEach(i => {
+                    text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}`;
+                    if (i.note) text += ` (${i.note})`;
+                    text += `\n`;
+                });
                 text += `\n`;
             }
             
@@ -11534,9 +11562,13 @@ www.estrellebridal.com`;
             }
             
             // Notes
+            const brideNotes = $('altBrideNotes')?.value || '';
             const notes = $('altNotes').value;
+            if (brideNotes) {
+                text += `Notes:\n${brideNotes}\n\n`;
+            }
             if (notes) {
-                text += `Notes: ${notes}\n`;
+                text += `Internal Notes: ${notes}\n`;
             }
             
             // Copy to clipboard
@@ -20173,13 +20205,22 @@ p{margin:6px 0;}
 
         // ========== INIT ==========
         document.querySelectorAll('.nav-item').forEach(n => {
-            // Use both click and touchend for responsive iPad taps
+            let lastTap = 0;
             function handleNav(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                // Debounce — ignore taps within 300ms of each other
+                const now = Date.now();
+                if (now - lastTap < 300) return;
+                lastTap = now;
                 if (n.dataset.page) showPage(n.dataset.page);
             }
-            n.addEventListener('click', handleNav);
             n.addEventListener('touchend', handleNav, { passive: false });
+            n.addEventListener('click', function(e) {
+                // On touch devices, touchend already handled it
+                if (lastTap && Date.now() - lastTap < 300) { e.preventDefault(); return; }
+                handleNav(e);
+            });
         });
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
         
