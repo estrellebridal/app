@@ -4479,6 +4479,10 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
+            
+            // Always scroll to top when switching pages
+            window.scrollTo(0, 0);
+            document.querySelector('.main')?.scrollTo(0, 0);
             try { if (name === 'clients') setClientsView(clientsView || 'all'); } catch(e) { console.error('clients view error:', e); }
             try { if (name === 'schedule') setScheduleView(scheduleView || 'week'); } catch(e) { console.error('schedule view error:', e); }
             if (name === 'orders') { 
@@ -10557,9 +10561,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         function openAlterationForClient(clientId) {
-            showPage('orders');
-            // Small delay to let the page render, then open alteration detail
-            setTimeout(() => openAlterationDetail(clientId), 100);
+            // Open alteration detail directly without switching pages
+            openAlterationDetail(clientId);
         }
         
         function openAlterationDetail(clientId) {
