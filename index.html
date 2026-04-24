@@ -4119,7 +4119,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         };
 
         // ========== API ==========
-        async function api(method, body = null) {
+        async function api(method, body = null, _retryCount = 0) {
             $('syncStatus').textContent = '● Syncing...';
             $('syncStatus').className = 'sync-status syncing';
             try {
@@ -4137,13 +4137,24 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 const url = API_URL + (method === 'GET' ? '?action=getAll&t=' + Date.now() : '');
                 const res = await fetch(url, opts);
                 
-                // Check HTTP status
+                // Check HTTP status — retry on 404/500/503 (Apps Script cold start)
                 if (!res.ok) {
+                    if (_retryCount < 3 && (res.status === 404 || res.status >= 500)) {
+                        console.log(`Server returned ${res.status}, retrying in ${(_retryCount + 1) * 2}s... (attempt ${_retryCount + 1}/3)`);
+                        $('syncStatus').textContent = '● Retrying...';
+                        await new Promise(r => setTimeout(r, (_retryCount + 1) * 2000));
+                        return api(method, body, _retryCount + 1);
+                    }
                     throw new Error('Server error: ' + res.status);
                 }
                 
                 const text = await res.text();
                 if (!text || text.trim() === '') {
+                    if (_retryCount < 3) {
+                        console.log('Empty response, retrying...');
+                        await new Promise(r => setTimeout(r, (_retryCount + 1) * 2000));
+                        return api(method, body, _retryCount + 1);
+                    }
                     throw new Error('Empty response from server');
                 }
                 
@@ -4160,6 +4171,13 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 $('syncStatus').className = 'sync-status';
                 return json.data !== undefined ? json.data : json;
             } catch (e) {
+                // Retry on network errors (fetch failed)
+                if (_retryCount < 3 && (e.message === 'Failed to fetch' || e.name === 'TypeError')) {
+                    console.log(`Network error, retrying in ${(_retryCount + 1) * 2}s...`);
+                    $('syncStatus').textContent = '● Retrying...';
+                    await new Promise(r => setTimeout(r, (_retryCount + 1) * 2000));
+                    return api(method, body, _retryCount + 1);
+                }
                 $('syncStatus').textContent = '● Error: ' + e.message;
                 $('syncStatus').className = 'sync-status error';
                 throw e;
@@ -16779,99 +16797,116 @@ The {storeName} Team`
             console.log('Appointments to import:', timelyImportData.length);
             
             try {
-                // Process each item sequentially to get correct server IDs
+                // BATCH APPROACH: Collect all records, send in one API call
+                const newClients = [];
+                const newAppts = [];
+                const updates = [];
+                
+                // First: identify all new clients
+                for (let idx = 0; idx < timelyImportData.length; idx++) {
+                    const item = timelyImportData[idx];
+                    if (item.action === 'new_client') {
+                        newClients.push({
+                            idx: idx,
+                            record: {
+                                FirstName: item.firstName,
+                                LastName: item.lastName,
+                                Email: item.email,
+                                Phone: item.phone,
+                                Status: 'new',
+                                CreatedAt: today()
+                            }
+                        });
+                    }
+                }
+                
+                // Batch-create all new clients in one call
+                $('btnConfirmImport').textContent = 'Creating clients...';
+                if (newClients.length > 0) {
+                    const clientRecords = newClients.map(c => c.record);
+                    const response = await api('POST', { action: 'bulkAdd', sheet: 'Clients', records: clientRecords });
+                    
+                    // Map returned IDs back
+                    const ids = response && response.ids ? response.ids : [];
+                    for (let i = 0; i < newClients.length; i++) {
+                        const id = ids[i] || ('c' + Date.now() + i);
+                        newClients[i].record.ID = id;
+                        batchClientIds[newClients[i].idx] = id;
+                        data.clients.push(newClients[i].record);
+                        clientsCreated++;
+                    }
+                }
+                
+                // Now collect all appointments to create
                 for (let idx = 0; idx < timelyImportData.length; idx++) {
                     const item = timelyImportData[idx];
                     let clientId = item.existingClientId;
                     
-                    $('btnConfirmImport').textContent = 'Importing ' + (idx + 1) + '/' + timelyImportData.length + '...';
-                    
-                    // Create new client if needed - WAIT for server response
                     if (item.action === 'new_client') {
-                        const newClient = {
-                            FirstName: item.firstName,
-                            LastName: item.lastName,
-                            Email: item.email,
-                            Phone: item.phone,
-                            Status: 'new',
-                            CreatedAt: today()
-                        };
-                        
-                        console.log('Creating client:', newClient);
-                        const response = await api('POST', { action: 'add', sheet: 'Clients', record: newClient });
-                        
-                        // Get the server-assigned ID
-                        if (response && response.id) {
-                            clientId = response.id;
-                            newClient.ID = response.id;
-                            console.log('Server assigned client ID:', clientId);
-                        } else {
-                            // Fallback - generate temp ID
-                            clientId = 'c' + Date.now() + idx;
-                            newClient.ID = clientId;
-                            console.log('Using temp client ID:', clientId);
-                        }
-                        
-                        // Store this client ID for batch lookups
-                        batchClientIds[idx] = clientId;
-                        
-                        data.clients.push(newClient);
-                        clientsCreated++;
+                        clientId = batchClientIds[idx];
                     }
-                    
-                    // For batch appointments, get the client ID from the earlier item
                     if (item.action === 'add_appt_to_batch' && item.batchClientIdx !== null) {
                         clientId = batchClientIds[item.batchClientIdx];
-                        console.log('Using batch client ID for appointment:', clientId, 'from batch index:', item.batchClientIdx);
                     }
                     
-                    // Create appointment with the correct client ID
                     if (clientId && (item.action === 'new_client' || item.action === 'add_appt' || item.action === 'add_appt_to_batch')) {
-                        // Get client name
                         const clientName = `${item.firstName} ${item.lastName}`.trim();
-                        
-                        const newAppt = {
-                            ClientID: clientId,
-                            ClientName: clientName,
-                            Date: item.date || today(),
-                            Time: item.time || '10:00',
-                            Type: item.type || 'Bridal Consultation',
-                            Consultant: item.consultant || '',
-                            Status: item.status === 'did-not-show' ? 'no-show' : '',
-                            CreatedAt: today()
-                        };
-                        
-                        console.log('Creating appointment with ClientID:', clientId, newAppt);
-                        const apptResponse = await api('POST', { action: 'add', sheet: 'Appointments', record: newAppt });
-                        
-                        if (apptResponse && apptResponse.id) {
-                            newAppt.ID = apptResponse.id;
-                        } else {
-                            newAppt.ID = 'a' + Date.now() + idx;
-                        }
-                        
-                        data.appointments.push(newAppt);
+                        newAppts.push({
+                            record: {
+                                ClientID: clientId,
+                                ClientName: clientName,
+                                Date: item.date || today(),
+                                Time: item.time || '10:00',
+                                Type: item.type || 'Bridal Consultation',
+                                Consultant: item.consultant || '',
+                                Status: item.status === 'did-not-show' ? 'no-show' : '',
+                                CreatedAt: today()
+                            },
+                            date: item.date,
+                            time: item.time,
+                            action: item.action,
+                            clientId: clientId
+                        });
+                    }
+                    
+                    // Collect updates (no-show, time changes)
+                    if (item.action === 'mark_noshow' && item.existingApptId) {
+                        updates.push({ id: item.existingApptId, fields: { Status: 'no-show' }, type: 'noshow' });
+                    }
+                    if (item.action === 'update_time' && item.existingApptId) {
+                        updates.push({ id: item.existingApptId, fields: { Time: item.time }, type: 'reschedule', time: item.time });
+                    }
+                }
+                
+                // Batch-create all appointments
+                $('btnConfirmImport').textContent = 'Creating appointments...';
+                if (newAppts.length > 0) {
+                    const apptRecords = newAppts.map(a => a.record);
+                    const apptResponse = await api('POST', { action: 'bulkAdd', sheet: 'Appointments', records: apptRecords });
+                    
+                    const apptIds = apptResponse && apptResponse.ids ? apptResponse.ids : [];
+                    for (let i = 0; i < newAppts.length; i++) {
+                        newAppts[i].record.ID = apptIds[i] || ('a' + Date.now() + i);
+                        data.appointments.push(newAppts[i].record);
                         apptsCreated++;
                         
-                        // Track this appointment key for new clients (they weren't in timelyAllAppointments)
-                        if (item.action === 'new_client' || item.action === 'add_appt_to_batch') {
-                            timelyApptKeys.add(`${clientId}|${item.date}|${item.time}`);
+                        if (newAppts[i].action === 'new_client' || newAppts[i].action === 'add_appt_to_batch') {
+                            timelyApptKeys.add(`${newAppts[i].clientId}|${newAppts[i].date}|${newAppts[i].time}`);
                         }
                     }
-                    
-                    // Handle no-show updates
-                    if (item.action === 'mark_noshow' && item.existingApptId) {
-                        await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, updates: { Status: 'no-show' } });
-                        const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
-                        if (appt) appt.Status = 'no-show';
-                    }
-                    
-                    // Handle rescheduled appointments (time changed)
-                    if (item.action === 'update_time' && item.existingApptId) {
-                        await api('POST', { action: 'update', sheet: 'Appointments', id: item.existingApptId, record: { Time: item.time } });
-                        const appt = data.appointments.find(function(a) { return String(a.ID) === String(item.existingApptId); });
-                        if (appt) appt.Time = item.time;
-                        apptsCreated++; // count as updated
+                }
+                
+                // Process updates (these are few, send individually)
+                if (updates.length > 0) {
+                    $('btnConfirmImport').textContent = 'Updating records...';
+                    for (const upd of updates) {
+                        await api('POST', { action: 'update', sheet: 'Appointments', id: upd.id, updates: upd.fields });
+                        const appt = data.appointments.find(a => String(a.ID) === String(upd.id));
+                        if (appt) {
+                            if (upd.type === 'noshow') appt.Status = 'no-show';
+                            if (upd.type === 'reschedule') appt.Time = upd.time;
+                        }
+                        if (upd.type === 'reschedule') apptsCreated++;
                     }
                 }
                 
