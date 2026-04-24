@@ -255,7 +255,7 @@
         /* Toast - Updated */
         .toast { position: fixed; bottom: 80px; right: 24px; padding: 14px 20px; background: var(--text); color: white; border-radius: 10px; font-size: 13px; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 2000; box-shadow: 0 8px 24px rgba(0,0,0,0.15); max-width: calc(100vw - 48px); }
         @media (max-width: 900px) { .toast { bottom: 80px; right: 12px; left: auto; text-align: center; } }
-        @media (max-width: 600px) { .toast { bottom: 100px; right: 12px; left: 12px; text-align: center; } }
+        @media (max-width: 600px) { .toast { bottom: 24px; right: 12px; left: 68px; text-align: center; } }
         .toast.show { transform: translateY(0); opacity: 1; }
         .toast.success { background: linear-gradient(135deg, var(--sage) 0%, #8a9f82 100%); }
         .toast.error { background: linear-gradient(135deg, var(--red) 0%, #a05858 100%); }
@@ -438,45 +438,45 @@
             .meas-grid { grid-template-columns: 1fr 1fr; }
         }
         
-        /* Phone only: bottom navigation bar */
+        /* Phone: compact left sidebar instead of bottom nav */
         @media (max-width: 600px) {
             .sidebar { 
-                width: 100% !important; 
-                height: 70px !important;
+                width: 56px !important;
+                padding: 8px 4px !important;
+                height: 100vh !important;
                 position: fixed !important;
-                bottom: 0 !important;
-                top: auto !important;
+                top: 0 !important;
                 left: 0 !important;
-                flex-direction: row !important;
-                border-right: none !important;
-                border-top: 1px solid var(--border) !important;
+                bottom: auto !important;
+                flex-direction: column !important;
+                border-right: 1px solid var(--border) !important;
+                border-top: none !important;
                 z-index: 1000;
-                padding: 0 !important;
-                padding-bottom: env(safe-area-inset-bottom) !important;
             }
             .sidebar .logo { display: none !important; }
             .sidebar .nav { 
                 display: flex !important; 
-                flex-direction: row !important; 
+                flex-direction: column !important; 
                 padding: 0 !important; 
                 width: 100%;
-                justify-content: space-around;
-                align-items: center;
-                height: 100%;
-                gap: 0;
+                gap: 2px;
             }
             .sidebar .nav-item { 
                 flex-direction: column !important; 
-                padding: 8px 4px !important; 
-                flex: 1;
+                padding: 8px 2px !important; 
+                font-size: 8px !important;
                 text-align: center;
-                border-radius: 0 !important;
+                gap: 2px !important;
+                border-radius: 6px !important;
                 min-width: 0;
             }
+            .sidebar .nav-item span { font-size: 8px !important; }
+            .sidebar .nav-item svg { width: 18px !important; height: 18px !important; }
             .sidebar .sync-status { display: none !important; }
             .main { 
-                margin-left: 0 !important; 
-                margin-bottom: 80px !important;
+                margin-left: 56px !important; 
+                margin-bottom: 0 !important;
+                padding: 12px !important;
             }
         }
         
@@ -10691,7 +10691,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             updateNeededByCountdown();
             
             // Render next fitting section
-            altPendingNextFitting = null;
+            altPendingNextFittings = [];
             renderAltNextFitting();
             
             openModal('alteration');
@@ -11422,8 +11422,24 @@ ${'─'.repeat(30)}
             
             body += `\n${'─'.repeat(30)}`;
             
-            if (nextFitting) {
-                body += `\n\nYour next fitting is scheduled for ${fmtDate(nextFitting.Date)} at ${fmtTime12(nextFitting.Time)}. We look forward to seeing you then!`;
+            // Get ALL upcoming fittings
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            const allUpcoming = data.appointments.filter(a => 
+                String(a.ClientID) === String(currentAltClientId) && 
+                ((a.Type||'').toLowerCase().includes('fitting')) &&
+                parseDate(a.Date) >= tomorrow
+            ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+            
+            if (allUpcoming.length > 0) {
+                body += `\n\nUPCOMING APPOINTMENTS\n`;
+                for (const f of allUpcoming) {
+                    body += `  ${fmtDate(f.Date)} at ${fmtTime12(f.Time)}`;
+                    if (f.FittingNote) body += ` — ${f.FittingNote}`;
+                    body += `\n`;
+                }
+                body += `\nWe look forward to seeing you!`;
             } else {
                 body += `\n\nYour next fitting: TBD. Please contact us to schedule your next appointment.`;
             }
@@ -11520,8 +11536,23 @@ www.estrellebridal.com`;
                 if (daysUntil <= 30) text += ` ** URGENT **`;
                 text += ` (${daysUntil} days)\n`;
             }
-            if (nextFitting) {
-                text += `Next fitting: ${fmtDate(nextFitting.Date)} at ${fmtTime12(nextFitting.Time)}\n`;
+            // All upcoming fittings
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0);
+            const allUpcoming = data.appointments.filter(a => 
+                String(a.ClientID) === String(currentAltClientId) && 
+                ((a.Type||'').toLowerCase().includes('fitting')) &&
+                parseDate(a.Date) >= tomorrow
+            ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+            
+            if (allUpcoming.length > 0) {
+                text += `Upcoming fittings:\n`;
+                allUpcoming.forEach(f => {
+                    text += `  ${fmtDate(f.Date)} at ${fmtTime12(f.Time)}`;
+                    if (f.FittingNote) text += ` — ${f.FittingNote}`;
+                    text += `\n`;
+                });
             } else {
                 text += `Next fitting: TBD\n`;
             }
@@ -11587,7 +11618,7 @@ www.estrellebridal.com`;
         }
 
         // ========== NEXT FITTING (from alteration modal) ==========
-        let altPendingNextFitting = null; // Stores scheduled but not yet saved fitting
+        let altPendingNextFittings = []; // Stores IDs of fittings scheduled in this session
         
         // Convert 24hr time to 12hr (e.g. "18:00" -> "6:00 PM")
         function fmtTime12(t) {
@@ -11602,64 +11633,61 @@ www.estrellebridal.com`;
             const c = getClient(currentAltClientId);
             if (!c) return;
             
-            // Use tomorrow to exclude today's appointments (which may have already happened)
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
             tomorrow.setHours(0, 0, 0, 0);
             
-            // Check for existing upcoming fitting
-            const nextFitting = data.appointments.find(a => 
+            // Get ALL upcoming fittings for this client
+            const upcomingFittings = data.appointments.filter(a => 
                 String(a.ClientID) === String(currentAltClientId) && 
                 ((a.Type||'').toLowerCase().includes('fitting')) &&
                 parseDate(a.Date) >= tomorrow
-            );
+            ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
             
             const scheduleBtn = `<div style="margin-top:8px;text-align:center">
-                <button class="btn btn-sm btn-secondary" onclick="showAltNextFittingForm()" style="font-size:11px;width:100%">+ Add Appointment</button>
+                <button class="btn btn-sm btn-secondary" onclick="showAltNextFittingForm()" style="font-size:11px;width:100%">+ Add Fitting</button>
             </div>`;
             
-            if (altPendingNextFitting) {
-                const fitDate = fmtDate(altPendingNextFitting.Date);
-                const fitTime = fmtTime12(altPendingNextFitting.Time);
-                $('altNextFittingDisplay').style.display = '';
-                $('altNextFittingDisplay').innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #27ae60">
+            let html = '';
+            
+            for (const f of upcomingFittings) {
+                const fitDate = fmtDate(f.Date);
+                const fitTime = fmtTime12(f.Time);
+                const isNew = altPendingNextFittings.some(id => String(id) === String(f.ID));
+                const borderColor = isNew ? '#27ae60' : 'var(--sage)';
+                const bgColor = isNew ? '#e8f5e9' : 'white';
+                const fittingNote = f.FittingNote || '';
+                
+                html += `<div style="padding:8px;background:${bgColor};border-radius:4px;border-left:3px solid ${borderColor};margin-bottom:4px">
+                    <div style="display:flex;align-items:center;justify-content:space-between">
                         <div>
-                            <div style="font-size:13px;font-weight:600">${fitDate} at ${fitTime}</div>
-                            <div style="font-size:10px;color:var(--taupe)">${altPendingNextFitting.Type}${altPendingNextFitting.Consultant ? ' · ' + altPendingNextFitting.Consultant : ''}</div>
+                            <div style="font-size:13px;font-weight:600">${fitDate} at ${fitTime}${isNew ? ' <span style="font-size:10px;color:#27ae60">NEW</span>' : ''}</div>
+                            <div style="font-size:10px;color:var(--taupe)">${f.Type}${f.Consultant ? ' \u00b7 ' + f.Consultant : ''}</div>
                         </div>
-                        <button class="btn btn-sm btn-secondary" onclick="removeAltNextFitting()" style="color:#e74c3c;font-size:11px">Remove</button>
+                        <button class="btn btn-sm btn-secondary" onclick="removeNewFitting('${f.ID}')" style="color:#e74c3c;font-size:10px;padding:4px 8px" title="Remove">\u00d7</button>
                     </div>
-                    ${scheduleBtn}`;
-                $('altNextFittingStatus').textContent = '✓ Scheduled';
-                $('altNextFittingStatus').style.color = '#27ae60';
-                $('altNextFittingForm').style.display = 'none';
-            } else if (nextFitting) {
-                const fitDate = fmtDate(nextFitting.Date);
-                const fitTime = fmtTime12(nextFitting.Time);
-                $('altNextFittingDisplay').style.display = '';
-                $('altNextFittingDisplay').innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid var(--sage)">
-                        <div>
-                            <div style="font-size:13px;font-weight:600">${fitDate} at ${fitTime}</div>
-                            <div style="font-size:10px;color:var(--taupe)">${nextFitting.Type}${nextFitting.Consultant ? ' · ' + nextFitting.Consultant : ''}</div>
-                        </div>
-                    </div>
-                    ${scheduleBtn}`;
-                $('altNextFittingStatus').textContent = '✓ Booked';
-                $('altNextFittingStatus').style.color = '#27ae60';
-                $('altNextFittingForm').style.display = 'none';
-            } else {
-                $('altNextFittingDisplay').style.display = '';
-                $('altNextFittingDisplay').innerHTML = `
-                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px;background:white;border-radius:4px;border-left:3px solid #e74c3c">
-                        <div style="font-size:13px;color:var(--taupe)">TBD — No fitting scheduled</div>
-                        <button class="btn btn-sm btn-primary" onclick="showAltNextFittingForm()" style="font-size:11px">+ Add Appointment</button>
-                    </div>`;
+                    <input type="text" class="form-input" placeholder="Note (e.g. prebooked extra if needed)" 
+                        value="${(fittingNote).replace(/"/g, '&quot;')}" 
+                        onchange="saveFittingNote('${f.ID}', this.value)"
+                        onclick="event.stopPropagation()"
+                        style="font-size:10px;padding:4px 6px;margin-top:4px;border-color:var(--champagne)">
+                </div>`;
+            }
+            
+            if (upcomingFittings.length === 0) {
+                html = `<div style="padding:8px;background:white;border-radius:4px;border-left:3px solid #e74c3c">
+                    <div style="font-size:13px;color:var(--taupe)">No upcoming fittings</div>
+                </div>`;
                 $('altNextFittingStatus').textContent = 'TBD';
                 $('altNextFittingStatus').style.color = '#e74c3c';
-                $('altNextFittingForm').style.display = 'none';
+            } else {
+                $('altNextFittingStatus').textContent = upcomingFittings.length + ' upcoming';
+                $('altNextFittingStatus').style.color = '#27ae60';
             }
+            
+            $('altNextFittingDisplay').style.display = '';
+            $('altNextFittingDisplay').innerHTML = html + scheduleBtn;
+            $('altNextFittingForm').style.display = 'none';
         }
         
         function showAltNextFittingForm() {
@@ -11707,10 +11735,12 @@ www.estrellebridal.com`;
                 Source: 'estrelle'  // Mark as internally created — protected from Timely auto-delete
             };
             
-            // saveRecord adds to data.appointments and syncs to server
-            saveRecord('Appointments', newAppt);
+            // saveRecord adds to data.appointments with temp ID and syncs to server
+            const result = await saveRecord('Appointments', newAppt);
+            const savedId = result?.id || Date.now();
             
-            altPendingNextFitting = newAppt;
+            // Track this fitting as newly added in this session
+            altPendingNextFittings.push(String(savedId));
             
             // Re-render next fitting section
             renderAltNextFitting();
@@ -11725,21 +11755,62 @@ www.estrellebridal.com`;
             toast(`Fitting scheduled: ${fmtDate(date)} at ${fmtTime(time)}`, 'success');
         }
         
-        function removeAltNextFitting() {
-            if (!altPendingNextFitting) return;
-            if (!confirm('Remove this scheduled fitting?')) return;
-            
+        function saveFittingNote(fittingId, note) {
+            const appt = data.appointments.find(a => String(a.ID) === String(fittingId));
+            if (!appt) return;
+            appt.FittingNote = note.trim();
+            updateRecord('Appointments', fittingId, { FittingNote: note.trim() });
+        }
+        
+        async function removeNewFitting(fittingId) {
             // Remove from data
-            const idx = data.appointments.findIndex(a => String(a.ID) === String(altPendingNextFitting.ID));
+            const idx = data.appointments.findIndex(a => String(a.ID) === String(fittingId));
             if (idx >= 0) {
                 const removed = data.appointments.splice(idx, 1)[0];
                 addUndo({ type: 'delete_appointment', record: removed });
-                api('POST', { action: 'delete', sheet: 'Appointments', id: altPendingNextFitting.ID }).catch(() => {});
+                api('POST', { action: 'delete', sheet: 'Appointments', id: fittingId }).catch(() => {});
+            } else {
+                // Try matching by temp ID — saveRecord may have updated the ID
+                // Check all upcoming fittings and find one that's close to this ID
+                const allFittings = data.appointments.filter(a => 
+                    String(a.ClientID) === String(currentAltClientId) && 
+                    ((a.Type||'').toLowerCase().includes('fitting'))
+                );
+                // Find by index in pending list
+                const pendingIdx = altPendingNextFittings.indexOf(String(fittingId));
+                if (pendingIdx >= 0) {
+                    // Find the actual fitting in data by matching pending order
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    tomorrow.setHours(0, 0, 0, 0);
+                    const upcoming = allFittings.filter(a => parseDate(a.Date) >= tomorrow)
+                        .sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+                    // Try to find the one that was added at this pendingIdx
+                    for (const f of upcoming) {
+                        const dataIdx = data.appointments.findIndex(a => a === f);
+                        if (dataIdx >= 0) {
+                            const removed = data.appointments.splice(dataIdx, 1)[0];
+                            addUndo({ type: 'delete_appointment', record: removed });
+                            api('POST', { action: 'delete', sheet: 'Appointments', id: f.ID }).catch(() => {});
+                            break;
+                        }
+                    }
+                }
             }
             
-            altPendingNextFitting = null;
+            // Remove from pending list
+            altPendingNextFittings = altPendingNextFittings.filter(id => String(id) !== String(fittingId));
+            
             saveCachedData();
             renderAltNextFitting();
+            
+            // Refresh fitting list at top
+            const fittings = data.appointments.filter(a => 
+                String(a.ClientID) === String(currentAltClientId) && 
+                ((a.Type||'').toLowerCase().includes('fitting'))
+            ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+            renderAltFittingsList(fittings);
+            
             toast('Fitting removed', 'success', true);
         }
         
