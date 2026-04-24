@@ -16750,13 +16750,64 @@ The {storeName} Team`
             const withDates = timelyImportData.filter(function(i) { return i.date; }).length;
             
             $('importSummary').textContent = timelyImportData.length + ' records';
+            
+            // Detect appointments that will be REMOVED (in app but not in Timely)
+            // Only consultation-type, never fittings or manually created
+            let minDate = null, maxDate = null;
+            for (const item of timelyImportData) {
+                if (item.date) {
+                    if (!minDate || item.date < minDate) minDate = item.date;
+                    if (!maxDate || item.date > maxDate) maxDate = item.date;
+                }
+            }
+            for (const appt of timelyAllAppointments) {
+                if (appt.date) {
+                    if (!minDate || appt.date < minDate) minDate = appt.date;
+                    if (!maxDate || appt.date > maxDate) maxDate = appt.date;
+                }
+            }
+            
+            // Build set of client+date combos from Timely
+            const timelyClientDates = new Set();
+            for (const appt of timelyAllAppointments) {
+                if (appt.clientId && appt.date) timelyClientDates.add(`${appt.clientId}|${appt.date}`);
+            }
+            // Also from new clients being imported (use email as key since they don't have IDs yet)
+            for (const item of timelyImportData) {
+                if (item.existingClientId && item.date) timelyClientDates.add(`${item.existingClientId}|${item.date}`);
+            }
+            
+            const apptsToRemove = minDate && maxDate ? data.appointments.filter(a => {
+                const apptDate = getDateStr(a.Date);
+                if (apptDate < minDate || apptDate > maxDate) return false;
+                if (a.Source === 'estrelle') return false; // Only protect manually created appointments
+                // Check if this client+date exists in Timely
+                return !timelyClientDates.has(`${a.ClientID}|${apptDate}`);
+            }) : [];
+            
+            // Show removal list
+            let removeHtml = '';
+            if (apptsToRemove.length > 0) {
+                removeHtml = '<div style="margin-top:12px;padding:10px;background:#fef3e2;border:1px solid #e67e22;border-radius:5px;font-size:11px">' +
+                    '<strong style="color:#e67e22">⚠ Will be removed (' + apptsToRemove.length + '):</strong> These consultation appointments are not in the Timely file and will be removed.<br>' +
+                    '<div style="margin-top:6px">' +
+                    apptsToRemove.map(a => {
+                        const c = getClient(a.ClientID);
+                        const name = c ? `${c.FirstName} ${c.LastName}` : (a.ClientName || 'Unknown');
+                        return `<div style="padding:3px 0;color:#c0392b">✕ ${name} — ${fmtDate(getDateStr(a.Date))} at ${a.Time || '?'} (${normalizeApptType(a.Type)})</div>`;
+                    }).join('') +
+                    '</div></div>';
+            }
+            
             $('importStats').innerHTML = 
                 '<strong>Summary:</strong> ' +
                 newClients + ' new clients, ' +
                 (addAppts + newClients) + ' new appointments, ' +
                 (rescheduled > 0 ? rescheduled + ' rescheduled, ' : '') +
                 noShows + ' no-shows' +
-                (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '');
+                (apptsToRemove.length > 0 ? ', <span style="color:#e67e22">' + apptsToRemove.length + ' removed</span>' : '') +
+                (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '') +
+                removeHtml;
         }
         
         async function confirmTimelyImport() {
@@ -16935,10 +16986,6 @@ The {storeName} Team`
                         
                         // Never delete appointments created internally
                         if (a.Source === 'estrelle') return false;
-                        
-                        // Only delete consultation-type appointments (these come from Timely)
-                        const type = (a.Type || '').toLowerCase();
-                        if (type.includes('fitting') || type.includes('measurement') || type.includes('pickup') || type.includes('alteration')) return false;
                         
                         // Check if this appointment exists in Timely (by client + date)
                         // Use client+date match since time may have changed
