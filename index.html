@@ -16991,6 +16991,12 @@ The {storeName} Team`
                         batchClientIds[newClients[i].idx] = id;
                         data.clients.push(newClients[i].record);
                         clientsCreated++;
+                        
+                        // Add this new client's appointments to timelyApptKeys so delete logic doesn't touch them
+                        const item = timelyImportData[newClients[i].idx];
+                        if (item && item.date) {
+                            timelyApptKeys.add(`${id}|${item.date}|${item.time}`);
+                        }
                     }
                 }
                 
@@ -17114,7 +17120,12 @@ The {storeName} Team`
                         deletedAppts.push({ ...appt });
                         const idx = data.appointments.findIndex(a => String(a.ID) === String(appt.ID));
                         if (idx >= 0) data.appointments.splice(idx, 1);
-                        api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID }).catch(() => {});
+                        try {
+                            await api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID });
+                            console.log('Deleted appointment:', appt.ID, appt.ClientName || '');
+                        } catch(e) {
+                            console.error('Failed to delete appointment:', appt.ID, e);
+                        }
                         apptsDeleted++;
                     }
                     
@@ -17200,7 +17211,18 @@ The {storeName} Team`
                 
             } catch (err) {
                 console.error('Import error:', err);
-                toast('Import error: ' + err.message, 'error');
+                // Still save and render what was imported
+                saveCachedData();
+                closeModal('importTimely');
+                renderClients();
+                renderAllAppointments();
+                renderDash();
+                renderAlts();
+                
+                let msg = 'Partial import: ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments';
+                if (apptsDeleted > 0) msg += ', ' + apptsDeleted + ' removed';
+                msg += '. Error: ' + (err.message || err);
+                toast(msg, 'error');
             }
             
             // Reset modal for next import
