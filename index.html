@@ -19995,6 +19995,17 @@ p{margin:6px 0;}
             const email = c.Email;
             if (!email) { toast('No email address for this client. Add their email first.', 'error'); return; }
             
+            // Capture signatures from canvas BEFORE saving
+            if (typeof sigPadCustomer !== 'undefined' && sigPadCustomer?.canvas && !isCanvasBlank(sigPadCustomer.canvas)) {
+                currentOrder.signatureData = sigPadCustomer.canvas.toDataURL();
+            }
+            if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
+                currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+            }
+            if (typeof collectInitials === 'function') {
+                currentOrder.initials = collectInitials();
+            }
+            
             // Capture contract HTML with signatures
             const contractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
             currentOrder._capturedContractHtml = contractHtml;
@@ -20034,54 +20045,100 @@ p{margin:6px 0;}
             const clientName = `${c.FirstName} ${c.LastName}`;
             const firstName = c.FirstName || '';
             
-            // Send signed contract PDF + save to Drive
-            const contractData = {
-                brideName: clientName,
-                brideEmail: email,
-                consultantName: currentOrder.consultant || '',
-                subject: `Your Signed Bridal Contract — Estrelle Bridal`,
-                body: `Hi ${firstName},\n\nThank you for visiting Estrelle Bridal! Your signed contract is attached.\n\nA copy is on file with us. If you have any questions about your order, we're here to help.\n\nWarmly,\nThe Estrelle Team`,
-                contractHtml: contractHtml,
-                signatureData: sigData,
-                consultantSignatureData: consultantSigData,
-                signDate: today()
-            };
+            // Get saved template or use default
+            const savedTpl = localStorage.getItem('estrelle_signed_contract_email');
+            let tpl = null;
+            try { tpl = savedTpl ? JSON.parse(savedTpl) : null; } catch(e) {}
             
-            api('POST', { action: 'sendContract', contractData })
-                .then(res => {
-                    // Mark as sent
-                    const clientOrders = data.orders
-                        .filter(o => String(o.ClientID) === String(c.ID))
-                        .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
-                    if (clientOrders.length > 0) {
-                        updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
-                    }
+            const defaultSubject = `Your Bridal Contract — Estrelle Bridal`;
+            const defaultBody = `Hi ${firstName},
+
+Congratulations on finding your dream dress with us, we are so excited to be part of this special time!! Below is a copy of your sale contract — feel free to reach out with any questions.
+
+We would greatly appreciate it if you could take a moment to share your experience with us on Google (https://g.page/r/CeGl9T2vSOuIEBM/review). Your review means the world to us and contributes to the joyous journeys of future brides.
+
+Warmly,
+The Estrelle Team
+55 Avenue Road, Suite 201.5
+Toronto, Ontario
+(647) 333-6582
+www.estrellebridal.com`;
+            
+            const emailSubject = (tpl?.subject || defaultSubject).replace(/\{firstName\}/g, firstName).replace(/\{clientName\}/g, clientName);
+            const emailBody = (tpl?.body || defaultBody).replace(/\{firstName\}/g, firstName).replace(/\{clientName\}/g, clientName);
+            
+            // Show editable preview
+            showChoiceDialog('📧 Send Signed Contract', '', [
+                { label: '📤 Send Email', style: 'primary', action: () => {
+                    const finalTo = document.getElementById('signedContractTo').value;
+                    const finalSubject = document.getElementById('signedContractSubject').value;
+                    const finalBody = document.getElementById('signedContractBody').value;
+                    closeModal('choice');
                     
-                    renderClientProfile();
-                    renderDash();
+                    toast('Sending...', 'success');
                     
-                    showChoiceDialog(
-                        '✓ Saved & Sent!',
-                        '',
-                        [{ label: '✓ Done', style: 'primary', action: () => closeModal('choice') }]
-                    );
-                    setTimeout(() => {
-                        const msgEl = $('choiceMessage');
-                        if (msgEl) {
-                            msgEl.innerHTML = `
-                                <div style="text-align:center">
-                                    <div style="width:50px;height:50px;background:#e8f5e9;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px">✓</div>
-                                    <div style="font-size:13px;margin-bottom:8px">Order saved & signed contract sent to <b>${email}</b></div>
-                                    <div style="font-size:11px;color:var(--taupe)">The signed contract PDF has been emailed to the customer and saved to Google Drive.</div>
-                                </div>`;
-                        }
-                    }, 50);
-                })
-                .catch(e => {
-                    toast('Order saved but email failed: ' + (e.message || e), 'error');
-                    renderClientProfile();
-                    renderDash();
-                });
+                    const contractData = {
+                        brideName: clientName,
+                        brideEmail: finalTo,
+                        consultantName: currentOrder.consultant || '',
+                        subject: finalSubject,
+                        body: finalBody,
+                        contractHtml: contractHtml,
+                        signatureData: sigData,
+                        consultantSignatureData: consultantSigData,
+                        signDate: today()
+                    };
+                    
+                    api('POST', { action: 'sendContract', contractData })
+                        .then(res => {
+                            const clientOrders = data.orders
+                                .filter(o => String(o.ClientID) === String(c.ID))
+                                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                            if (clientOrders.length > 0) {
+                                updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
+                            }
+                            renderClientProfile();
+                            renderDash();
+                            toast('✓ Signed contract sent to ' + finalTo, 'success');
+                        })
+                        .catch(e => {
+                            toast('Failed: ' + (e.message || e), 'error');
+                            renderClientProfile();
+                            renderDash();
+                        });
+                }},
+                { label: 'Save as Template', style: 'secondary', action: () => {
+                    const subj = document.getElementById('signedContractSubject').value;
+                    const bod = document.getElementById('signedContractBody').value;
+                    // Save with placeholders restored
+                    const tplSubj = subj.replace(new RegExp(firstName, 'g'), '{firstName}').replace(new RegExp(clientName, 'g'), '{clientName}');
+                    const tplBod = bod.replace(new RegExp(firstName, 'g'), '{firstName}').replace(new RegExp(clientName, 'g'), '{clientName}');
+                    localStorage.setItem('estrelle_signed_contract_email', JSON.stringify({ subject: tplSubj, body: tplBod }));
+                    toast('Template saved!', 'success');
+                }},
+                { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+            ]);
+            
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left;font-size:12px">
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">To</label>
+                                <input type="email" class="form-input" id="signedContractTo" value="${email}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:8px">
+                                <label class="form-label" style="font-size:10px">Subject</label>
+                                <input type="text" class="form-input" id="signedContractSubject" value="${emailSubject.replace(/"/g, '&quot;')}" style="font-size:12px">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0">
+                                <label class="form-label" style="font-size:10px">Email Body</label>
+                                <textarea class="form-input" id="signedContractBody" style="min-height:200px;font-size:11px;line-height:1.5;white-space:pre-wrap">${emailBody.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</textarea>
+                            </div>
+                        </div>`;
+                }
+            }, 50);
         }
         
         async function saveAndSendESign() {
@@ -20090,6 +20147,14 @@ p{margin:6px 0;}
             
             const email = c.Email;
             if (!email) { toast('No email address for this client. Save the order first, then add their email.', 'error'); return; }
+            
+            // Capture signatures from canvas before saving
+            if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
+                currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+            }
+            if (typeof collectInitials === 'function') {
+                currentOrder.initials = collectInitials();
+            }
             
             // Capture contract HTML before any state changes
             currentOrder._capturedContractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
