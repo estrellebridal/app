@@ -4214,6 +4214,19 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             return false;
         }
 
+        // Central UI refresh — call after any data modification
+        function refreshUI() {
+            saveCachedData();
+            const activePage = document.querySelector('.section.active')?.id;
+            try { renderDash(); } catch(e) {}
+            try { renderClients(); } catch(e) {}
+            if (activePage === 'page-schedule') { try { renderWeek(); renderAllAppointments(); } catch(e) {} }
+            if (activePage === 'page-orders') { try { renderOrders(); renderAlts(); } catch(e) {} }
+            if (activePage === 'page-reporting') { try { renderReporting(); } catch(e) {} }
+            if (activePage === 'page-settings') { try { renderSettings(); } catch(e) {} }
+            if (currentClient) { try { renderClientProfile(); } catch(e) {} }
+        }
+        
         function saveCachedData() {
             try {
                 localStorage.setItem(CACHE_KEY, JSON.stringify(data));
@@ -4348,6 +4361,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             if (data[sheetKey]) {
                 data[sheetKey].push(newRecord);
                 saveCachedData();
+                scheduleRefreshUI(); // Refresh immediately with optimistic data
             }
             
             // Send to server and WAIT for real ID
@@ -4364,6 +4378,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         }
                     }
                     saveCachedData();
+                    scheduleRefreshUI();
                     return { id: res.id };
                 }
                 return { id: tempId };
@@ -4379,11 +4394,15 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             }
         }
 
+        let _refreshTimer = null;
+        function scheduleRefreshUI() {
+            if (_refreshTimer) clearTimeout(_refreshTimer);
+            _refreshTimer = setTimeout(() => refreshUI(), 300);
+        }
+        
         async function updateRecord(sheet, id, record) {
-            // Mark that we just made an update
             lastUpdateTime = Date.now();
             
-            // Optimistic update - update local data immediately
             const sheetKey = sheet.toLowerCase();
             if (data[sheetKey]) {
                 const idx = data[sheetKey].findIndex(r => String(r.ID) === String(id));
@@ -4399,13 +4418,14 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 pendingUpdates.appointments[id] = { ...pendingUpdates.appointments[id], ...record };
             }
             
+            // Refresh UI immediately (debounced to avoid spam)
+            scheduleRefreshUI();
+            
             // Send to server in background
             api('POST', { action: 'update', sheet, id, record })
                 .then(() => {
-                    // Clear pending update once server confirms
                     if (pendingUpdates.appointments && pendingUpdates.appointments[id]) {
                         delete pendingUpdates.appointments[id];
-                        console.log('Cleared pending update for:', id);
                     }
                 })
                 .catch(e => {
@@ -4414,17 +4434,18 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         }
 
         async function deleteRecord(sheet, id) {
-            // Optimistic update - remove from local data immediately
             const sheetKey = sheet.toLowerCase();
             if (data[sheetKey]) {
                 const removedIdx = data[sheetKey].findIndex(r => r.ID == id);
                 if (removedIdx >= 0) {
                     data[sheetKey].splice(removedIdx, 1);
-                    saveCachedData();
                 }
             }
             
-            // Send to server in background (fire and forget)
+            // Refresh UI immediately
+            refreshUI();
+            
+            // Send to server in background
             api('POST', { action: 'delete', sheet, id }).catch(() => {});
         }
 
@@ -5504,12 +5525,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             const removedIdx = data.clients.findIndex(c => c.ID == currentClient.ID);
             if (removedIdx >= 0) {
                 data.clients.splice(removedIdx, 1);
-                saveCachedData();
             }
             
             // Send to server
             api('POST', { action: 'delete', sheet: 'Clients', id: currentClient.ID }).catch(() => {});
             
+            refreshUI();
             toast(`${name} deleted`, 'success', true);
             showPage('clients');
         }
@@ -14838,7 +14859,9 @@ The {storeName} Team`
             const confirmed = await appConfirmDanger('Delete this consultant?', 'Delete Consultant');
             if (!confirmed) return;
             deleteRecord('Consultants', id);
+            saveCachedData();
             renderConsultants();
+            renderSettings();
             toast('Deleted', 'success');
         }
         
