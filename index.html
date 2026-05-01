@@ -1560,16 +1560,16 @@
                             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px">These fees are deducted from the pre-tax sale amount before commission is calculated.</div>
                             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
                                 <div class="form-group" style="margin:0">
-                                    <label class="form-label">Credit Card (tap/chip)</label>
-                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardTap" value="2.5" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                    <label class="form-label">Card Present</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardTap" value="2.45" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
                                 </div>
                                 <div class="form-group" style="margin:0">
-                                    <label class="form-label">Credit Card (manual/keyed)</label>
-                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardManual" value="2.9" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                    <label class="form-label">Manual Keyed In</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardManual" value="3.4" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
                                 </div>
                                 <div class="form-group" style="margin:0">
-                                    <label class="form-label">Debit / Cash / E-Transfer</label>
-                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeOther" value="0" step="0.1" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                    <label class="form-label">Invoice</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeInvoice" value="2.8" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
                                 </div>
                             </div>
                             <button class="btn btn-sm btn-primary" onclick="$('commRatesCard').style.display='none';renderCommission()" style="margin-top:12px">Done</button>
@@ -3999,7 +3999,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         };
         const fmtDateLong = d => new Date(d+'T00:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
         const initials = (f,l) => (f?.[0]||'') + (l?.[0]||'');
-        const money = n => '$' + Number(n||0).toLocaleString();
+        const money = n => '$' + Number(n||0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
         
         // Format price input as user types (e.g., $12,020)
         function formatPriceInput(input) {
@@ -12574,8 +12574,9 @@ The {StoreName} Team
         
         function saveCommissionSettings() {
             const settings = getCommissionSettings();
-            settings.feeCardTap = parseFloat($('feeCardTap')?.value) || 2.5;
-            settings.feeCardManual = parseFloat($('feeCardManual')?.value) || 2.9;
+            settings.feeCardTap = parseFloat($('feeCardTap')?.value) || 2.45;
+            settings.feeCardManual = parseFloat($('feeCardManual')?.value) || 3.4;
+            settings.feeInvoice = parseFloat($('feeInvoice')?.value) || 2.8;
             settings.feeOther = parseFloat($('feeOther')?.value) || 0;
             localStorage.setItem('estrelle_commission', JSON.stringify(settings));
             renderCommission();
@@ -12587,8 +12588,9 @@ The {StoreName} Team
             card.style.display = show ? 'block' : 'none';
             if (show) {
                 const s = getCommissionSettings();
-                $('feeCardTap').value = s.feeCardTap ?? 2.5;
-                $('feeCardManual').value = s.feeCardManual ?? 2.9;
+                $('feeCardTap').value = s.feeCardTap ?? 2.45;
+                $('feeCardManual').value = s.feeCardManual ?? 3.4;
+                if ($('feeInvoice')) $('feeInvoice').value = s.feeInvoice ?? 2.8;
                 $('feeOther').value = s.feeOther ?? 0;
             }
         }
@@ -12714,8 +12716,9 @@ The {StoreName} Team
             const year = parseInt($('commYear').value);
             
             const settings = getCommissionSettings();
-            const feeCardTap = settings.feeCardTap ?? 2.5;
-            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeCardTap = settings.feeCardTap ?? 2.45;
+            const feeCardManual = settings.feeCardManual ?? 3.4;
+            const feeInvoice = settings.feeInvoice ?? 2.8;
             const feeOther = settings.feeOther ?? 0;
             
             // Helper to calc one order's commission data
@@ -12725,6 +12728,7 @@ The {StoreName} Team
                 let feeRate = 0;
                 if (pm === 'credit_tap') feeRate = feeCardTap;
                 else if (pm === 'credit_manual') feeRate = feeCardManual;
+                else if (pm === 'invoice') feeRate = feeInvoice;
                 else if (pm === 'debit' || pm === 'cash' || pm === 'etransfer') feeRate = feeOther;
                 const fee = preTax * (feeRate / 100);
                 const base = preTax - fee;
@@ -12825,7 +12829,7 @@ The {StoreName} Team
             }
             
             // Per-order breakdown
-            const pmOptions = `<option value="">Not set</option><option value="credit_tap">\u{1F4B3} Tap/Chip</option><option value="credit_manual">\u{1F4B3} Keyed</option><option value="debit">\u{1F4B3} Debit</option><option value="cash">\u{1F4B5} Cash</option><option value="etransfer">\u{1F4F1} E-Transfer</option>`;
+            const pmOptions = `<option value="">Not set</option><option value="credit_tap">Card Present (${feeCardTap}%)</option><option value="credit_manual">Keyed In (${feeCardManual}%)</option><option value="invoice">Invoice (${feeInvoice}%)</option>`;
             const rateOpts = [0,1,2,3].map(r => `<option value="${r}">${r}%</option>`).join('');
             const consultantNames = data.consultants.map(c => c.Name).filter(Boolean).sort();
             const nameOpts = `<option value="">Select...</option>` + consultantNames.map(n => `<option value="${n}">${n}</option>`).join('');
@@ -12865,7 +12869,7 @@ The {StoreName} Team
                     <td>${o.PO || '\u2014'}</td>
                     <td>${money(o._preTax)}</td>
                     <td><select class="form-input" style="font-size:10px;padding:2px 4px;width:auto" onchange="setOrderPaymentMethod('${o.ID}',this.value)">${pmOptions.replace('value="'+o._pm+'"', 'value="'+o._pm+'" selected')}</select></td>
-                    <td style="color:#e74c3c">${o._feeRate > 0 ? '-'+money(o._fee) : '\u2014'}</td>
+                    <td style="color:#e74c3c">${o._feeRate > 0 ? '-'+money(o._fee)+' <span style="font-size:9px;opacity:0.7">('+o._feeRate+'%)</span>' : '\u2014'}</td>
                     <td>${money(o._base)}</td>
                     <td style="min-width:220px">${splitsHtml}<button class="btn btn-sm btn-secondary" onclick="addCommSplit('${o.ID}')" style="font-size:9px;padding:2px 8px;margin-top:2px">+ Add person</button></td>
                     <td style="font-weight:700;color:var(--accent)">${money(o._totalComm)}</td>
@@ -12886,8 +12890,9 @@ The {StoreName} Team
             const year = parseInt($('commYear').value);
             const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             const settings = getCommissionSettings();
-            const feeCardTap = settings.feeCardTap ?? 2.5;
-            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeCardTap = settings.feeCardTap ?? 2.45;
+            const feeCardManual = settings.feeCardManual ?? 3.4;
+            const feeInvoice = settings.feeInvoice ?? 2.8;
             const feeOther = settings.feeOther ?? 0;
             
             const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
@@ -12896,7 +12901,7 @@ The {StoreName} Team
             monthOrders.forEach(o => {
                 const preTax = getOrderPreTax(o);
                 const pm = getOrderPaymentMethod(o);
-                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
                 const fee = preTax * (feeRate / 100);
                 const base = preTax - fee;
                 const splits = getOrderSplits(o);
@@ -12921,8 +12926,9 @@ The {StoreName} Team
             const year = parseInt($('commYear').value);
             const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
             const settings = getCommissionSettings();
-            const feeCardTap = settings.feeCardTap ?? 2.5;
-            const feeCardManual = settings.feeCardManual ?? 2.9;
+            const feeCardTap = settings.feeCardTap ?? 2.45;
+            const feeCardManual = settings.feeCardManual ?? 3.4;
+            const feeInvoice = settings.feeInvoice ?? 2.8;
             const feeOther = settings.feeOther ?? 0;
             
             const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
@@ -12932,7 +12938,7 @@ The {StoreName} Team
             monthOrders.forEach(o => {
                 const preTax = getOrderPreTax(o);
                 const pm = getOrderPaymentMethod(o);
-                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
                 const base = preTax - (preTax * feeRate / 100);
                 const splits = getOrderSplits(o);
                 splits.forEach(sp => {
