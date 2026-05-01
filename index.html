@@ -8375,16 +8375,16 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
         }
         
         function getConsultantSigForView(order) {
-            // Try order record first
+            // Try order record first — but validate it's not truncated
             const sig = order.ConsultantSignature || '';
-            if (sig && sig.indexOf('data:image') === 0) {
+            if (sig && sig.indexOf('data:image') === 0 && sig.length > 100 && sig.endsWith('=')) {
                 return `<img src="${sig}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">`;
             }
             // Fallback: look up from data.consultants by name
             const consultantName = (order.Consultant || '').trim().toLowerCase();
             if (consultantName && data.consultants) {
                 const consultant = data.consultants.find(c => (c.Name || '').trim().toLowerCase() === consultantName);
-                if (consultant && consultant.Signature && consultant.Signature.indexOf('data:image') === 0) {
+                if (consultant && consultant.Signature && consultant.Signature.indexOf('data:image') === 0 && consultant.Signature.length > 100) {
                     return `<img src="${consultant.Signature}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">`;
                 }
             }
@@ -19947,8 +19947,8 @@ p{margin:6px 0;}
             currentOrder._capturedContractHtml = contractHtml;
             let sigData = currentOrder.signatureData;
             let consultantSigData = currentOrder.consultantSignatureData;
-            if (sigData && sigData.length > 500000) sigData = null;
-            if (consultantSigData && consultantSigData.length > 500000) consultantSigData = null;
+            // signature size check removed - server handles truncation
+            // consultant sig size check removed
             
             toast('Saving order & contract...', 'success');
             
@@ -20007,6 +20007,14 @@ p{margin:6px 0;}
             }
             if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
                 currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+                // Also save to Consultants sheet for reliable fallback
+                const consultantName = currentOrder.consultant || $('yConsultantSelect')?.selectedOptions?.[0]?.text || '';
+                if (consultantName) {
+                    const consultant = data.consultants.find(c => c.Name === consultantName);
+                    if (consultant && consultant.ID) {
+                        updateRecord('Consultants', consultant.ID, { Signature: currentOrder.consultantSignatureData });
+                    }
+                }
             }
             if (typeof collectInitials === 'function') {
                 currentOrder.initials = collectInitials();
@@ -20017,8 +20025,8 @@ p{margin:6px 0;}
             currentOrder._capturedContractHtml = contractHtml;
             let sigData = currentOrder.signatureData;
             let consultantSigData = currentOrder.consultantSignatureData;
-            if (sigData && sigData.length > 500000) sigData = null;
-            if (consultantSigData && consultantSigData.length > 500000) consultantSigData = null;
+            // signature size check removed - server handles truncation
+            // consultant sig size check removed
             
             toast('Saving order...', 'success');
             
@@ -20157,6 +20165,14 @@ www.estrellebridal.com`;
             // Capture signatures from canvas before saving
             if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
                 currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+                // Also save to Consultants sheet for reliable fallback
+                const consultantName = currentOrder.consultant || $('yConsultantSelect')?.selectedOptions?.[0]?.text || '';
+                if (consultantName) {
+                    const consultant = data.consultants.find(c => c.Name === consultantName);
+                    if (consultant && consultant.ID) {
+                        updateRecord('Consultants', consultant.ID, { Signature: currentOrder.consultantSignatureData });
+                    }
+                }
             }
             if (typeof collectInitials === 'function') {
                 currentOrder.initials = collectInitials();
