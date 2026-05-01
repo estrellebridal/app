@@ -13167,9 +13167,9 @@ The {StoreName} Team
                     <div class="avatar">${c.Name ? c.Name[0] : '?'}</div>
                     <div style="flex:1">
                         <div style="font-weight:600">${c.Name || 'Unknown'}</div>
-                        <div style="font-size:12px;color:var(--text-secondary)">${c.Signature ? 'Signature saved' : 'No signature'}</div>
+                        <div style="font-size:12px;color:${c.Signature && c.Signature.indexOf('data:image') === 0 ? '#27ae60' : '#e67e22'}">${c.Signature && c.Signature.indexOf('data:image') === 0 ? '✓ Signature saved' : '⚠ No signature'}</div>
                     </div>
-                    <button class="btn btn-sm btn-secondary" onclick="editConsultant('${c.ID}')">Edit</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editConsultant('${c.ID}')">${c.Signature && c.Signature.indexOf('data:image') === 0 ? 'Edit' : '✍️ Add Signature'}</button>
                     <button class="btn btn-sm" onclick="deleteConsultant('${c.ID}')" style="background:var(--red);color:white">Delete</button>
                 </div>
             `).join('') : '<p style="color:var(--text-secondary);font-size:13px">No consultants added yet</p>';
@@ -14720,6 +14720,7 @@ The {storeName} Team`
         }
         
         function initConsultantSigPad() {
+            // Default to "Add" mode
             $('editConsultantId').value = '';
             $('cConsultantName').value = '';
             $('consultantModalTitle').textContent = 'Add Consultant';
@@ -14747,6 +14748,27 @@ The {storeName} Team`
                 canvas.onmouseup = canvas.ontouchend = canvas.onmouseleave = () => { drawing = false; };
                 
                 consultantSigPad = { canvas, ctx };
+                
+                // If editing an existing consultant, load their data now
+                if (_pendingConsultantEdit) {
+                    const c = _pendingConsultantEdit;
+                    _pendingConsultantEdit = null;
+                    
+                    $('editConsultantId').value = c.ID;
+                    $('cConsultantName').value = c.Name || '';
+                    $('consultantModalTitle').textContent = 'Edit Consultant — ' + c.Name;
+                    
+                    // Load existing signature
+                    if (c.Signature && c.Signature.indexOf('data:image') === 0) {
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.fillStyle = 'white';
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0);
+                        };
+                        img.src = c.Signature;
+                    }
+                }
             }, 100);
         }
         
@@ -14756,28 +14778,17 @@ The {storeName} Team`
             consultantSigPad.ctx.fillRect(0, 0, consultantSigPad.canvas.width, consultantSigPad.canvas.height);
         }
         
+        // Store pending edit data so initConsultantSigPad can load it
+        let _pendingConsultantEdit = null;
+        
         function editConsultant(id) {
-            const c = data.consultants.find(x => x.ID == id);
-            if (!c) return;
+            const c = data.consultants.find(x => String(x.ID) === String(id));
+            if (!c) { console.error('Consultant not found:', id); return; }
             
-            $('editConsultantId').value = c.ID;
-            $('cConsultantName').value = c.Name || '';
-            $('consultantModalTitle').textContent = 'Edit Consultant';
+            // Store edit data — initConsultantSigPad will pick this up
+            _pendingConsultantEdit = { ...c };
             
             openModal('newConsultant');
-            
-            // Load existing signature after canvas is ready
-            setTimeout(() => {
-                if (c.Signature && consultantSigPad) {
-                    const img = new Image();
-                    img.onload = () => {
-                        consultantSigPad.ctx.fillStyle = 'white';
-                        consultantSigPad.ctx.fillRect(0, 0, consultantSigPad.canvas.width, consultantSigPad.canvas.height);
-                        consultantSigPad.ctx.drawImage(img, 0, 0);
-                    };
-                    img.src = c.Signature;
-                }
-            }, 150);
         }
         
         async function saveConsultant() {
@@ -14785,20 +14796,42 @@ The {storeName} Team`
             const name = $('cConsultantName').value.trim();
             if (!name) { toast('Enter name'); return; }
             
-            const signature = consultantSigPad?.canvas?.toDataURL() || null;
+            // Only capture signature if canvas has been drawn on (not blank white)
+            let signature = null;
+            if (consultantSigPad?.canvas) {
+                const isBlank = isCanvasBlank(consultantSigPad.canvas);
+                if (!isBlank) {
+                    signature = consultantSigPad.canvas.toDataURL();
+                } else {
+                    // Keep existing signature if canvas wasn't touched
+                    const existing = data.consultants.find(c => String(c.ID) === String(id));
+                    if (existing) signature = existing.Signature || null;
+                }
+            }
+            
             const record = { Name: name, Signature: signature };
             
             closeModal('newConsultant');
-            toast('Saving...', '');
             
             if (id) {
+                // Update existing consultant
                 updateRecord('Consultants', id, record);
+                // Update local data immediately
+                const existing = data.consultants.find(c => String(c.ID) === String(id));
+                if (existing) {
+                    existing.Name = name;
+                    existing.Signature = signature;
+                }
+                toast('Updated!', 'success');
             } else {
+                // Create new consultant
                 saveRecord('Consultants', record);
+                toast('Added!', 'success');
             }
             
-            toast('Saved!', 'success');
+            saveCachedData();
             renderConsultants();
+            renderSettings();
         }
         
         async function deleteConsultant(id) {
