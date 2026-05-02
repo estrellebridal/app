@@ -1018,6 +1018,7 @@
                 <div class="nav-item" data-page="clients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Clients</span></div>
                 <div class="nav-item" data-page="schedule"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>Schedule</span></div>
                 <div class="nav-item" data-page="orders"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span>Orders</span></div>
+                <div class="nav-item" data-page="alterations"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12"/></svg><span>Alterations</span></div>
                 <div class="nav-item" data-page="reporting"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg><span>Reporting</span></div>
                 <div class="nav-item" data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>Settings</span></div>
             </nav>
@@ -1183,13 +1184,12 @@
             <!-- Orders & Alterations -->
             <section class="section" id="page-orders">
                 <div class="header">
-                    <div><h1 class="title">Orders & Alterations</h1><p class="subtitle" id="ordersSubtitle">Track orders and fittings</p></div>
+                    <div><h1 class="title">Orders & Contracts</h1><p class="subtitle" id="ordersSubtitle">Track orders and fittings</p></div>
                     <div style="display:flex;gap:8px;align-items:center">
                         <button class="btn btn-secondary btn-sm" onclick="syncData()" title="Sync with server" style="padding:8px">🔄</button>
                         <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
                             <button class="btn btn-sm" id="viewOrders" onclick="setOrdersView('orders')" style="border:none;border-radius:0;background:var(--accent);color:white">Orders</button>
-                            <button class="btn btn-sm" id="viewAlterations" onclick="setOrdersView('alterations')" style="border:none;border-radius:0;background:white;color:var(--text)">Alterations</button>
-                            <button class="btn btn-sm" id="viewCalculator" onclick="setOrdersView('calculator')" style="border:none;border-radius:0;background:white;color:var(--text)">✂️ Calculator</button>
+                            <button class="btn btn-sm" id="viewContracts" onclick="setOrdersView('contracts')" style="border:none;border-radius:0;background:white;color:var(--text)">Contracts</button>
                         </div>
                         <button class="btn btn-primary" id="ordersAddBtn" onclick="openAddOrder()">+ Add Order</button>
                     </div>
@@ -1330,6 +1330,18 @@
                     </div>
                 </div>
                 
+                <!-- Contracts View -->
+                <div id="contractsViewContent" style="display:none">
+                    <input type="text" class="form-input" id="contractsSearch" placeholder="Search by client name, date, dress, designer..." oninput="renderAllContracts()" style="margin-bottom:12px">
+                    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                        <button class="btn btn-sm" onclick="filterContracts('all')" id="cfAll" style="background:var(--accent);color:white">All</button>
+                        <button class="btn btn-sm btn-secondary" onclick="filterContracts('signed')" id="cfSigned">✓ Signed</button>
+                        <button class="btn btn-sm btn-secondary" onclick="filterContracts('esign')" id="cfEsign">📱 Sent for E-Sign</button>
+                        <button class="btn btn-sm btn-secondary" onclick="filterContracts('unsigned')" id="cfUnsigned">⚠ Unsigned</button>
+                    </div>
+                    <div id="contractsList"></div>
+                </div>
+                
                 <!-- Calculator View -->
                 <div id="calculatorViewContent" style="display:none">
                     <div id="altCalcApp"></div>
@@ -1345,6 +1357,42 @@
                     </div>
                 </div>
             </section>
+            <!-- Alterations Page -->
+            <section class="section" id="page-alterations">
+                <div class="header">
+                    <div><h1 class="title">Alterations</h1><p class="subtitle">Fittings, seamstress assignments & progress</p></div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        <div style="display:flex;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+                            <button class="btn btn-sm" id="altViewList" onclick="setAlterationsPageView('list')" style="border:none;border-radius:0;background:var(--accent);color:white">List</button>
+                            <button class="btn btn-sm" id="altViewCalendar" onclick="setAlterationsPageView('calendar')" style="border:none;border-radius:0;background:white;color:var(--text)">Calendar</button>
+                        </div>
+                        <button class="btn btn-primary" onclick="openAddAlterationItem()">+ Add Fitting</button>
+                    </div>
+                </div>
+                
+                <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="altSeamstressFilter">
+                    <button class="btn btn-sm" onclick="filterSeamstress('all')" id="sfAll" style="background:var(--accent);color:white">All</button>
+                    <button class="btn btn-sm btn-secondary" onclick="filterSeamstress('Rowena')" id="sfRowena">Rowena</button>
+                    <button class="btn btn-sm btn-secondary" onclick="filterSeamstress('Shannon')" id="sfShannon">Shannon</button>
+                    <button class="btn btn-sm btn-secondary" onclick="filterSeamstress('External')" id="sfExternal">External</button>
+                    <button class="btn btn-sm btn-secondary" onclick="filterSeamstress('unassigned')" id="sfUnassigned">⚠ Unassigned</button>
+                </div>
+                
+                <div id="altPageListView">
+                    <div id="altPageStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
+                    <div id="altPageClientsList"></div>
+                </div>
+                
+                <div id="altPageCalendarView" style="display:none">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <button class="btn btn-sm btn-secondary" onclick="altCalPrev()">← Prev</button>
+                        <h3 id="altCalTitle" style="margin:0"></h3>
+                        <button class="btn btn-sm btn-secondary" onclick="altCalNext()">Next →</button>
+                    </div>
+                    <div id="altCalGrid" style="display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden"></div>
+                </div>
+            </section>
+            
             <!-- Reporting (Analytics + Report Builder) -->
             <section class="section" id="page-reporting">
                 <div class="header">
@@ -4511,6 +4559,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 if (name === 'clients') setClientsView(clientsView || 'all');
                 else if (name === 'schedule') setScheduleView(scheduleView || 'week');
                 else if (name === 'orders') setOrdersView(ordersView || 'orders');
+                else if (name === 'alterations') setAlterationsPageView(altPageView || 'list');
                 else if (name === 'reporting') renderReporting();
                 else if (name === 'settings') renderSettings();
             } catch(e) { console.error('Page render error:', e); }
@@ -13322,30 +13371,28 @@ The {StoreName} Team
         
         function setOrdersView(view) {
             ordersView = view;
-            $('viewOrders').style.background = view === 'orders' ? 'var(--accent)' : 'white';
-            $('viewOrders').style.color = view === 'orders' ? 'white' : 'var(--text)';
-            $('viewAlterations').style.background = view === 'alterations' ? 'var(--accent)' : 'white';
-            $('viewAlterations').style.color = view === 'alterations' ? 'white' : 'var(--text)';
-            $('viewCalculator').style.background = view === 'calculator' ? 'var(--accent)' : 'white';
-            $('viewCalculator').style.color = view === 'calculator' ? 'white' : 'var(--text)';
+            ['viewOrders','viewContracts'].forEach(id => {
+                const el = $(id);
+                if (!el) return;
+                const match = (id==='viewOrders'&&view==='orders') || (id==='viewContracts'&&view==='contracts');
+                el.style.background = match ? 'var(--accent)' : 'white';
+                el.style.color = match ? 'white' : 'var(--text)';
+            });
             
             $('ordersViewContent').style.display = view === 'orders' ? 'block' : 'none';
-            $('alterationsViewContent').style.display = view === 'alterations' ? 'block' : 'none';
-            $('calculatorViewContent').style.display = view === 'calculator' ? 'block' : 'none';
+            if ($('contractsViewContent')) $('contractsViewContent').style.display = view === 'contracts' ? 'block' : 'none';
+            
             
             if (view === 'orders') {
                 $('ordersAddBtn').textContent = '+ Add Order';
                 $('ordersAddBtn').onclick = openAddOrder;
                 $('ordersAddBtn').style.display = '';
                 renderOrders();
-            } else if (view === 'alterations') {
-                $('ordersAddBtn').textContent = '+ Add Fitting';
-                $('ordersAddBtn').onclick = openAddAlterationItem;
+            } else if (view === 'contracts') {
+                $('ordersAddBtn').textContent = '+ New Contract';
+                $('ordersAddBtn').onclick = function() { addContractFromList(); };
                 $('ordersAddBtn').style.display = '';
-                renderAlts();
-            } else if (view === 'calculator') {
-                $('ordersAddBtn').style.display = 'none';
-                renderCalc();
+                renderAllContracts();
             }
         }
         
@@ -16924,63 +16971,13 @@ The {storeName} Team`
             
             $('importSummary').textContent = timelyImportData.length + ' records';
             
-            // Detect appointments that will be REMOVED (in app but not in Timely)
-            // Only consultation-type, never fittings or manually created
-            let minDate = null, maxDate = null;
-            for (const item of timelyImportData) {
-                if (item.date) {
-                    if (!minDate || item.date < minDate) minDate = item.date;
-                    if (!maxDate || item.date > maxDate) maxDate = item.date;
-                }
-            }
-            for (const appt of timelyAllAppointments) {
-                if (appt.date) {
-                    if (!minDate || appt.date < minDate) minDate = appt.date;
-                    if (!maxDate || appt.date > maxDate) maxDate = appt.date;
-                }
-            }
-            
-            // Build set of client+date combos from Timely
-            const timelyClientDates = new Set();
-            for (const appt of timelyAllAppointments) {
-                if (appt.clientId && appt.date) timelyClientDates.add(`${appt.clientId}|${appt.date}`);
-            }
-            // Also from new clients being imported (use email as key since they don't have IDs yet)
-            for (const item of timelyImportData) {
-                if (item.existingClientId && item.date) timelyClientDates.add(`${item.existingClientId}|${item.date}`);
-            }
-            
-            const apptsToRemove = minDate && maxDate ? data.appointments.filter(a => {
-                const apptDate = getDateStr(a.Date);
-                if (apptDate < minDate || apptDate > maxDate) return false;
-                if (a.Source === 'estrelle') return false; // Only protect manually created appointments
-                // Check if this client+date exists in Timely
-                return !timelyClientDates.has(`${a.ClientID}|${apptDate}`);
-            }) : [];
-            
-            // Show removal list
-            let removeHtml = '';
-            if (apptsToRemove.length > 0) {
-                removeHtml = '<div style="margin-top:12px;padding:10px;background:#fef3e2;border:1px solid #e67e22;border-radius:5px;font-size:11px">' +
-                    '<strong style="color:#e67e22">⚠ Will be removed (' + apptsToRemove.length + '):</strong> These consultation appointments are not in the Timely file and will be removed.<br>' +
-                    '<div style="margin-top:6px">' +
-                    apptsToRemove.map(a => {
-                        const c = getClient(a.ClientID);
-                        const name = c ? `${c.FirstName} ${c.LastName}` : (a.ClientName || 'Unknown');
-                        return `<div style="padding:3px 0;color:#c0392b">✕ ${name} — ${fmtDate(getDateStr(a.Date))} at ${a.Time || '?'} (${normalizeApptType(a.Type)})</div>`;
-                    }).join('') +
-                    '</div></div>';
-            }
-            
             $('importStats').innerHTML = 
                 '<strong>Summary:</strong> ' +
                 newClients + ' new clients, ' +
                 (addAppts + newClients) + ' new appointments, ' +
                 (rescheduled > 0 ? rescheduled + ' rescheduled, ' : '') +
                 noShows + ' no-shows' +
-                (apptsToRemove.length > 0 ? ', <span style="color:#e67e22">' + apptsToRemove.length + ' removed</span>' : '') +
-                (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '') +
-                removeHtml;
+                (withDates < timelyImportData.length ? ' <span style="color:var(--rose)">(' + (timelyImportData.length - withDates) + ' missing dates)</span>' : '');
         }
         
         async function confirmTimelyImport() {
@@ -17140,66 +17137,11 @@ The {storeName} Team`
                     }
                 }
                 
-                // SMART AUTO-DELETE: Only remove consultation-type appointments within the 
-                // Timely date range that are NOT in the Timely file. Never delete fittings,
-                // measurements, or other internally-created appointment types.
+                // AUTO-DELETE DISABLED — too risky, has caused data loss
+                // Appointments are only added/updated by import, never removed
+                // Cancelled appointments should be deleted manually
                 let apptsDeleted = 0;
                 const deletedAppts = [];
-                
-                // Collect IDs of appointments we just updated (time changes) so we don't delete them
-                const updatedApptIds = new Set();
-                for (const item of timelyImportData) {
-                    if (item.action === 'update_time' && item.existingApptId) {
-                        updatedApptIds.add(String(item.existingApptId));
-                    }
-                }
-                
-                if (minDate && maxDate) {
-                    const apptsToDelete = data.appointments.filter(a => {
-                        const apptDate = getDateStr(a.Date);
-                        // Only within Timely file's date range
-                        if (apptDate < minDate || apptDate > maxDate) return false;
-                        
-                        // Never delete appointments we just updated
-                        if (updatedApptIds.has(String(a.ID))) return false;
-                        
-                        // Never delete appointments created internally
-                        if (a.Source === 'estrelle') return false;
-                        
-                        // Check if this appointment exists in Timely (by client + date)
-                        // Use client+date match since time may have changed
-                        let foundInTimely = false;
-                        for (const tk of timelyApptKeys) {
-                            const parts = tk.split('|');
-                            if (parts[0] === String(a.ClientID) && parts[1] === apptDate) {
-                                foundInTimely = true;
-                                break;
-                            }
-                        }
-                        return !foundInTimely;
-                    });
-                    
-                    if (apptsToDelete.length > 0) {
-                        console.log('Appointments to delete (cancelled in Timely):', apptsToDelete.map(a => `${a.ClientName || a.ClientID} on ${getDateStr(a.Date)} at ${a.Time}`));
-                    }
-                    
-                    for (const appt of apptsToDelete) {
-                        deletedAppts.push({ ...appt });
-                        const idx = data.appointments.findIndex(a => String(a.ID) === String(appt.ID));
-                        if (idx >= 0) data.appointments.splice(idx, 1);
-                        try {
-                            await api('POST', { action: 'delete', sheet: 'Appointments', id: appt.ID });
-                            console.log('Deleted appointment:', appt.ID, appt.ClientName || '');
-                        } catch(e) {
-                            console.error('Failed to delete appointment:', appt.ID, e);
-                        }
-                        apptsDeleted++;
-                    }
-                    
-                    if (deletedAppts.length > 0) {
-                        addUndo({ type: 'bulk_delete_appointments', records: deletedAppts });
-                    }
-                }
                 
                 console.log('Import complete - Clients:', clientsCreated, 'Appointments:', apptsCreated, 'Deleted:', apptsDeleted);
                 
@@ -20543,6 +20485,205 @@ www.estrellebridal.com`;
             renderClients();
         }
 
+        function addContractFromList() {
+            // Show a client search dialog to pick which client to create a contract for
+            showChoiceDialog('New Contract', '', [
+                { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+            ]);
+            setTimeout(() => {
+                const msgEl = $('choiceMessage');
+                if (msgEl) {
+                    msgEl.innerHTML = `
+                        <div style="text-align:left">
+                            <label class="form-label" style="font-size:11px">Search client</label>
+                            <input type="text" class="form-input" id="contractClientSearch" placeholder="Type client name..." oninput="searchContractClient(this.value)" style="margin-bottom:8px">
+                            <div id="contractClientResults" style="max-height:200px;overflow-y:auto"></div>
+                        </div>`;
+                }
+            }, 50);
+        }
+        
+        function searchContractClient(query) {
+            const q = query.toLowerCase().trim();
+            if (!q) { $('contractClientResults').innerHTML = ''; return; }
+            const matches = data.clients.filter(c => 
+                `${c.FirstName} ${c.LastName}`.toLowerCase().includes(q)
+            ).slice(0, 8);
+            $('contractClientResults').innerHTML = matches.map(c => 
+                `<div class="list-item" style="padding:8px;cursor:pointer" onclick="closeModal('choice');openClient('${c.ID}');setTimeout(()=>sheSaidYes(),300)">
+                    <div class="avatar" style="width:28px;height:28px;font-size:10px">${(c.FirstName||'?')[0]}${(c.LastName||'?')[0]}</div>
+                    <div style="font-size:12px;font-weight:500">${c.FirstName} ${c.LastName}</div>
+                </div>`
+            ).join('') || '<div style="font-size:11px;color:var(--taupe);padding:8px">No clients found</div>';
+        }
+        
+        // ========== CONTRACTS VIEW ==========
+        let contractsFilter = 'all';
+        
+        function filterContracts(filter) {
+            contractsFilter = filter;
+            document.querySelectorAll('#contractsViewContent .btn').forEach(b => { 
+                if (b.id && b.id.startsWith('cf')) { b.className = 'btn btn-sm btn-secondary'; b.style.background = ''; b.style.color = ''; }
+            });
+            const btn = $('cf' + filter.charAt(0).toUpperCase() + filter.slice(1));
+            if (btn) { btn.className = 'btn btn-sm'; btn.style.background = 'var(--accent)'; btn.style.color = 'white'; }
+            renderAllContracts();
+        }
+        
+        function renderAllContracts() {
+            const searchVal = ($('contractsSearch')?.value || '').toLowerCase().trim();
+            const orders = data.orders.filter(o => o.ContractHtml || o.CustomerSignature || o.ESignedDate || o.ContractSentDate);
+            let filtered = orders;
+            if (contractsFilter === 'signed') filtered = orders.filter(o => (o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image')) || o.ESignedDate);
+            else if (contractsFilter === 'esign') filtered = orders.filter(o => o.ESignLinkSent && !o.ESignedDate);
+            else if (contractsFilter === 'unsigned') filtered = orders.filter(o => !o.CustomerSignature && !o.ESignedDate);
+            
+            if (searchVal) {
+                filtered = filtered.filter(o => {
+                    const c = getClient(o.ClientID);
+                    const name = c ? `${c.FirstName} ${c.LastName}`.toLowerCase() : '';
+                    const designer = (o.Designer || '').toLowerCase();
+                    const dress = (o.Dress || '').toLowerCase();
+                    const date = fmtDate(o.OrderDate).toLowerCase();
+                    let itemNames = '';
+                    try { const items = o.Items ? JSON.parse(o.Items) : []; itemNames = items.map(i => `${i.name||''} ${i.designer||''}`).join(' ').toLowerCase(); } catch(e) {}
+                    return name.includes(searchVal) || designer.includes(searchVal) || dress.includes(searchVal) || date.includes(searchVal) || itemNames.includes(searchVal);
+                });
+            }
+            
+            filtered.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            
+            function getTotal(o) {
+                if (o.Total && Number(o.Total) > 0) return Number(o.Total);
+                try { const items = o.Items ? JSON.parse(o.Items) : []; let s=0; items.forEach(i=>{s+=i.price||0;if(i.customizations)i.customizations.forEach(c=>s+=c.price||0)}); return s+(o.HST?Number(o.HST):(s*0.13)); } catch(e){ return 0; }
+            }
+            
+            $('contractsList').innerHTML = filtered.length === 0 ? '<div class="empty">No contracts found</div>' :
+            filtered.map(o => {
+                const c = getClient(o.ClientID);
+                const name = c ? `${c.FirstName} ${c.LastName}` : (o.ClientName||'Unknown');
+                const isSigned = !!(o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image')) || !!o.ESignedDate;
+                const isEsignSent = !!o.ESignLinkSent && !o.ESignedDate;
+                const badge = isSigned ? '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">✓ Signed</span>' :
+                    isEsignSent ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">📱 E-Sign Sent</span>' :
+                    '<span style="background:#fce4ec;color:#c62828;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">⚠ Unsigned</span>';
+                const total = getTotal(o);
+                const saleType = o.SaleType === 'sample-sale' ? ' <span style="background:#e3f2fd;color:#1565c0;padding:1px 6px;border-radius:6px;font-size:9px">SAMPLE</span>' : '';
+                return `<div class="list-item" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openClient('${o.ClientID}')">
+                    <div class="avatar">${name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
+                    <div style="flex:1">
+                        <div style="font-weight:600">${name} ${badge}${saleType}</div>
+                        <div style="font-size:11px;color:var(--taupe)">${o.Designer||''} ${o.Dress||''} · ${fmtDate(o.OrderDate)}${total>0?' · '+money(total):''}</div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                        ${isSigned ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button>` : ''}
+                        ${!isSigned && !isEsignSent ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')">Send E-Sign</button>` : ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        
+        // ========== ALTERATIONS PAGE ==========
+        let altPageView = 'list';
+        let altSeamFilter = 'all';
+        let altCalMonth = new Date().getMonth();
+        let altCalYear = new Date().getFullYear();
+        const SEAMSTRESSES = ['Rowena', 'Shannon', 'External'];
+        const SEAM_BG = { 'Rowena':'#e8f5e9', 'Shannon':'#e3f2fd', 'External':'#fce4ec', '':'#fff3e0' };
+        const SEAM_FG = { 'Rowena':'#2e7d32', 'Shannon':'#1565c0', 'External':'#c62828', '':'#e65100' };
+        
+        function setAlterationsPageView(view) {
+            altPageView = view;
+            if ($('altViewList')) { $('altViewList').style.background = view==='list'?'var(--accent)':'white'; $('altViewList').style.color = view==='list'?'white':'var(--text)'; }
+            if ($('altViewCalendar')) { $('altViewCalendar').style.background = view==='calendar'?'var(--accent)':'white'; $('altViewCalendar').style.color = view==='calendar'?'white':'var(--text)'; }
+            $('altPageListView').style.display = view === 'list' ? 'block' : 'none';
+            $('altPageCalendarView').style.display = view === 'calendar' ? 'block' : 'none';
+            if (view === 'list') renderAltsPage();
+            else renderAltCal();
+        }
+        
+        function filterSeamstress(name) {
+            altSeamFilter = name;
+            document.querySelectorAll('#altSeamstressFilter .btn').forEach(b => { b.className='btn btn-sm btn-secondary'; b.style.background=''; b.style.color=''; });
+            const id = name==='all'?'sfAll':name==='unassigned'?'sfUnassigned':'sf'+name;
+            if ($(id)) { $(id).className='btn btn-sm'; $(id).style.background='var(--accent)'; $(id).style.color='white'; }
+            if (altPageView==='list') renderAltsPage(); else renderAltCal();
+        }
+        
+        function renderAltsPage() {
+            const alts = data.alterations || [];
+            const active = alts.filter(a => a.Status !== 'complete');
+            const now = new Date();
+            const weekEnd = new Date(now); weekEnd.setDate(now.getDate()+7);
+            const fittingsWeek = data.appointments.filter(a => { const d=parseDate(a.Date); return d>=now && d<=weekEnd && (a.Type||'').toLowerCase().includes('fitting'); });
+            const urgent = active.filter(a => { const c=getClient(a.ClientID); if(!c||!c.WeddingDate) return false; return Math.ceil((parseDate(c.WeddingDate)-now)/(1000*60*60*24))<=30; });
+            
+            if ($('altPageStats')) $('altPageStats').innerHTML = `
+                <div class="stat"><div class="stat-value">${active.length}</div><div class="stat-label">ACTIVE</div></div>
+                <div class="stat"><div class="stat-value">${fittingsWeek.length}</div><div class="stat-label">FITTINGS THIS WEEK</div></div>
+                <div class="stat" style="border-left:3px solid #e74c3c"><div class="stat-value">${urgent.length}</div><div class="stat-label">URGENT (<30 DAYS)</div></div>`;
+            
+            let list = active;
+            if (altSeamFilter==='unassigned') list=active.filter(a=>!a.Seamstress);
+            else if (altSeamFilter!=='all') list=active.filter(a=>a.Seamstress===altSeamFilter);
+            
+            list.sort((a,b)=>{ const ca=getClient(a.ClientID),cb=getClient(b.ClientID); const da=ca?.WeddingDate?parseDate(ca.WeddingDate):new Date('2099-01-01'), db=cb?.WeddingDate?parseDate(cb.WeddingDate):new Date('2099-01-01'); return da-db; });
+            
+            if ($('altPageClientsList')) $('altPageClientsList').innerHTML = list.length ? list.map(a => {
+                const c=getClient(a.ClientID); const name=c?`${c.FirstName} ${c.LastName}`:'Unknown';
+                const wd=c?.WeddingDate?Math.ceil((parseDate(c.WeddingDate)-now)/(1000*60*60*24)):null;
+                const items=a.AlterationItems?JSON.parse(a.AlterationItems):[]; const done=items.filter(i=>i.status==='done').length;
+                const sm=a.Seamstress||''; const bg=SEAM_BG[sm]||SEAM_BG['']; const fg=SEAM_FG[sm]||SEAM_FG[''];
+                return `<div class="list-item" style="cursor:pointer" onclick="openAlterationForClient('${a.ClientID}')">
+                    <div class="avatar">${name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
+                    <div style="flex:1">
+                        <div style="font-weight:600">${name}${wd!==null&&wd<=30?' <span style="color:#e74c3c;font-size:10px">URGENT</span>':''}</div>
+                        <div style="font-size:11px;color:var(--taupe)">Wedding: ${c?.WeddingDate?fmtDate(c.WeddingDate):'TBD'}${wd!==null?' · '+wd+' days':''}</div>
+                        <div style="margin-top:4px;display:flex;gap:6px;align-items:center">
+                            <select class="form-input" style="width:auto;font-size:10px;padding:2px 6px;border-radius:12px;background:${bg};color:${fg};font-weight:600;border:none" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateSeamstress('${a.ID}',this.value)">
+                                <option value="" ${!sm?'selected':''}>Assign</option>
+                                ${SEAMSTRESSES.map(s=>`<option value="${s}" ${sm===s?'selected':''}>${s}</option>`).join('')}
+                            </select>
+                            <span style="font-size:10px;color:var(--taupe)">${done}/${items.length}</span>
+                            <div style="flex:1;max-width:80px;height:4px;background:#eee;border-radius:2px"><div style="height:100%;width:${items.length>0?(done/items.length*100):0}%;background:#27ae60;border-radius:2px"></div></div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('') : '<div class="empty">No alterations found</div>';
+        }
+        
+        function updateSeamstress(altId, val) {
+            const alt=(data.alterations||[]).find(a=>String(a.ID)===String(altId));
+            if(alt){alt.Seamstress=val;updateRecord('Alterations',altId,{Seamstress:val});toast(val?'Assigned to '+val:'Unassigned','success');}
+        }
+        
+        function renderAltCal() {
+            const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+            $('altCalTitle').textContent=months[altCalMonth]+' '+altCalYear;
+            let fits=data.appointments.filter(a=>{const d=parseDate(a.Date);return d&&d.getMonth()===altCalMonth&&d.getFullYear()===altCalYear&&(a.Type||'').toLowerCase().includes('fitting');});
+            if(altSeamFilter!=='all'){
+                if(altSeamFilter==='unassigned') fits=fits.filter(f=>{const alt=(data.alterations||[]).find(a=>String(a.ClientID)===String(f.ClientID));return !alt?.Seamstress;});
+                else fits=fits.filter(f=>{const alt=(data.alterations||[]).find(a=>String(a.ClientID)===String(f.ClientID));return alt?.Seamstress===altSeamFilter;});
+            }
+            const first=new Date(altCalYear,altCalMonth,1).getDay();
+            const days=new Date(altCalYear,altCalMonth+1,0).getDate();
+            const today=new Date();
+            let html=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div style="background:var(--cream);padding:8px;text-align:center;font-size:10px;font-weight:600;color:var(--taupe)">${d}</div>`).join('');
+            for(let i=0;i<first;i++) html+=`<div style="background:white;padding:8px;min-height:80px"></div>`;
+            for(let day=1;day<=days;day++){
+                const ds=`${altCalYear}-${String(altCalMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+                const isToday=today.getDate()===day&&today.getMonth()===altCalMonth&&today.getFullYear()===altCalYear;
+                const df=fits.filter(f=>getDateStr(f.Date)===ds);
+                let fh=df.map(f=>{const c=getClient(f.ClientID);const alt=(data.alterations||[]).find(a=>String(a.ClientID)===String(f.ClientID));const sm=alt?.Seamstress||'';const bg=SEAM_BG[sm]||SEAM_BG[''];const fg=SEAM_FG[sm]||SEAM_FG[''];
+                return `<div onclick="openAlterationForClient('${f.ClientID}')" style="background:${bg};color:${fg};padding:2px 4px;border-radius:3px;font-size:9px;margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b>${(f.Time||'').padStart(5,'0').substring(0,5)}</b> ${c?.FirstName||''}${sm?' · '+sm.substring(0,3):''}</div>`;
+                }).join('');
+                html+=`<div style="background:white;padding:4px;min-height:80px;${isToday?'border:2px solid var(--accent)':''}"><div style="font-size:11px;font-weight:${isToday?'700':'500'};color:${isToday?'var(--accent)':'var(--text)'};margin-bottom:4px">${day}</div>${fh}</div>`;
+            }
+            $('altCalGrid').innerHTML=html;
+        }
+        function altCalPrev(){altCalMonth--;if(altCalMonth<0){altCalMonth=11;altCalYear--;}renderAltCal();}
+        function altCalNext(){altCalMonth++;if(altCalMonth>11){altCalMonth=0;altCalYear++;}renderAltCal();}
+        
         // ========== INIT ==========
         document.querySelectorAll('.nav-item').forEach(n => {
             let lastTap = 0;
