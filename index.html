@@ -2269,6 +2269,7 @@
                 <button class="btn btn-secondary" onclick="closeModal('alteration')">Close</button>
                 <button class="btn btn-secondary" onclick="copySeamstressText()">📋 Copy for Seamstress</button>
                 <button class="btn btn-secondary" onclick="sendFittingSummary()">📧 Email Bride</button>
+                <button class="btn btn-secondary" onclick="deleteCurrentAlteration()" style="color:#e74c3c">🗑 Delete</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
                 <button class="btn btn-primary" onclick="saveAndMarkReady()" style="background:#27ae60">✓ Save & Mark Picked Up</button>
@@ -3869,6 +3870,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     renderOrders();
                     renderAlts();
                     toast(`${action.clientName} restored to alterations!`, 'success');
+                    try { renderAltsPage(); } catch(e) {}
                     
                 } else if (action.type === 'delete_topoption') {
                     // Re-add top option
@@ -3888,6 +3890,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     if (action.localData && action.record.ClientID) {
                         if (action.localData.items) localStorage.setItem(`alts_${action.record.ClientID}`, action.localData.items);
                         if (action.localData.notes) localStorage.setItem(`alts_notes_${action.record.ClientID}`, action.localData.notes);
+                        if (action.localData.bridenotes) localStorage.setItem(`alts_bridenotes_${action.record.ClientID}`, action.localData.bridenotes);
                         if (action.localData.neededby) localStorage.setItem(`alts_neededby_${action.record.ClientID}`, action.localData.neededby);
                     }
                     
@@ -10494,16 +10497,47 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }).join('');
         }
         
+        async function deleteCurrentAlteration() {
+            if (!currentAltClientId) return;
+            const c = getClient(currentAltClientId);
+            const clientName = c ? `${c.FirstName} ${c.LastName}` : 'Unknown';
+            
+            const confirmed = await appConfirmDanger(
+                `Are you sure you want to delete the alteration record for ${clientName}? All items, notes, and progress will be removed.`, 
+                'Delete Alteration'
+            );
+            if (!confirmed) return;
+            
+            // Second confirmation for extra protection
+            const doubleConfirmed = await appConfirmDanger(
+                `This will permanently delete all alteration data for ${clientName}. Are you absolutely sure?`,
+                'Confirm Delete'
+            );
+            if (!doubleConfirmed) return;
+            
+            closeModal('alteration');
+            
+            // Use the existing deleteAlteration which has undo support
+            deleteAlteration(currentAltClientId);
+        }
+        
         async function deleteAlteration(clientId) {
             const c = getClient(clientId);
             if (!c) return;
             
             const clientName = `${c.FirstName} ${c.LastName}`;
             
+            const confirmed = await appConfirmDanger(
+                `Delete alteration record for ${clientName}? All items and progress will be removed.`, 
+                'Delete Alteration'
+            );
+            if (!confirmed) return;
+            
             // Save data for undo before removing
             const localData = {
                 items: localStorage.getItem(`alts_${clientId}`),
                 notes: localStorage.getItem(`alts_notes_${clientId}`),
+                bridenotes: localStorage.getItem(`alts_bridenotes_${clientId}`),
                 neededby: localStorage.getItem(`alts_neededby_${clientId}`)
             };
             
@@ -10522,6 +10556,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Remove alteration data from localStorage
             localStorage.removeItem(`alts_${clientId}`);
             localStorage.removeItem(`alts_notes_${clientId}`);
+            localStorage.removeItem(`alts_bridenotes_${clientId}`);
             localStorage.removeItem(`alts_neededby_${clientId}`);
             
             // Set order status back to QA complete (so they can re-enter alterations if needed)
@@ -11301,30 +11336,34 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             
             const itemsJson = JSON.stringify(currentAltItems);
             const notes = $('altNotes').value;
+            const brideNotes = $('altBrideNotes')?.value || '';
             const neededBy = $('altDressNeededBy').value;
             
-            // ALWAYS save to localStorage FIRST
+            // Save to localStorage
             localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
             localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
+            localStorage.setItem(`alts_bridenotes_${currentAltClientId}`, brideNotes);
             if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
             
-            console.log(`[ALTS] Saved to localStorage before marking ready for client ${currentAltClientId}`);
-            
-            // Try to sync to Google Sheets (non-blocking)
+            // Sync to Google Sheets
             try {
                 const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
                 if (altRecord && altRecord.ID) {
-                    const updates = { AlterationItems: itemsJson, Notes: notes };
+                    const updates = { AlterationItems: itemsJson, Notes: notes, BrideNotes: brideNotes };
                     if (neededBy) updates.DueDate = neededBy;
                     updateRecord('Alterations', altRecord.ID, updates);
                 }
             } catch (e) {
-                console.warn('[ALTS] Google Sheets sync failed (data safe in localStorage):', e);
+                console.warn('[ALTS] Sync failed:', e);
             }
             
-            // Then mark ready
-            markAlterationComplete(currentAltClientId);
+            // Close modal first, then mark complete
             closeModal('alteration');
+            
+            // Small delay to let modal close before showing the pickup dialog
+            setTimeout(() => {
+                markAlterationComplete(currentAltClientId);
+            }, 300);
         }
         
         async function markAlterationComplete(clientId) {
@@ -11358,6 +11397,8 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             saveCachedData();
             renderAlts();
             renderOrders();
+            try { renderAltsPage(); } catch(e) {}
+            try { renderDash(); } catch(e) {}
             
             // Add to undo stack
             addUndo({ 
@@ -20648,6 +20689,7 @@ www.estrellebridal.com`;
                             <div style="flex:1;max-width:80px;height:4px;background:#eee;border-radius:2px"><div style="height:100%;width:${items.length>0?(done/items.length*100):0}%;background:#27ae60;border-radius:2px"></div></div>
                         </div>
                     </div>
+                    <button class="btn btn-sm" onclick="event.stopPropagation();deleteAlteration('${a.ClientID}')" style="color:#e74c3c;background:none;border:none;font-size:14px" title="Delete">✕</button>
                 </div>`;
             }).join('') : '<div class="empty">No alterations found</div>';
         }
