@@ -1379,6 +1379,7 @@
                 </div>
                 
                 <div id="altPageListView">
+                    <input type="text" class="form-input" id="altSearchBar" placeholder="Search by client name..." oninput="renderAltsPage()" style="margin-bottom:12px">
                     <div id="altPageStats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px"></div>
                     <div id="altPageClientsList"></div>
                 </div>
@@ -10576,7 +10577,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             saveCachedData();
             renderAlts();
             renderOrders();
-            
+
+            try { renderAltsPage(); } catch(e) {}
+            try { renderDash(); } catch(e) {}
             // Add to undo stack
             addUndo({ 
                 type: 'delete_alteration', 
@@ -12989,10 +12992,20 @@ The {StoreName} Team
                 }).join('');
                 
                 const paidStyle = o._paid ? 'background:#f0faf0;' : (noSplits ? 'background:#fffbf0;' : '');
+                
+                // Parse items for expandable detail
+                let itemsDetail = '';
+                try {
+                    const items = o.Items ? JSON.parse(o.Items) : [];
+                    if (items.length > 0) {
+                        itemsDetail = items.map(it => `<div style="display:flex;justify-content:space-between;padding:2px 0"><span>${it.name || 'Item'}${it.designer ? ' — ' + it.designer : ''}</span><span>${money(it.price || 0)}</span></div>`).join('');
+                    }
+                } catch(e) {}
+                
                 orderHtml += `<tr style="${paidStyle}">
                     <td><div style="font-weight:500">${o.ClientName || '\u2014'}</div><div style="font-size:10px;color:var(--taupe)">${o.SubmittedBy || o.Consultant || ''}</div></td>
                     <td>${o.PO || '\u2014'}</td>
-                    <td>${money(o._preTax)}</td>
+                    <td>${itemsDetail ? `<div style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">${money(o._preTax)} <span style="font-size:9px;color:var(--dusty)">▾</span></div><div style="display:none;font-size:10px;color:var(--taupe);padding:4px 0;border-top:1px solid var(--border);margin-top:4px">${itemsDetail}</div>` : money(o._preTax)}</td>
                     <td><select class="form-input" style="font-size:10px;padding:2px 4px;width:auto" onchange="setOrderPaymentMethod('${o.ID}',this.value)">${pmOptions.replace('value="'+o._pm+'"', 'value="'+o._pm+'" selected')}</select></td>
                     <td style="color:#e74c3c">${o._feeRate > 0 ? '-'+money(o._fee)+' <span style="font-size:9px;opacity:0.7">('+o._feeRate+'%)</span>' : '\u2014'}</td>
                     <td>${money(o._base)}</td>
@@ -20679,17 +20692,41 @@ www.estrellebridal.com`;
             if (altSeamFilter==='unassigned') list=active.filter(a=>!a.Seamstress);
             else if (altSeamFilter!=='all') list=active.filter(a=>a.Seamstress===altSeamFilter);
             
-            list.sort((a,b)=>{ const ca=getClient(a.ClientID),cb=getClient(b.ClientID); const da=ca?.WeddingDate?parseDate(ca.WeddingDate):new Date('2099-01-01'), db=cb?.WeddingDate?parseDate(cb.WeddingDate):new Date('2099-01-01'); return da-db; });
+            // Search filter
+            const altSearch = ($('altSearchBar')?.value || '').toLowerCase().trim();
+            if (altSearch) {
+                list = list.filter(a => {
+                    const c = getClient(a.ClientID);
+                    const name = c ? `${c.FirstName} ${c.LastName}`.toLowerCase() : '';
+                    return name.includes(altSearch);
+                });
+            }
+            
+            // Sort: fittings today first, then urgent, then by wedding date
+            const todayStr = today();
+            list.sort((a,b) => {
+                const ca=getClient(a.ClientID), cb=getClient(b.ClientID);
+                // Check if has fitting today
+                const aToday = data.appointments.some(ap => String(ap.ClientID)===String(a.ClientID) && getDateStr(ap.Date)===todayStr && (ap.Type||'').toLowerCase().includes('fitting'));
+                const bToday = data.appointments.some(ap => String(ap.ClientID)===String(b.ClientID) && getDateStr(ap.Date)===todayStr && (ap.Type||'').toLowerCase().includes('fitting'));
+                if (aToday && !bToday) return -1;
+                if (!aToday && bToday) return 1;
+                // Then by wedding date
+                const da=ca?.WeddingDate?parseDate(ca.WeddingDate):new Date('2099-01-01');
+                const db=cb?.WeddingDate?parseDate(cb.WeddingDate):new Date('2099-01-01');
+                return da-db;
+            });
             
             if ($('altPageClientsList')) $('altPageClientsList').innerHTML = list.length ? list.map(a => {
                 const c=getClient(a.ClientID); const name=c?`${c.FirstName} ${c.LastName}`:'Unknown';
                 const wd=c?.WeddingDate?Math.ceil((parseDate(c.WeddingDate)-now)/(1000*60*60*24)):null;
+                const hasFittingToday = data.appointments.some(ap => String(ap.ClientID)===String(a.ClientID) && getDateStr(ap.Date)===todayStr && (ap.Type||'').toLowerCase().includes('fitting'));
                 const items=a.AlterationItems?JSON.parse(a.AlterationItems):[]; const done=items.filter(i=>i.status==='done').length;
                 const sm=a.Seamstress||''; const bg=SEAM_BG[sm]||SEAM_BG['']; const fg=SEAM_FG[sm]||SEAM_FG[''];
                 return `<div class="list-item" style="cursor:pointer" onclick="openAlterationForClient('${a.ClientID}')">
                     <div class="avatar">${name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
                     <div style="flex:1">
-                        <div style="font-weight:600">${name}${wd!==null&&wd<=30?' <span style="color:#e74c3c;font-size:10px">URGENT</span>':''}</div>
+                        <div style="font-weight:600">${name}${hasFittingToday?' <span style="background:#C4A265;color:white;padding:1px 6px;border-radius:8px;font-size:9px">TODAY</span>':''}${wd!==null&&wd<=30?' <span style="color:#e74c3c;font-size:10px">URGENT</span>':''}</div>
                         <div style="font-size:11px;color:var(--taupe)">Wedding: ${c?.WeddingDate?fmtDate(c.WeddingDate):'TBD'}${wd!==null?' · '+wd+' days':''}</div>
                         <div style="margin-top:4px;display:flex;gap:6px;align-items:center">
                             <select class="form-input" style="width:auto;font-size:10px;padding:2px 6px;border-radius:12px;background:${bg};color:${fg};font-weight:600;border:none" onclick="event.stopPropagation()" onchange="event.stopPropagation();updateSeamstress('${a.ID}',this.value)">
