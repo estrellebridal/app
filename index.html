@@ -12863,6 +12863,7 @@ The {StoreName} Team
                 if (pm === 'credit_tap') feeRate = feeCardTap;
                 else if (pm === 'credit_manual') feeRate = feeCardManual;
                 else if (pm === 'invoice') feeRate = feeInvoice;
+                else if (pm === 'credit_intl') feeRate = feeIntl;
                 else if (pm === 'debit' || pm === 'cash' || pm === 'etransfer') feeRate = feeOther;
                 const fee = preTax * (feeRate / 100);
                 const base = preTax - fee;
