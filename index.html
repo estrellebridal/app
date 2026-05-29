@@ -1606,7 +1606,7 @@
                         <div class="card-header"><h2 class="card-title">⚙️ Transaction Fees</h2></div>
                         <div class="card-body">
                             <div style="font-size:11px;color:var(--text-secondary);margin-bottom:12px">These fees are deducted from the pre-tax sale amount before commission is calculated.</div>
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
                                 <div class="form-group" style="margin:0">
                                     <label class="form-label">Card Present</label>
                                     <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeCardTap" value="2.45" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
@@ -1618,6 +1618,10 @@
                                 <div class="form-group" style="margin:0">
                                     <label class="form-label">Invoice</label>
                                     <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeInvoice" value="2.8" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
+                                </div>
+                                <div class="form-group" style="margin:0">
+                                    <label class="form-label">International Card</label>
+                                    <div style="display:flex;align-items:center;gap:4px"><input type="number" class="form-input" id="feeIntl" value="4.2" step="0.01" style="width:70px" onchange="saveCommissionSettings()"><span style="font-size:12px">%</span></div>
                                 </div>
                             </div>
                             <button class="btn btn-sm btn-primary" onclick="$('commRatesCard').style.display='none';renderCommission()" style="margin-top:12px">Done</button>
@@ -2272,7 +2276,9 @@
                 <button class="btn btn-secondary" onclick="deleteCurrentAlteration()" style="color:#e74c3c">🗑 Delete</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
-                <button class="btn btn-primary" onclick="saveAndMarkReady()" style="background:#27ae60">✓ Save & Mark Picked Up</button>
+            </div>
+            <div style="padding:0 20px 16px;text-align:right">
+                <button class="btn" onclick="saveAndMarkReady()" style="background:#27ae60;color:white;font-size:12px;padding:8px 20px;border:none;width:100%">✓ Save &amp; Mark Picked Up</button>
             </div>
         </div>
     </div>
@@ -11704,7 +11710,7 @@ www.estrellebridal.com`;
             
             if (done.length > 0) {
                 text += `DONE:\n`;
-                done.forEach(i => text += `  - ${i.name}\n`);
+                done.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
             
@@ -12693,6 +12699,7 @@ The {StoreName} Team
             settings.feeCardTap = parseFloat($('feeCardTap')?.value) || 2.45;
             settings.feeCardManual = parseFloat($('feeCardManual')?.value) || 3.4;
             settings.feeInvoice = parseFloat($('feeInvoice')?.value) || 2.8;
+            settings.feeIntl = parseFloat($('feeIntl')?.value) || 4.2;
             settings.feeOther = parseFloat($('feeOther')?.value) || 0;
             localStorage.setItem('estrelle_commission', JSON.stringify(settings));
             renderCommission();
@@ -12707,6 +12714,7 @@ The {StoreName} Team
                 $('feeCardTap').value = s.feeCardTap ?? 2.45;
                 $('feeCardManual').value = s.feeCardManual ?? 3.4;
                 if ($('feeInvoice')) $('feeInvoice').value = s.feeInvoice ?? 2.8;
+                if ($('feeIntl')) $('feeIntl').value = s.feeIntl ?? 4.2;
                 $('feeOther').value = s.feeOther ?? 0;
             }
         }
@@ -12835,6 +12843,7 @@ The {StoreName} Team
             const feeCardTap = settings.feeCardTap ?? 2.45;
             const feeCardManual = settings.feeCardManual ?? 3.4;
             const feeInvoice = settings.feeInvoice ?? 2.8;
+            const feeIntl = settings.feeIntl ?? 4.2;
             const feeOther = settings.feeOther ?? 0;
             
             // Helper to calc one order's commission data
@@ -12945,7 +12954,7 @@ The {StoreName} Team
             }
             
             // Per-order breakdown
-            const pmOptions = `<option value="">Not set</option><option value="credit_tap">Card Present (${feeCardTap}%)</option><option value="credit_manual">Keyed In (${feeCardManual}%)</option><option value="invoice">Invoice (${feeInvoice}%)</option>`;
+            const pmOptions = `<option value="">Not set</option><option value="credit_tap">Card Present (${feeCardTap}%)</option><option value="credit_manual">Keyed In (${feeCardManual}%)</option><option value="invoice">Invoice (${feeInvoice}%)</option><option value="credit_intl">International Card (${feeIntl}%)</option>`;
             const rateOpts = [0,1,2,3].map(r => `<option value="${r}">${r}%</option>`).join('');
             const consultantNames = data.consultants.map(c => c.Name).filter(Boolean).sort();
             const nameOpts = `<option value="">Select...</option>` + consultantNames.map(n => `<option value="${n}">${n}</option>`).join('');
@@ -13009,6 +13018,7 @@ The {StoreName} Team
             const feeCardTap = settings.feeCardTap ?? 2.45;
             const feeCardManual = settings.feeCardManual ?? 3.4;
             const feeInvoice = settings.feeInvoice ?? 2.8;
+            const feeIntl = settings.feeIntl ?? 4.2;
             const feeOther = settings.feeOther ?? 0;
             
             const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
@@ -13017,7 +13027,7 @@ The {StoreName} Team
             monthOrders.forEach(o => {
                 const preTax = getOrderPreTax(o);
                 const pm = getOrderPaymentMethod(o);
-                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : pm === 'credit_intl' ? feeIntl : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
                 const fee = preTax * (feeRate / 100);
                 const base = preTax - fee;
                 const splits = getOrderSplits(o);
@@ -13045,6 +13055,7 @@ The {StoreName} Team
             const feeCardTap = settings.feeCardTap ?? 2.45;
             const feeCardManual = settings.feeCardManual ?? 3.4;
             const feeInvoice = settings.feeInvoice ?? 2.8;
+            const feeIntl = settings.feeIntl ?? 4.2;
             const feeOther = settings.feeOther ?? 0;
             
             const monthOrders = data.orders.filter(o => { const d = parseDate(o.OrderDate); return d && d.getMonth() === month && d.getFullYear() === year; });
@@ -13054,7 +13065,7 @@ The {StoreName} Team
             monthOrders.forEach(o => {
                 const preTax = getOrderPreTax(o);
                 const pm = getOrderPaymentMethod(o);
-                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
+                let feeRate = pm === 'credit_tap' ? feeCardTap : pm === 'credit_manual' ? feeCardManual : pm === 'invoice' ? feeInvoice : pm === 'credit_intl' ? feeIntl : (pm === 'debit' || pm === 'cash' || pm === 'etransfer') ? feeOther : 0;
                 const base = preTax - (preTax * feeRate / 100);
                 const splits = getOrderSplits(o);
                 splits.forEach(sp => {
