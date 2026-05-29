@@ -1406,8 +1406,9 @@
                         </div>
                         <select class="form-input" id="analyticsYear" onchange="renderAnalytics()" style="width:auto">
                             <option value="2024">2024</option>
-                            <option value="2025" selected>2025</option>
-                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2026" selected>2026</option>
+                            <option value="2027">2027</option>
                         </select>
                         <button class="btn btn-secondary" onclick="exportAnalytics()">📊 Export</button>
                     </div>
@@ -9979,6 +9980,11 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         
         // ========== ANALYTICS ==========
         function renderAnalytics() {
+            // Default to current year
+            if (!$('analyticsYear').dataset.init) {
+                $('analyticsYear').value = new Date().getFullYear();
+                $('analyticsYear').dataset.init = '1';
+            }
             const year = parseInt($('analyticsYear').value);
             const yearOrders = data.orders.filter(o => {
                 const d = parseDate(o.OrderDate);
