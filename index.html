@@ -13005,7 +13005,7 @@ The {StoreName} Team
                 orderHtml += `<tr style="${paidStyle}">
                     <td><div style="font-weight:500">${o.ClientName || '\u2014'}</div><div style="font-size:10px;color:var(--taupe)">${o.SubmittedBy || o.Consultant || ''}</div></td>
                     <td>${o.PO || '\u2014'}</td>
-                    <td>${itemsDetail ? `<div style="cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">${money(o._preTax)} <span style="font-size:9px;color:var(--dusty)">▾</span></div><div style="display:none;font-size:10px;color:var(--taupe);padding:4px 0;border-top:1px solid var(--border);margin-top:4px">${itemsDetail}</div>` : money(o._preTax)}</td>
+                    <td>${money(o._preTax)}${itemsDetail ? `<div style="font-size:10px;color:var(--taupe);padding:4px 0;border-top:1px solid var(--border);margin-top:4px">${itemsDetail}</div>` : ''}</td>
                     <td><select class="form-input" style="font-size:10px;padding:2px 4px;width:auto" onchange="setOrderPaymentMethod('${o.ID}',this.value)">${pmOptions.replace('value="'+o._pm+'"', 'value="'+o._pm+'" selected')}</select></td>
                     <td style="color:#e74c3c">${o._feeRate > 0 ? '-'+money(o._fee)+' <span style="font-size:9px;opacity:0.7">('+o._feeRate+'%)</span>' : '\u2014'}</td>
                     <td>${money(o._base)}</td>
