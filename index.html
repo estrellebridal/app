@@ -2275,6 +2275,7 @@
                 <button class="btn btn-secondary" onclick="closeModal('alteration')">Close</button>
                 <button class="btn btn-secondary" onclick="copySeamstressText()">📋 Copy for Seamstress</button>
                 <button class="btn btn-secondary" onclick="sendFittingSummary()">📧 Email Bride</button>
+                <button class="btn btn-secondary" onclick="generateAltContract()">📄 Contract</button>
                 <button class="btn btn-secondary" onclick="deleteCurrentAlteration()" style="color:#e74c3c">🗑 Delete</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
@@ -2285,6 +2286,93 @@
         </div>
     </div>
 
+    <!-- Alteration Contract Modal -->
+    <div class="modal-overlay" id="modal-altContract">
+        <div class="modal full">
+            <div class="modal-header">
+                <h2 class="modal-title">📄 Alteration Contract</h2>
+                <button class="modal-close" onclick="closeModal('altContract')">×</button>
+            </div>
+            <div class="modal-body" style="max-height:calc(100vh - 160px);overflow-y:auto">
+                <!-- Top Settings Row -->
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Consultant (signs contract)</label>
+                        <select class="form-input" id="altContractConsultant" onchange="updateAltContractConsultantSig();renderAltContractPreview()"></select>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Wedding Date</label>
+                        <input type="date" class="form-input" id="altContractWeddingDate" onchange="renderAltContractPreview()">
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Dress Needed By</label>
+                        <input type="date" class="form-input" id="altContractNeededBy" onchange="renderAltContractPreview()">
+                    </div>
+                </div>
+                
+                <!-- Notes -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Notes for Bride</label>
+                        <textarea class="form-input" id="altContractBrideNotes" rows="2" placeholder="Included in contract..." onchange="renderAltContractPreview()" style="font-size:11px"></textarea>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label class="form-label">Notes for Seamstress (internal, not on contract)</label>
+                        <textarea class="form-input" id="altContractSeamstressNotes" rows="2" placeholder="Internal only..." style="font-size:11px"></textarea>
+                    </div>
+                </div>
+
+                <!-- Price Input -->
+                <div style="background:var(--blush);padding:16px;border-radius:8px;margin-bottom:16px">
+                    <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+                        <div class="form-group" style="margin:0;flex:1;min-width:150px">
+                            <label class="form-label">Alteration Total (before tax)</label>
+                            <input type="number" class="form-input" id="altContractPreTax" placeholder="e.g. 800" step="0.01" oninput="updateAltContractTotal()" style="font-size:18px;font-weight:600">
+                        </div>
+                        <div style="text-align:center;min-width:100px">
+                            <div style="font-size:10px;color:var(--taupe)">HST (13%)</div>
+                            <div style="font-size:16px;font-weight:600" id="altContractTax">$0.00</div>
+                        </div>
+                        <div style="text-align:center;min-width:120px">
+                            <div style="font-size:10px;color:var(--taupe)">TOTAL</div>
+                            <div style="font-size:20px;font-weight:700;color:var(--accent)" id="altContractTotal">$0.00</div>
+                        </div>
+                        <div style="text-align:center;min-width:120px">
+                            <div style="font-size:10px;color:var(--taupe)">50% DEPOSIT</div>
+                            <div style="font-size:16px;font-weight:600;color:#2e7d32" id="altContractDeposit">$0.00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contract Preview -->
+                <div id="altContractPreview" style="background:white;border:1px solid var(--border);border-radius:8px;padding:24px;font-family:Georgia,serif;font-size:12px;line-height:1.6"></div>
+                
+                <!-- Signature Section -->
+                <div style="margin-top:16px;padding:16px;background:var(--cream);border-radius:8px">
+                    <h3 style="margin:0 0 12px;font-size:14px">Signatures</h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                        <div>
+                            <label class="form-label">Customer Signature</label>
+                            <canvas id="altContractCustSig" width="300" height="120" style="border:2px dashed var(--border);border-radius:8px;background:white;touch-action:none;cursor:crosshair;width:100%"></canvas>
+                            <button class="btn btn-sm btn-secondary" onclick="clearAltContractSig('cust')" style="margin-top:4px;font-size:10px">Clear</button>
+                        </div>
+                        <div>
+                            <label class="form-label">Consultant Signature</label>
+                            <div id="altContractConsultantSigArea"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="flex-wrap:wrap;gap:8px">
+                <button class="btn btn-secondary" onclick="closeModal('altContract')">Cancel</button>
+                <button class="btn btn-secondary" onclick="downloadAltContractPDF()">📥 Download PDF</button>
+                <div style="flex:1"></div>
+                <button class="btn btn-primary" onclick="saveAltContract()">💾 Save & Send Copy</button>
+                <button class="btn btn-primary" onclick="sendAltContractESign()" style="background:#C4A265;border-color:#C4A265">📱 Save & Send E-Sign</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Add/Edit Option -->
     <div class="modal-overlay" id="modal-addOption">
         <div class="modal">
@@ -20258,7 +20346,8 @@ www.estrellebridal.com`;
                         contractHtml: contractHtml,
                         signatureData: sigData,
                         consultantSignatureData: consultantSigData,
-                        signDate: today()
+                        signDate: today(),
+                        saleType: currentSaleType || 'made-to-order'
                     };
                     
                     // Build styled HTML email body
@@ -20589,6 +20678,298 @@ www.estrellebridal.com`;
             ).join('') || '<div style="font-size:11px;color:var(--taupe);padding:8px">No clients found</div>';
         }
         
+        // ========== ALTERATION CONTRACT ==========
+        let altContractSigPads = {};
+        
+        function generateAltContract() {
+            saveAlterations();
+            
+            const c = getClient(currentAltClientId);
+            if (!c) { toast('No client selected', 'error'); return; }
+            
+            closeModal('alteration');
+            setTimeout(() => {
+                openModal('altContract');
+                
+                // Populate consultant dropdown
+                const consultantNames = data.consultants.map(cn => cn.Name).filter(Boolean).sort();
+                $('altContractConsultant').innerHTML = '<option value="">Select consultant...</option>' + 
+                    consultantNames.map(n => `<option value="${n}">${n}</option>`).join('');
+                
+                // Pre-fill dates from client data
+                const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+                $('altContractWeddingDate').value = c.WeddingDate ? getDateStr(c.WeddingDate) : '';
+                $('altContractNeededBy').value = alt?.DueDate || ($('altDressNeededBy')?.value || '');
+                
+                // Pre-fill notes
+                const brideNotes = $('altBrideNotes')?.value || localStorage.getItem(`alts_bridenotes_${currentAltClientId}`) || '';
+                const seamNotes = $('altNotes')?.value || localStorage.getItem(`alts_notes_${currentAltClientId}`) || '';
+                $('altContractBrideNotes').value = brideNotes;
+                $('altContractSeamstressNotes').value = seamNotes;
+                
+                // Reset price
+                $('altContractPreTax').value = '';
+                updateAltContractTotal();
+                
+                renderAltContractPreview();
+                
+                // Init signature pads
+                setTimeout(() => {
+                    initAltContractSigPad('altContractCustSig', 'cust');
+                    updateAltContractConsultantSig();
+                }, 200);
+            }, 300);
+        }
+        
+        function updateAltContractConsultantSig() {
+            const selectedName = $('altContractConsultant').value;
+            const consultant = data.consultants.find(cn => cn.Name === selectedName);
+            
+            $('altContractConsultantSigArea').innerHTML = consultant?.Signature && consultant.Signature.indexOf('data:image') === 0 
+                ? `<img src="${consultant.Signature}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333"><p style="font-size:11px;margin-top:4px">${selectedName}</p>`
+                : selectedName 
+                    ? `<div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;color:var(--taupe);font-size:11px">${selectedName} — no signature saved</div>`
+                    : `<div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;color:var(--taupe);font-size:11px">Select a consultant above</div>`;
+        }
+        
+        function updateAltContractTotal() {
+            const preTax = parseFloat($('altContractPreTax').value) || 0;
+            const tax = preTax * 0.13;
+            const total = preTax + tax;
+            const deposit = total / 2;
+            $('altContractTax').textContent = money(tax);
+            $('altContractTotal').textContent = money(total);
+            $('altContractDeposit').textContent = money(deposit);
+            renderAltContractPreview();
+        }
+        
+        function renderAltContractPreview() {
+            const c = getClient(currentAltClientId);
+            if (!c) return;
+            
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            const items = currentAltItems || [];
+            const seamstress = alt?.Seamstress || '';
+            const consultantName = $('altContractConsultant')?.value || '';
+            const weddingDate = $('altContractWeddingDate')?.value || '';
+            const neededBy = $('altContractNeededBy')?.value || '';
+            const brideNotes = $('altContractBrideNotes')?.value || '';
+            const preTax = parseFloat($('altContractPreTax')?.value) || 0;
+            const tax = preTax * 0.13;
+            const total = preTax + tax;
+            const deposit = total / 2;
+            
+            // Get dress info from orders
+            const order = data.orders.find(o => String(o.ClientID) === String(currentAltClientId));
+            let dressInfo = '';
+            if (order) {
+                dressInfo = `${order.Designer || ''} ${order.Dress || ''}`.trim();
+                if (!dressInfo) {
+                    try { const itms = JSON.parse(order.Items||'[]'); if (itms[0]) dressInfo = `${itms[0].designer||''} ${itms[0].name||''}`.trim(); } catch(e) {}
+                }
+            }
+            
+            const itemsHtml = items.length > 0 ? items.map(i => 
+                `<tr><td style="padding:6px 8px;border:1px solid #ddd">${i.name}</td><td style="padding:6px 8px;border:1px solid #ddd">${i.details || '—'}</td></tr>`
+            ).join('') : '<tr><td colspan="2" style="padding:6px 8px;border:1px solid #ddd;color:#999">No items added yet</td></tr>';
+            
+            $('altContractPreview').innerHTML = `
+                <h1 style="text-align:center;font-size:18px;margin-bottom:20px">ALTERATION CONTRACT</h1>
+                
+                <div style="background:#f9f7f5;padding:12px;border-radius:4px;margin-bottom:16px">
+                    <table style="border:none;font-size:11px;width:100%">
+                        <tr><td style="border:none;padding:3px 8px"><b>Client:</b> ${c.FirstName} ${c.LastName}</td><td style="border:none;padding:3px 8px"><b>Email:</b> ${c.Email||''}</td></tr>
+                        <tr><td style="border:none;padding:3px 8px"><b>Phone:</b> ${c.Phone||''}</td><td style="border:none;padding:3px 8px"><b>Wedding Date:</b> ${weddingDate ? fmtDate(weddingDate) : 'TBD'}</td></tr>
+                        <tr><td style="border:none;padding:3px 8px"><b>Dress:</b> ${dressInfo || 'N/A'}</td><td style="border:none;padding:3px 8px"><b>Dress Needed By:</b> ${neededBy ? fmtDate(neededBy) : 'TBD'}</td></tr>
+                        <tr><td style="border:none;padding:3px 8px"><b>Seamstress:</b> ${seamstress || 'TBD'}</td><td style="border:none;padding:3px 8px"><b>Consultant:</b> ${consultantName || 'TBD'}</td></tr>
+                        <tr><td style="border:none;padding:3px 8px" colspan="2"><b>Contract Date:</b> ${fmtDate(today())}</td></tr>
+                    </table>
+                </div>
+                
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">PARTIES</h2>
+                <p>This Alteration Contract is entered into on <b>${fmtDate(today())}</b> by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (the "Seller"), and <b>${c.FirstName} ${c.LastName}</b> (the "Customer").</p>
+                
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">ALTERATION WORK</h2>
+                <p>The following alteration services will be performed on the Customer's wedding dress:</p>
+                <table style="width:100%;border-collapse:collapse;margin:8px 0">
+                    <tr><th style="padding:6px 8px;border:1px solid #ddd;background:#f5f5f5;text-align:left">Item</th><th style="padding:6px 8px;border:1px solid #ddd;background:#f5f5f5;text-align:left">Details</th></tr>
+                    ${itemsHtml}
+                </table>
+                
+                ${brideNotes ? `
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">ADDITIONAL NOTES</h2>
+                <p>${brideNotes.replace(/\n/g, '<br>')}</p>
+                ` : ''}
+                
+                ${preTax > 0 ? `
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">PRICING</h2>
+                <table style="width:250px;border-collapse:collapse;margin:8px 0">
+                    <tr><td style="padding:4px 8px;border:1px solid #ddd">Subtotal</td><td style="padding:4px 8px;border:1px solid #ddd;text-align:right">${money(preTax)}</td></tr>
+                    <tr><td style="padding:4px 8px;border:1px solid #ddd">HST (13%)</td><td style="padding:4px 8px;border:1px solid #ddd;text-align:right">${money(tax)}</td></tr>
+                    <tr><td style="padding:4px 8px;border:1px solid #ddd;font-weight:bold">Total</td><td style="padding:4px 8px;border:1px solid #ddd;text-align:right;font-weight:bold">${money(total)}</td></tr>
+                    <tr><td style="padding:4px 8px;border:1px solid #ddd">Deposit (50%)</td><td style="padding:4px 8px;border:1px solid #ddd;text-align:right">${money(deposit)}</td></tr>
+                </table>` : ''}
+                
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">PAYMENT TERMS</h2>
+                <p>The Customer agrees to pay a deposit of 50% of the total alteration cost at the first fitting appointment. The remaining balance is due at the second fitting appointment. Full payment is required before the dress will be released.</p>
+                
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">TERMS & CONDITIONS</h2>
+                <p>All alterations are final once completed. The Seller is not responsible for any changes in the Customer's body size or shape after measurements are taken. Any significant fluctuations in weight or body measurements may affect the fit and may require additional alterations at the Customer's expense.</p>
+                <p>Any additional alterations beyond the original scope outlined above will incur extra charges. Rush fees may apply for last-minute changes or additions.</p>
+                <p>The Customer acknowledges that the alteration work is customized and therefore NO refunds will be issued for alteration services once work has commenced.</p>
+                
+                <h2 style="font-size:13px;border-bottom:1px solid #ccc;padding-bottom:4px">ENTIRE AGREEMENT</h2>
+                <p>This Agreement contains the entire agreement between the Parties with respect to the alteration services described herein, and supersedes all prior agreements and understandings.</p>
+            `;
+        }
+        
+        function initAltContractSigPad(canvasId, key) {
+            const canvas = $(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#2C2825';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            let drawing = false;
+            const getPos = e => { const r = canvas.getBoundingClientRect(); return { x: ((e.clientX||e.touches?.[0]?.clientX) - r.left)*(canvas.width/r.width), y: ((e.clientY||e.touches?.[0]?.clientY) - r.top)*(canvas.height/r.height) }; };
+            canvas.onmousedown = canvas.ontouchstart = e => { e.preventDefault(); drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+            canvas.onmousemove = canvas.ontouchmove = e => { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+            canvas.onmouseup = canvas.ontouchend = canvas.onmouseleave = () => { drawing = false; };
+            altContractSigPads[key] = { canvas, ctx };
+        }
+        
+        function clearAltContractSig(key) {
+            const pad = altContractSigPads[key];
+            if (pad) { pad.ctx.fillStyle = 'white'; pad.ctx.fillRect(0, 0, pad.canvas.width, pad.canvas.height); }
+        }
+        
+        function getAltContractHtml() {
+            return $('altContractPreview')?.innerHTML || '';
+        }
+        
+        async function saveAltContract() {
+            const c = getClient(currentAltClientId);
+            if (!c || !c.Email) { toast('No email for this client', 'error'); return; }
+            
+            const preTax = parseFloat($('altContractPreTax').value) || 0;
+            if (preTax <= 0) { toast('Enter alteration total', 'error'); return; }
+            
+            const consultantName = $('altContractConsultant').value;
+            if (!consultantName) { toast('Select a consultant', 'error'); return; }
+            
+            let custSig = null;
+            if (altContractSigPads.cust?.canvas && !isCanvasBlank(altContractSigPads.cust.canvas)) {
+                custSig = altContractSigPads.cust.canvas.toDataURL();
+            }
+            if (!custSig) { toast('Customer signature required', 'error'); return; }
+            
+            // Save wedding date and needed-by back to client/alteration if updated
+            const weddingDate = $('altContractWeddingDate').value;
+            const neededBy = $('altContractNeededBy').value;
+            if (weddingDate && weddingDate !== getDateStr(c.WeddingDate)) {
+                c.WeddingDate = weddingDate;
+                updateRecord('Clients', c.ID, { WeddingDate: weddingDate });
+            }
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            if (neededBy && alt) {
+                updateRecord('Alterations', alt.ID, { DueDate: neededBy });
+            }
+            
+            const contractHtml = getAltContractHtml();
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            
+            // Get consultant signature
+            const consultant = data.consultants.find(cn => cn.Name === consultantName);
+            const consultSig = consultant?.Signature || null;
+            
+            closeModal('altContract');
+            toast('Saving contract & sending to ' + c.Email + '...', 'success');
+            
+            const contractData = {
+                brideName: clientName,
+                brideEmail: c.Email,
+                consultantName: consultantName,
+                subject: 'Your Alteration Contract — Estrelle Bridal',
+                body: `Hi ${c.FirstName},\n\nThank you for your fitting appointment at Estrelle Bridal. Attached is your alteration contract for your records.\n\nIf you have any questions, feel free to reach out.\n\nWarmly,\nThe Estrelle Team\n55 Avenue Road, Suite 201.5\nToronto, Ontario\n(647) 333-6582\nwww.estrellebridal.com`,
+                contractHtml: contractHtml,
+                signatureData: custSig,
+                consultantSignatureData: consultSig,
+                signDate: today(),
+                contractType: 'alteration',
+                htmlBody: true
+            };
+            
+            contractData.body = '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;padding:32px 20px"><div style="text-align:center;margin-bottom:24px"><div style="font-family:sans-serif;font-size:11px;letter-spacing:3px;color:#C4A265;text-transform:uppercase">Estrelle Bridal</div></div><div style="background:white;border-radius:12px;padding:32px;border:1px solid #eee"><p style="color:#333;font-size:14px;line-height:1.8">' + contractData.body.replace(/\n\n/g, '</p><p style="color:#333;font-size:14px;line-height:1.8">').replace(/\n/g, '<br>') + '</p></div></div>';
+            
+            api('POST', { action: 'sendContract', contractData })
+                .then(res => {
+                    if (alt) {
+                        updateRecord('Alterations', alt.ID, { 
+                            ContractSigned: today(), 
+                            AlterationTotal: preTax,
+                            CustomerSignature: custSig ? 'signed' : '',
+                            ContractConsultant: consultantName
+                        });
+                    }
+                    toast('✓ Alteration contract sent to ' + c.Email, 'success');
+                    refreshUI();
+                })
+                .catch(e => toast('Failed: ' + (e.message || e), 'error'));
+        }
+        
+        async function sendAltContractESign() {
+            const c = getClient(currentAltClientId);
+            if (!c || !c.Email) { toast('No email for this client', 'error'); return; }
+            
+            const preTax = parseFloat($('altContractPreTax').value) || 0;
+            if (preTax <= 0) { toast('Enter alteration total', 'error'); return; }
+            
+            const consultantName = $('altContractConsultant').value;
+            if (!consultantName) { toast('Select a consultant', 'error'); return; }
+            
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            if (!alt) { toast('No alteration record found', 'error'); return; }
+            
+            // Save dates back
+            const weddingDate = $('altContractWeddingDate').value;
+            const neededBy = $('altContractNeededBy').value;
+            if (weddingDate && weddingDate !== getDateStr(c.WeddingDate)) {
+                c.WeddingDate = weddingDate;
+                updateRecord('Clients', c.ID, { WeddingDate: weddingDate });
+            }
+            if (neededBy) updateRecord('Alterations', alt.ID, { DueDate: neededBy });
+            
+            const contractHtml = getAltContractHtml();
+            updateRecord('Alterations', alt.ID, { 
+                AlterationTotal: preTax,
+                ContractHtml: contractHtml,
+                ContractConsultant: consultantName
+            });
+            
+            const clientName = `${c.FirstName} ${c.LastName}`;
+            const token = generateSignToken(alt.ID);
+            
+            closeModal('altContract');
+            toast('📧 Sending e-sign link to ' + c.Email + '...', 'success');
+            
+            api('POST', { 
+                action: 'sendESignEmail', 
+                orderId: alt.ID, 
+                token: token,
+                brideEmail: c.Email, 
+                brideName: clientName,
+                contractType: 'alteration'
+            })
+            .then(res => {
+                updateRecord('Alterations', alt.ID, { ESignLinkSent: today() });
+                toast('✓ E-sign link sent to ' + c.Email, 'success');
+                refreshUI();
+            })
+            .catch(e => toast('Failed: ' + (e.message || e), 'error'));
+        }
+        
         // ========== CONTRACTS VIEW ==========
         let contractsFilter = 'all';
         
@@ -20604,14 +20985,27 @@ www.estrellebridal.com`;
         
         function renderAllContracts() {
             const searchVal = ($('contractsSearch')?.value || '').toLowerCase().trim();
-            const orders = data.orders.filter(o => o.ContractHtml || o.CustomerSignature || o.ESignedDate || o.ContractSentDate);
-            let filtered = orders;
-            if (contractsFilter === 'signed') filtered = orders.filter(o => (o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image')) || o.ESignedDate);
-            else if (contractsFilter === 'esign') filtered = orders.filter(o => o.ESignLinkSent && !o.ESignedDate);
-            else if (contractsFilter === 'unsigned') filtered = orders.filter(o => !o.CustomerSignature && !o.ESignedDate);
+            
+            // Sales contracts from orders
+            const salesContracts = data.orders.filter(o => o.ContractHtml || o.CustomerSignature || o.ESignedDate || o.ContractSentDate).map(o => ({
+                ...o, _type: 'sales', _isSigned: !!(o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image')) || !!o.ESignedDate,
+                _isEsign: !!o.ESignLinkSent && !o.ESignedDate
+            }));
+            
+            // Alteration contracts
+            const altContracts = (data.alterations||[]).filter(a => a.ContractSigned || a.ContractHtml || a.ESignLinkSent).map(a => ({
+                ...a, _type: 'alteration', _isSigned: !!a.ContractSigned, _isEsign: !!a.ESignLinkSent && !a.ContractSigned,
+                OrderDate: a.ContractSigned || a.ESignLinkSent || '', Designer: 'Alteration', Dress: '', SaleType: ''
+            }));
+            
+            let allContracts = [...salesContracts, ...altContracts];
+            
+            if (contractsFilter === 'signed') allContracts = allContracts.filter(o => o._isSigned);
+            else if (contractsFilter === 'esign') allContracts = allContracts.filter(o => o._isEsign);
+            else if (contractsFilter === 'unsigned') allContracts = allContracts.filter(o => !o._isSigned && !o._isEsign);
             
             if (searchVal) {
-                filtered = filtered.filter(o => {
+                allContracts = allContracts.filter(o => {
                     const c = getClient(o.ClientID);
                     const name = c ? `${c.FirstName} ${c.LastName}`.toLowerCase() : '';
                     const designer = (o.Designer || '').toLowerCase();
@@ -20619,37 +21013,38 @@ www.estrellebridal.com`;
                     const date = fmtDate(o.OrderDate).toLowerCase();
                     let itemNames = '';
                     try { const items = o.Items ? JSON.parse(o.Items) : []; itemNames = items.map(i => `${i.name||''} ${i.designer||''}`).join(' ').toLowerCase(); } catch(e) {}
-                    return name.includes(searchVal) || designer.includes(searchVal) || dress.includes(searchVal) || date.includes(searchVal) || itemNames.includes(searchVal);
+                    return name.includes(searchVal) || designer.includes(searchVal) || dress.includes(searchVal) || date.includes(searchVal) || itemNames.includes(searchVal) || (o._type||'').includes(searchVal);
                 });
             }
             
-            filtered.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            allContracts.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
             
             function getTotal(o) {
+                if (o._type === 'alteration') { const pt = o.AlterationTotal || 0; return pt > 0 ? pt * 1.13 : 0; }
                 if (o.Total && Number(o.Total) > 0) return Number(o.Total);
                 try { const items = o.Items ? JSON.parse(o.Items) : []; let s=0; items.forEach(i=>{s+=i.price||0;if(i.customizations)i.customizations.forEach(c=>s+=c.price||0)}); return s+(o.HST?Number(o.HST):(s*0.13)); } catch(e){ return 0; }
             }
             
-            $('contractsList').innerHTML = filtered.length === 0 ? '<div class="empty">No contracts found</div>' :
-            filtered.map(o => {
+            $('contractsList').innerHTML = allContracts.length === 0 ? '<div class="empty">No contracts found</div>' :
+            allContracts.map(o => {
                 const c = getClient(o.ClientID);
                 const name = c ? `${c.FirstName} ${c.LastName}` : (o.ClientName||'Unknown');
-                const isSigned = !!(o.CustomerSignature && String(o.CustomerSignature).startsWith('data:image')) || !!o.ESignedDate;
-                const isEsignSent = !!o.ESignLinkSent && !o.ESignedDate;
-                const badge = isSigned ? '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">✓ Signed</span>' :
-                    isEsignSent ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">📱 E-Sign Sent</span>' :
+                const badge = o._isSigned ? '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">✓ Signed</span>' :
+                    o._isEsign ? '<span style="background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">📱 E-Sign Sent</span>' :
                     '<span style="background:#fce4ec;color:#c62828;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">⚠ Unsigned</span>';
+                const typeBadge = o._type === 'alteration' ? ' <span style="background:#f3e5f5;color:#7b1fa2;padding:1px 6px;border-radius:6px;font-size:9px">ALTERATION</span>' : 
+                    (o.SaleType === 'sample-sale' ? ' <span style="background:#e3f2fd;color:#1565c0;padding:1px 6px;border-radius:6px;font-size:9px">SAMPLE</span>' : '');
                 const total = getTotal(o);
-                const saleType = o.SaleType === 'sample-sale' ? ' <span style="background:#e3f2fd;color:#1565c0;padding:1px 6px;border-radius:6px;font-size:9px">SAMPLE</span>' : '';
+                
                 return `<div class="list-item" style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="openClient('${o.ClientID}')">
                     <div class="avatar">${name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
                     <div style="flex:1">
-                        <div style="font-weight:600">${name} ${badge}${saleType}</div>
+                        <div style="font-weight:600">${name} ${badge}${typeBadge}</div>
                         <div style="font-size:11px;color:var(--taupe)">${o.Designer||''} ${o.Dress||''} · ${fmtDate(o.OrderDate)}${total>0?' · '+money(total):''}</div>
                     </div>
                     <div style="display:flex;gap:6px">
-                        ${isSigned ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button>` : ''}
-                        ${!isSigned && !isEsignSent ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')">Send E-Sign</button>` : ''}
+                        ${o._isSigned && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button>` : ''}
+                        ${!o._isSigned && !o._isEsign && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')">Send E-Sign</button>` : ''}
                     </div>
                 </div>`;
             }).join('');
