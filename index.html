@@ -2260,8 +2260,13 @@
                                 </select>
                             </div>
                             <div class="form-group" style="margin:0">
-                                <label class="form-label" style="font-size:10px">Consultant</label>
-                                <select class="form-input" id="altNextFitConsultant" style="font-size:12px"></select>
+                                <label class="form-label" style="font-size:10px">Seamstress</label>
+                                <select class="form-input" id="altNextFitConsultant" style="font-size:12px">
+                                    <option value="">—</option>
+                                    <option value="Rowena">Rowena</option>
+                                    <option value="Shannon">Shannon</option>
+                                    <option value="External">External</option>
+                                </select>
                             </div>
                         </div>
                         <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -11942,10 +11947,9 @@ www.estrellebridal.com`;
             $('altNextFitTime').value = '11:00';
             $('altNextFitType').value = 'fitting';
             
-            // Populate consultants
-            const consultants = data.consultants || [];
-            $('altNextFitConsultant').innerHTML = '<option value="">—</option>' + 
-                consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            // Pre-select seamstress from alteration record
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            $('altNextFitConsultant').value = alt?.Seamstress || '';
             
             // Scroll form into view
             setTimeout(() => $('altNextFittingForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
