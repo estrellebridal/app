@@ -4544,7 +4544,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         let _refreshTimer = null;
         function scheduleRefreshUI() {
             if (_refreshTimer) clearTimeout(_refreshTimer);
-            _refreshTimer = setTimeout(() => refreshUI(), 300);
+            _refreshTimer = setTimeout(() => {
+                // Don't refresh while a modal is open — it can interfere with buttons
+                const anyModalOpen = document.querySelector('.modal-overlay.active');
+                if (anyModalOpen) return;
+                refreshUI();
+            }, 500);
         }
         
         async function updateRecord(sheet, id, record) {
@@ -10842,6 +10847,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <div style="font-size:11px;color:var(--taupe)">${c.Email || ''}</div>
                     </div>
                 </div>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+                    <label style="font-size:11px;font-weight:600;color:var(--taupe)">Seamstress:</label>
+                    <select class="form-input" style="width:auto;font-size:11px;padding:4px 8px;border-radius:8px" onchange="updateAltSeamstress(this.value)">
+                        <option value="">Unassigned</option>
+                        ${['Rowena','Shannon','External'].map(s => `<option value="${s}" ${(altRecord?.Seamstress||'')=== s ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                </div>
             `;
             
             // Fittings list
@@ -10914,6 +10926,16 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 const modal = document.querySelector('#modal-alteration .modal-content');
                 if (modal) modal.scrollTop = 0;
             }, 50);
+        }
+        
+        function updateAltSeamstress(val) {
+            if (!currentAltClientId) return;
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            if (alt) {
+                alt.Seamstress = val;
+                updateRecord('Alterations', alt.ID, { Seamstress: val });
+                toast(val ? 'Assigned to ' + val : 'Seamstress unassigned', 'success');
+            }
         }
         
         function saveAltNeededBy() {
@@ -11910,7 +11932,7 @@ www.estrellebridal.com`;
         }
         
         function showAltNextFittingForm() {
-            $('altNextFittingDisplay').style.display = 'none';
+            // Show form BELOW the fitting list, don't hide fittings
             $('altNextFittingForm').style.display = 'block';
             
             // Default to 2 weeks from now
@@ -11924,10 +11946,12 @@ www.estrellebridal.com`;
             const consultants = data.consultants || [];
             $('altNextFitConsultant').innerHTML = '<option value="">—</option>' + 
                 consultants.map(c => `<option value="${c.Name}">${c.Name}</option>`).join('');
+            
+            // Scroll form into view
+            setTimeout(() => $('altNextFittingForm').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
         }
         
         function cancelAltNextFitting() {
-            $('altNextFittingDisplay').style.display = '';
             $('altNextFittingForm').style.display = 'none';
         }
         
@@ -11951,20 +11975,21 @@ www.estrellebridal.com`;
                 Type: type,
                 Consultant: consultant,
                 Status: 'scheduled',
-                Source: 'estrelle'  // Mark as internally created — protected from Timely auto-delete
+                Source: 'estrelle'
             };
             
-            // saveRecord adds to data.appointments with temp ID and syncs to server
-            const result = await saveRecord('Appointments', newAppt);
-            const savedId = result?.id || Date.now();
+            // Add to local data immediately (optimistic) 
+            const tempId = 't' + Date.now();
+            newAppt.ID = tempId;
+            data.appointments.push(newAppt);
             
-            // Track this fitting as newly added in this session
-            altPendingNextFittings.push(String(savedId));
+            // Track as pending
+            altPendingNextFittings.push(String(tempId));
             
-            // Re-render next fitting section
+            // Hide form and refresh list immediately
+            $('altNextFittingForm').style.display = 'none';
             renderAltNextFitting();
             
-            // Refresh the fitting list at top of modal
             const fittings = data.appointments.filter(a => 
                 String(a.ClientID) === String(currentAltClientId) && 
                 ((a.Type||'').toLowerCase().includes('fitting'))
@@ -11972,6 +11997,18 @@ www.estrellebridal.com`;
             renderAltFittingsList(fittings);
             
             toast(`Fitting scheduled: ${fmtDate(date)} at ${fmtTime(time)}`, 'success');
+            
+            // Save to server in background (non-blocking)
+            saveRecord('Appointments', newAppt).then(result => {
+                // Update temp ID with real ID
+                if (result?.id) {
+                    const idx = data.appointments.findIndex(a => a.ID === tempId);
+                    if (idx >= 0) data.appointments[idx].ID = result.id;
+                    const pendingIdx = altPendingNextFittings.indexOf(String(tempId));
+                    if (pendingIdx >= 0) altPendingNextFittings[pendingIdx] = String(result.id);
+                    saveCachedData();
+                }
+            }).catch(e => console.error('Save fitting failed:', e));
         }
         
         function saveFittingNote(fittingId, note) {
