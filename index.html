@@ -2280,7 +2280,7 @@
                 <button class="btn btn-secondary" onclick="closeModal('alteration')">Close</button>
                 <button class="btn btn-secondary" onclick="copySeamstressText()">📋 Copy for Seamstress</button>
                 <button class="btn btn-secondary" onclick="sendFittingSummary()">📧 Email Bride</button>
-                <button class="btn btn-secondary" onclick="generateAltContract()">📄 Contract</button>
+                <button class="btn btn-secondary" id="altContractBtn" onclick="handleAltContractBtn()">📄 Contract</button>
                 <button class="btn btn-secondary" onclick="deleteCurrentAlteration()" style="color:#e74c3c">🗑 Delete</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
@@ -8498,9 +8498,23 @@ The Estrelle Bridal Team`;
             }
         }
         
+        function viewContract(orderId) { viewOrderContractById(orderId); }
+        
         function viewOrderContractById(orderId) {
-            $('btnViewContract').dataset.orderId = orderId;
-            viewOrderContract();
+            const order = data.orders.find(o => String(o.ID) === String(orderId));
+            if (!order) { toast('Order not found', 'error'); return; }
+            
+            // If Drive link exists, offer both options
+            if (order.DriveLink) {
+                showChoiceDialog('View Contract', '', [
+                    { label: '📄 Open from Drive (full signed copy)', style: 'primary', action: () => { closeModal('choice'); window.open(order.DriveLink, '_blank'); } },
+                    { label: '👁 View in App', style: 'secondary', action: () => { closeModal('choice'); $('btnViewContract').dataset.orderId = orderId; viewOrderContract(); } },
+                    { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+                ]);
+            } else {
+                $('btnViewContract').dataset.orderId = orderId;
+                viewOrderContract();
+            }
         }
         
         function viewOrderContract() {
@@ -8647,11 +8661,26 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             ];
             if (measurements.custom) measurements.custom.forEach(m => { if (m.value) allMeas.push({ label: m.name, value: m.value, u: m.unit || '' }); });
             
-            // Build initials image tag if available
+            // Build initials display - check if signature image is valid, fallback to text initials
             let initialImg = '';
             const initSig = order.InitialSignature || order.ESignInitials || '';
-            if (initSig && initSig.indexOf('data:image') === 0) {
+            if (initSig && initSig.indexOf('data:image') === 0 && initSig.length > 100 && initSig.endsWith('=')) {
                 initialImg = `<img src="${initSig}" style="width:70px;height:35px;object-fit:contain">`;
+            } else if (initSig && initSig.length > 0 && initSig.length < 20) {
+                // Text initials (e.g. "JP")
+                initialImg = `<span style="font-weight:bold;font-size:14px">${initSig}</span>`;
+            } else {
+                // Try to get initials from the Initials JSON field
+                let textInitials = '';
+                try {
+                    const initObj = order.Initials ? JSON.parse(order.Initials) : null;
+                    if (initObj) {
+                        textInitials = initObj.bust || initObj.waist || initObj.hip || initObj.other || '';
+                    }
+                } catch(e) {}
+                if (textInitials) {
+                    initialImg = `<span style="font-weight:bold;font-size:14px">${textInitials}</span>`;
+                }
             }
             
             const measRows = allMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim()).map(m => `<tr><td>${m.label}</td><td>${m.value}${m.u ? ' ' + m.u : ''}</td><td style="text-align:center">${initialImg}</td></tr>`).join('');
@@ -10923,6 +10952,20 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Render next fitting section
             altPendingNextFittings = [];
             renderAltNextFitting();
+            
+            // Set contract button state
+            if ($('altContractBtn')) {
+                if (altRecord?.ContractSigned) {
+                    $('altContractBtn').textContent = '📄 View Contract';
+                    $('altContractBtn').style.color = '#2e7d32';
+                } else if (altRecord?.ESignLinkSent) {
+                    $('altContractBtn').textContent = '📄 E-Sign Sent';
+                    $('altContractBtn').style.color = '#e65100';
+                } else {
+                    $('altContractBtn').textContent = '📄 Contract';
+                    $('altContractBtn').style.color = '';
+                }
+            }
             
             openModal('alteration');
             
@@ -19169,6 +19212,7 @@ The {storeName} Team`
             // Calculate totals including customizations
             let subtotal = 0;
             o.items.forEach(item => {
+                if (item.type === 'customization') return; // Counted under parent
                 subtotal += item.price || 0;
                 if (item.customizations) {
                     item.customizations.forEach(c => subtotal += c.price || 0);
@@ -19207,8 +19251,9 @@ The {storeName} Team`
             // Build items table with new structure
             let itemsHtml = '';
             o.items.forEach(item => {
+                if (item.type === 'customization') return; // Skip - shown under parent
+                
                 if (item.type === 'dress' || item.type === 'accessory') {
-                    const typeLabel = item.type === 'dress' ? '👗 Dress' : '✨ Accessory';
                     itemsHtml += `<tr>
                         <td>${item.name}</td>
                         <td>${item.designer || '—'}</td>
@@ -19233,7 +19278,7 @@ The {storeName} Team`
                         <td>${item.name}</td>
                         <td>In-House</td>
                         <td>—</td>
-                        <td>${item.notes ? item.notes.substring(0, 30) + '...' : '—'}</td>
+                        <td>${item.notes ? item.notes.substring(0, 30) : '—'}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                 } else if (item.type === 'fee') {
@@ -19242,6 +19287,31 @@ The {storeName} Team`
                         <td>—</td>
                         <td>—</td>
                         <td>${item.note || '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'custom') {
+                    itemsHtml += `<tr>
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${item.notes || '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'discount') {
+                    itemsHtml += `<tr style="color:#e74c3c">
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>Discount</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else {
+                    // Catch-all for any unknown type
+                    itemsHtml += `<tr>
+                        <td>${item.name || 'Item'}</td>
+                        <td>${item.designer || '—'}</td>
+                        <td>${item.size || '—'}</td>
+                        <td>${item.notes || item.note || '—'}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                 }
@@ -19583,6 +19653,7 @@ The {storeName} Team`
             // Calculate totals with new structure
             let subtotal = 0;
             o.items.forEach(item => {
+                if (item.type === 'customization') return;
                 subtotal += item.price || 0;
                 if (item.customizations) {
                     item.customizations.forEach(cust => subtotal += cust.price || 0);
@@ -19666,6 +19737,7 @@ The {storeName} Team`
                 CustomerSignature: o.signatureData || '',
                 ConsultantSignature: o.consultantSignatureData || '',
                 InitialSignature: o.initialSignature || '',
+                Initials: o.initials ? JSON.stringify(o.initials) : '',
                 SaleType: currentSaleType || 'made-to-order'
             };
             try {
@@ -19764,6 +19836,7 @@ p{margin:6px 0;}
             // Calculate totals with new structure
             let subtotal = 0;
             o.items.forEach(item => {
+                if (item.type === 'customization') return;
                 subtotal += item.price || 0;
                 if (item.customizations) {
                     item.customizations.forEach(cust => subtotal += cust.price || 0);
@@ -19786,6 +19859,8 @@ p{margin:6px 0;}
             // Build items HTML with new structure
             let itemsHtml = '';
             o.items.forEach(item => {
+                if (item.type === 'customization') return; // Skip - shown under parent
+                
                 if (item.type === 'dress' || item.type === 'accessory') {
                     itemsHtml += `<tr>
                         <td>${item.name}</td>
@@ -19819,6 +19894,31 @@ p{margin:6px 0;}
                         <td>—</td>
                         <td>—</td>
                         <td>${item.note || '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'custom') {
+                    itemsHtml += `<tr>
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>${item.notes || '—'}</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else if (item.type === 'discount') {
+                    itemsHtml += `<tr style="color:#c62828">
+                        <td>${item.name}</td>
+                        <td>—</td>
+                        <td>—</td>
+                        <td>Discount</td>
+                        <td>${money(item.price)}</td>
+                    </tr>`;
+                } else {
+                    // Catch-all
+                    itemsHtml += `<tr>
+                        <td>${item.name || 'Item'}</td>
+                        <td>${item.designer || '—'}</td>
+                        <td>${item.size || '—'}</td>
+                        <td>${item.notes || item.note || '—'}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                 }
@@ -20413,7 +20513,9 @@ www.estrellebridal.com`;
                                 .filter(o => String(o.ClientID) === String(c.ID))
                                 .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
                             if (clientOrders.length > 0) {
-                                updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
+                                const updates = { ContractSentDate: new Date().toISOString() };
+                                if (res.driveLink) updates.DriveLink = res.driveLink;
+                                updateRecord('Orders', clientOrders[0].ID, updates);
                             }
                             renderClientProfile();
                             renderDash();
@@ -20722,6 +20824,84 @@ www.estrellebridal.com`;
         // ========== ALTERATION CONTRACT ==========
         let altContractSigPads = {};
         
+        function viewAltContractById(altId) {
+            const alt = (data.alterations||[]).find(a => String(a.ID) === String(altId));
+            if (!alt) { toast('Alteration not found', 'error'); return; }
+            currentAltClientId = alt.ClientID;
+            viewAltContract();
+        }
+        
+        function handleAltContractBtn() {
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
+            if (alt?.ContractSigned || alt?.ContractHtml) {
+                // Contract exists - show options
+                showChoiceDialog('📄 Alteration Contract', '', [
+                    { label: '👁 View Contract', style: 'primary', action: () => { closeModal('choice'); viewAltContract(); } },
+                    { label: '📄 Generate New', style: 'secondary', action: () => { closeModal('choice'); generateAltContract(); } },
+                    { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
+                ]);
+            } else {
+                generateAltContract();
+            }
+        }
+        
+        function viewAltContract() {
+            const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId));
+            if (!alt?.ContractHtml) { toast('No contract found', 'error'); return; }
+            
+            const c = getClient(currentAltClientId);
+            const clientName = c ? `${c.FirstName} ${c.LastName}` : 'Unknown';
+            const consultantName = alt.ContractConsultant || alt.Seamstress || '';
+            
+            // Get consultant signature
+            const consultant = data.consultants.find(cn => cn.Name === consultantName);
+            const consultSigHtml = consultant?.Signature && consultant.Signature.indexOf('data:image') === 0
+                ? `<img src="${consultant.Signature}" style="max-width:200px;max-height:80px;border-bottom:1px solid #333">`
+                : '<div style="border-bottom:1px solid #333;height:60px"></div>';
+            
+            closeModal('alteration');
+            
+            // Open in new window
+            const win = window.open('', '_blank');
+            if (!win) { toast('Pop-up blocked - allow pop-ups', 'error'); return; }
+            
+            win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+                <title>${clientName} — Alteration Contract</title>
+                <style>
+                    body { font-family: Georgia, serif; max-width: 700px; margin: 0 auto; padding: 20px; color: #333; font-size: 12px; line-height: 1.6; }
+                    h1 { font-size: 18px; } h2 { font-size: 13px; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+                    table { border-collapse: collapse; } th, td { border: 1px solid #ddd; padding: 6px 8px; }
+                    .header-bar { position: sticky; top: 0; background: var(--charcoal, #2C2825); color: white; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; margin: -20px -20px 20px; }
+                    .header-bar button { background: white; color: #333; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
+                    @media print { .header-bar { display: none; } }
+                </style>
+            </head><body>
+                <div class="header-bar">
+                    <span>${clientName} — Alteration Contract</span>
+                    <div>
+                        <button onclick="window.print()">🖨 Print</button>
+                        <button onclick="window.close()">✕ Close</button>
+                    </div>
+                </div>
+                ${alt.ContractHtml}
+                <div style="margin-top:30px;display:flex;justify-content:space-between">
+                    <div style="width:45%">
+                        <p style="font-weight:bold;font-size:11px">Customer Signature:</p>
+                        ${alt.CustomerSignature === 'signed' ? '<div style="border-bottom:1px solid #333;height:60px;display:flex;align-items:center;color:#2e7d32;font-style:italic">✓ Signed ' + (alt.ContractSigned ? fmtDate(alt.ContractSigned) : '') + '</div>' : '<div style="border-bottom:1px solid #333;height:60px"></div>'}
+                        <p style="font-size:10px">${clientName}</p>
+                        ${alt.ContractSigned ? `<p style="font-size:10px">Date: ${fmtDate(alt.ContractSigned)}</p>` : ''}
+                    </div>
+                    <div style="width:45%">
+                        <p style="font-weight:bold;font-size:11px">Consultant Signature:</p>
+                        ${consultSigHtml}
+                        <p style="font-size:10px">${consultantName}</p>
+                    </div>
+                </div>
+                <div style="text-align:center;font-size:9px;color:#999;margin-top:40px">Estrelle Bridal — 55 Avenue Road #201.5, Toronto — estrellebridal.com</div>
+            </body></html>`);
+            win.document.close();
+        }
+
         function generateAltContract() {
             saveAlterations();
             
@@ -20951,7 +21131,8 @@ www.estrellebridal.com`;
                             ContractSigned: today(), 
                             AlterationTotal: preTax,
                             CustomerSignature: custSig ? 'signed' : '',
-                            ContractConsultant: consultantName
+                            ContractConsultant: consultantName,
+                            ContractHtml: contractHtml
                         });
                     }
                     toast('✓ Alteration contract sent to ' + c.Email, 'success');
@@ -21085,6 +21266,7 @@ www.estrellebridal.com`;
                     </div>
                     <div style="display:flex;gap:6px">
                         ${o._isSigned && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button>` : ''}
+                        ${o._isSigned && o._type === 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewAltContractById('${o.ID}')">View</button>` : ''}
                         ${!o._isSigned && !o._isEsign && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')">Send E-Sign</button>` : ''}
                     </div>
                 </div>`;
