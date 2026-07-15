@@ -3480,7 +3480,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
                         <div class="form-group" style="margin:0;flex:1;max-width:200px">
                             <label class="form-label" style="font-size:10px">Measured by <span style="color:#e74c3c">*</span></label>
-                            <select class="form-input" id="mTakenBy" style="padding:6px 8px;font-size:11px">
+                            <select class="form-input" id="mTakenBy" style="padding:6px 8px;font-size:11px" onchange="syncMeasurementsToOrder()">
                                 <option value="">Select consultant...</option>
                             </select>
                         </div>
@@ -3491,13 +3491,13 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         </div>
                     </div>
                     <div class="meas-grid">
-                        <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="mBust"><div class="meas-unit" data-unit>in</div></div>
-                        <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="mCup" placeholder="e.g. 34C"></div>
-                        <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="mWaist"><div class="meas-unit" data-unit>in</div></div>
-                        <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip"><div class="meas-unit" data-unit>in</div></div>
-                        <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight"><div class="meas-unit">in</div></div>
-                        <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="mHeels"><div class="meas-unit">in</div></div>
-                        <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="mWaistToFloor"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="mBust" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="mCup" placeholder="e.g. 34C" onblur="syncMeasurementsToOrder()"></div>
+                        <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="mWaist" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight" onblur="syncMeasurementsToOrder()"><div class="meas-unit">in</div></div>
+                        <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="mHeels" onblur="syncMeasurementsToOrder()"><div class="meas-unit">in</div></div>
+                        <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="mWaistToFloor" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
                     </div>
                     <div style="margin-top:12px">
                         <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
@@ -3510,8 +3510,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                             </div>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top:12px"><label class="form-label">Measurement Notes</label><textarea class="form-input" id="mNotes"></textarea></div>
-                    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--champagne);display:flex;justify-content:flex-end">
+                    <div class="form-group" style="margin-top:12px"><label class="form-label">Measurement Notes</label><textarea class="form-input" id="mNotes" onblur="syncMeasurementsToOrder()"></textarea></div>
+                    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--champagne);display:flex;justify-content:flex-end;align-items:center;gap:12px">
+                        <span id="measSaveState" style="font-size:11px;font-weight:600"></span>
                         <button class="btn btn-secondary" onclick="saveMeasurementsFromSayYes()" style="font-size:12px">💾 Save Measurements to Client</button>
                     </div>
                 </div>
@@ -16887,18 +16888,16 @@ The {storeName} Team`
         
         // Save measurements from Say Yes modal (Step 1) to client's history
         async function saveMeasurementsFromSayYes() {
-            // Validate Taken By is required
-            if (!$('mTakenBy').value) {
-                toast('Please select who took the measurements', 'error');
-                return;
-            }
-            
             // Check if there's at least some measurement data
-            const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value || 
+            const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value ||
                                    $('mHeight').value || $('mWaistToFloor').value;
             if (!hasMeasurements) {
                 toast('Please enter at least one measurement', 'error');
                 return;
+            }
+            // "Measured by" is a reminder, not a blocker — save anyway.
+            if (!$('mTakenBy').value) {
+                toast('Saved. Tip: set who took the measurements when you can', 'warning');
             }
             
             const measurement = {
@@ -16942,7 +16941,8 @@ The {storeName} Team`
             currentOrder.measurementsSaved = true;
             
             toast('Measurements saved to client profile!', 'success');
-            
+            setMeasSaveState('saved');
+
             // Update the dropdown to show the new measurement
             populateSavedMeasurementsDropdown();
         }
@@ -17750,13 +17750,14 @@ The {storeName} Team`
             $('customMeasName').value = '';
             $('customMeasValue').value = '';
             renderCustomMeas();
+            syncMeasurementsToOrder();
         }
 
         function renderCustomMeas() {
             $('customMeasList').innerHTML = customMeasurements.map((m, i) => `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--cream);border-radius:4px;margin-bottom:4px;font-size:11px">
                     <span>${m.name}: ${m.value} ${m.unit}</span>
-                    <button class="action-btn" onclick="customMeasurements.splice(${i},1);renderCustomMeas()">×</button>
+                    <button class="action-btn" onclick="customMeasurements.splice(${i},1);renderCustomMeas();syncMeasurementsToOrder()">×</button>
                 </div>
             `).join('');
         }
@@ -17820,6 +17821,7 @@ The {storeName} Team`
             if ($('customMeasList')) $('customMeasList').innerHTML = '';
             if ($('selectSavedMeasurement')) $('selectSavedMeasurement').value = '';
             if ($('mTakenBy')) $('mTakenBy').value = '';
+            setMeasSaveState('');
             
             if ($('orderItems')) $('orderItems').innerHTML = '';
             if ($('orderTotal')) $('orderTotal').textContent = '$0';
@@ -17988,15 +17990,31 @@ The {storeName} Team`
                 if (itemCount > 0 && hasMeasurements) desc = `${itemCount} item${itemCount > 1 ? 's' : ''} + measurements`;
                 else if (itemCount > 0) desc = `${itemCount} item${itemCount > 1 ? 's' : ''}`;
                 else desc = 'measurements';
-                
-                showChoiceDialog(
-                    'Draft Auto-Saved',
-                    `Your work is saved (${desc}). You can continue later from the client's profile or dashboard.`,
-                    [
-                        { label: '✓ Close', style: 'primary', action: () => { closeModal('choice'); closeModal('yes'); renderClientProfile(); renderDash(); } },
-                        { label: '← Keep Editing', style: 'secondary', action: () => { closeModal('choice'); startDraftAutoSave(); } }
-                    ]
-                );
+
+                // When measurements are present, be explicit that they're saved to the
+                // draft, and offer to also commit them to the client's profile so they
+                // land in MeasurementHistory (not just the recoverable draft).
+                let msg = `Your work is saved (${desc}). You can continue later from the client's profile or dashboard.`;
+                const buttons = [
+                    { label: '✓ Close', style: 'primary', action: () => { closeModal('choice'); closeModal('yes'); renderClientProfile(); renderDash(); } },
+                    { label: '← Keep Editing', style: 'secondary', action: () => { closeModal('choice'); startDraftAutoSave(); } }
+                ];
+                if (hasMeasurements) {
+                    msg = `Your measurements are saved to this draft (${desc}) and will be here when you return. To also file them on the client's profile now, choose "Save to client profile".`;
+                    buttons.splice(1, 0, {
+                        label: '📋 Save to client profile',
+                        style: 'secondary',
+                        action: async () => {
+                            closeModal('choice');
+                            await saveMeasurementsFromSayYes();
+                            closeModal('yes');
+                            renderClientProfile();
+                            renderDash();
+                        }
+                    });
+                }
+
+                showChoiceDialog('Draft Auto-Saved', msg, buttons);
             } else {
                 closeModal('yes');
             }
@@ -18098,6 +18116,43 @@ The {storeName} Team`
         }
         
         // Silent auto-save — no modal close, no toast (unless showError)
+        // Reflect measurement save state in the UI chip (fix D)
+        function setMeasSaveState(state) {
+            const el = $('measSaveState');
+            if (!el) return;
+            if (state === 'saving') { el.textContent = 'Saving…'; el.style.color = 'var(--taupe)'; }
+            else if (state === 'saved') { el.textContent = '✓ Saved'; el.style.color = '#2e7d32'; }
+            else if (state === 'unsaved') { el.textContent = '● Unsaved'; el.style.color = '#c77700'; }
+            else { el.textContent = ''; }
+        }
+
+        // Persist Say-Yes measurement fields the moment staff leave a field (fix A).
+        // Copies the form into currentOrder.measurements and triggers the existing
+        // draft autosave so nothing is lost without clicking Save or Next.
+        function syncMeasurementsToOrder() {
+            if (!currentClient) return;
+            currentOrder.measurements = {
+                bust: $('mBust')?.value || '',
+                cup: $('mCup')?.value || '',
+                waist: $('mWaist')?.value || '',
+                hip: $('mHip')?.value || '',
+                height: $('mHeight')?.value || '',
+                waistToFloor: $('mWaistToFloor')?.value || '',
+                heels: $('mHeels')?.value || '',
+                notes: $('mNotes')?.value || '',
+                unit: measUnit,
+                custom: [...customMeasurements],
+                takenBy: $('mTakenBy')?.value || ''
+            };
+            const hasAny = currentOrder.measurements.bust || currentOrder.measurements.waist ||
+                           currentOrder.measurements.hip || currentOrder.measurements.height ||
+                           currentOrder.measurements.waistToFloor || currentOrder.measurements.heels;
+            if (!hasAny) { setMeasSaveState(''); return; }
+            setMeasSaveState('saving');
+            const ok = autoSaveDraft();
+            setMeasSaveState(ok ? 'saved' : 'unsaved');
+        }
+
         function autoSaveDraft(showError) {
             if (!currentClient) return false;
             
@@ -18504,25 +18559,24 @@ The {storeName} Team`
 
         function yNext() {
             if (yStep === 1) {
-                // Validate Taken By is required
-                if (!$('mTakenBy').value) {
-                    toast('Please select who took the measurements', 'error');
-                    return;
-                }
-                
-                currentOrder.measurements = { 
+                // Capture measurements first so nothing typed is ever discarded.
+                currentOrder.measurements = {
                     bust: $('mBust').value,
                     cup: $('mCup').value,
-                    waist: $('mWaist').value, 
-                    hip: $('mHip').value, 
-                    height: $('mHeight').value, 
+                    waist: $('mWaist').value,
+                    hip: $('mHip').value,
+                    height: $('mHeight').value,
                     waistToFloor: $('mWaistToFloor').value,
-                    heels: $('mHeels').value, 
+                    heels: $('mHeels').value,
                     notes: $('mNotes').value,
                     unit: measUnit,
                     custom: [...customMeasurements],
                     takenBy: $('mTakenBy').value
                 };
+                // "Measured by" is a reminder, not a blocker — warn but allow proceeding.
+                if (!$('mTakenBy').value) {
+                    toast('Tip: set who took the measurements when you get a chance', 'warning');
+                }
             }
             if (yStep === 2) {
                 // Check if at least one item is added
@@ -19900,15 +19954,20 @@ The {storeName} Team`
                     // Create new order
                     await saveRecord('Orders', record);
                 }
-                await updateRecord('Clients', c.ID, { 
-                    Status: 'ordered', 
-                    Measurements: JSON.stringify(o.measurements), 
+                // Only overwrite the client's "current" Measurements when this order
+                // actually captured measurements. Prevents an empty {} from blanking
+                // out good data if measurements weren't entered this time.
+                const hasNewMeas = o.measurements && (o.measurements.bust || o.measurements.waist || o.measurements.hip);
+                const clientUpdate = {
+                    Status: 'ordered',
                     MeasurementHistory: JSON.stringify(existingMeasurements),
                     OrderDraft: '',
                     SaidYes: 'TRUE',
                     SaidYesDate: today(),
-                    LastVisit: today() 
-                });
+                    LastVisit: today()
+                };
+                if (hasNewMeas) clientUpdate.Measurements = JSON.stringify(o.measurements);
+                await updateRecord('Clients', c.ID, clientUpdate);
                 currentClient.MeasurementHistory = JSON.stringify(existingMeasurements);
                 currentClient.OrderDraft = '';
                 currentClient.SaidYes = 'TRUE';
