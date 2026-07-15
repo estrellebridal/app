@@ -2,56 +2,147 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Estrelle Bridal — Loading Contract...</title>
-<script>
-var params = new URLSearchParams(window.location.search);
-var id = params.get('id');
-var token = params.get('token');
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqIDrN80TWbF0srEYW_4NoWFYlg-VBzyrv1wfA-OShDFlyXXYZjJNvsEAdpCoMqtFTIA/exec';
-
-if (id && token) {
-  var url = SCRIPT_URL + '?action=sign&id=' + id + '&token=' + token;
-  // For Safari: use top-level navigation
-  document.location.href = url;
-}
-</script>
-<meta id="redir" http-equiv="refresh" content="2;url=about:blank">
-<script>
-// Set meta refresh as backup
-if (id && token) {
-  var url = SCRIPT_URL + '?action=sign&id=' + id + '&token=' + token;
-  document.getElementById('redir').setAttribute('content', '1;url=' + url);
-}
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Sign Your Contract — Estrelle Bridal</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-body { font-family: -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #f9f7f4; text-align: center; }
-.card { padding: 40px 24px; max-width: 360px; }
-.spin { width: 40px; height: 40px; border: 3px solid #eee; border-top: 3px solid #C4A265; border-radius: 50%; animation: s 1s linear infinite; margin: 0 auto 20px; }
-@keyframes s { to { transform: rotate(360deg); } }
-.brand { font-size: 11px; letter-spacing: 3px; color: #C4A265; text-transform: uppercase; margin-bottom: 16px; }
-p { color: #666; font-size: 14px; line-height: 1.5; }
-a { display: inline-block; background: #C4A265; color: white; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; margin-top: 16px; font-family: -apple-system, sans-serif; font-size: 15px; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Cormorant Garamond",Georgia,serif;background:#f9f7f4;color:#2c2c2c;-webkit-font-smoothing:antialiased}
+.header{background:linear-gradient(135deg,#2c2c2c,#1a1a1a);padding:20px 24px;text-align:center;position:sticky;top:0;z-index:100}
+.header h1{font-family:Montserrat,sans-serif;color:#C4A265;font-size:11px;letter-spacing:3px;text-transform:uppercase;font-weight:500}
+.header .name{color:white;font-size:20px;font-weight:600;margin-top:4px}
+.progress{height:3px;background:rgba(196,162,101,0.15);position:sticky;top:68px;z-index:99}
+.progress-fill{height:100%;background:#C4A265;width:0%;transition:width 0.3s}
+.container{max-width:660px;margin:0 auto;padding:20px 16px 200px}
+.intro{background:white;border-radius:16px;padding:28px 24px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.04);text-align:center}
+.intro .ic{font-size:40px;margin-bottom:10px}
+.intro h2{font-size:22px;font-weight:600;margin-bottom:6px}
+.intro p{font-size:14px;color:#888;line-height:1.5}
+.contract{background:white;border-radius:16px;padding:24px 20px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.04)}
+.contract h1,.contract h2{font-size:14px}
+.contract p{font-size:11.5px;line-height:1.6;margin-bottom:6px}
+.contract table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0}
+.contract th{text-align:left;padding:5px 6px;background:#f9f6f2;font-size:10px;text-transform:uppercase;letter-spacing:0.3px;border-bottom:1.5px solid #ddd}
+.contract td{padding:4px 6px;border-bottom:1px solid #eee}
+.sign{background:white;border-radius:16px;padding:28px 24px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,0.04);border:2px solid #C4A265}
+.sign h3{font-family:Montserrat,sans-serif;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#C4A265;margin-bottom:14px;text-align:center}
+.cwrap{background:#fafafa;border:2px dashed #ddd;border-radius:12px;padding:6px;margin-bottom:10px;position:relative;touch-action:none}
+.cwrap.active{border-color:#C4A265;border-style:solid}
+canvas{width:100%;height:150px;display:block;border-radius:8px;cursor:crosshair;touch-action:none}
+.hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:Montserrat,sans-serif;font-size:13px;color:#ccc;pointer-events:none;transition:opacity 0.3s}
+.clearb{display:block;margin:0 auto;font-family:Montserrat,sans-serif;font-size:12px;padding:8px 24px;border:1px solid #ddd;background:white;border-radius:8px;cursor:pointer;color:#888}
+.bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid #eee;padding:16px 20px;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,0.05)}
+.signbtn{font-family:Montserrat,sans-serif;width:100%;padding:16px;background:#C4A265;color:white;border:none;border-radius:12px;font-size:16px;font-weight:600;letter-spacing:0.5px;cursor:pointer;transition:all 0.2s}
+.signbtn:active{transform:scale(0.98);background:#b08d4f}
+.signbtn:disabled{background:#ddd;color:#999;cursor:not-allowed}
+.legal{font-family:Montserrat,sans-serif;font-size:10px;color:#aaa;text-align:center;margin-top:8px;line-height:1.4}
+.overlay{position:fixed;inset:0;background:#f9f7f4;display:flex;align-items:center;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity 0.4s}
+.overlay.show{opacity:1;pointer-events:auto}
+.ocard{text-align:center;padding:40px 32px;max-width:380px}
+.chk{width:80px;height:80px;background:#e8f5e9;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:36px;animation:pop 0.5s ease}
+.envelope{width:64px;height:64px;background:#fef3e2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.ocard h2{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:700;margin-bottom:12px;color:#2e7d32}
+.ocard.err h2{color:#333}
+.ocard p{font-size:14px;color:#666;line-height:1.5}
+.ocard .contact{margin-top:20px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#aaa}
+.ocard .contact a{color:#C4A265;text-decoration:none}
+.spin{width:40px;height:40px;border:3px solid #eee;border-top:3px solid #C4A265;border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 20px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.ld{opacity:0.5;pointer-events:none}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="brand">Estrelle Bridal</div>
-  <div class="spin"></div>
-  <p>Loading your contract...</p>
-  <p id="fallback" style="display:none;margin-top:20px">
-    <a id="manualLink" href="#">Tap here to open your contract</a>
-  </p>
+
+<div class="header"><h1>Estrelle Bridal</h1><div class="name" id="hdrName"></div></div>
+<div class="progress"><div class="progress-fill" id="pf"></div></div>
+
+<div class="container" id="mc" style="display:none">
+  <div class="intro"><div class="ic">💍</div><h2>Your Bridal Contract</h2><p>Please review the contract below and sign at the bottom to confirm your order.</p></div>
+  <div class="contract" id="contract"></div>
+  <div class="sign" id="ss"><h3>Your Signature</h3><div class="cwrap" id="cw"><canvas id="sc"></canvas><div class="hint" id="sh">Sign here with your finger</div></div><button class="clearb" onclick="clr()">Clear</button></div>
+  <div class="sign" id="initSection" style="display:none;border-color:#ddd"><h3>Initial Your Measurements (Required)</h3><p style="font-family:Montserrat,sans-serif;font-size:11px;color:#888;text-align:center;margin-bottom:14px">Please draw your initials below, then tap “Apply to All Measurements”. This is required before you can sign.</p><div class="cwrap" id="initWrap" style="border-color:#ddd"><canvas id="initCanvas" style="width:100%;height:80px;display:block;border-radius:8px;touch-action:none;cursor:crosshair"></canvas><div class="hint" id="initHint" style="font-size:12px">Draw your initials here</div></div><div style="display:flex;gap:8px;margin-top:10px;justify-content:center"><button class="clearb" onclick="applyInitToAll()" style="background:#C4A265;color:white;border-color:#C4A265;padding:10px 24px;font-weight:600">✓ Apply to All Measurements</button><button class="clearb" onclick="clearInit()">Clear</button></div><div id="initStatus" style="font-family:Montserrat,sans-serif;font-size:11px;color:#2e7d32;text-align:center;margin-top:8px;display:none">✓ Initials applied to all measurements</div></div>
 </div>
+
+<div class="bar" id="sb" style="display:none"><button class="signbtn" id="btn" onclick="sub()" disabled>Sign &amp; Confirm</button><div class="legal">By signing, you agree to the terms in the contract above.</div></div>
+
+<!-- Loading / status overlay -->
+<div class="overlay show" id="ov">
+  <div class="ocard" id="ovcard">
+    <div class="spin" id="ovspin"></div>
+    <h2 id="ovtitle" style="color:#333;font-size:20px">Loading your contract…</h2>
+    <p id="ovmsg"></p>
+    <div class="contact" id="ovcontact" style="display:none">Estrelle Bridal<br><a href="mailto:info@estrellebridal.com">info@estrellebridal.com</a> · <a href="tel:+16473336582">(647) 333-6582</a></div>
+  </div>
+</div>
+
 <script>
-// If still on this page after 3 seconds, show manual link
-if (id && token) {
-  var url = SCRIPT_URL + '?action=sign&id=' + id + '&token=' + token;
-  setTimeout(function() {
-    document.getElementById('fallback').style.display = 'block';
-    document.getElementById('manualLink').href = url;
-  }, 3000);
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqIDrN80TWbF0srEYW_4NoWFYlg-VBzyrv1wfA-OShDFlyXXYZjJNvsEAdpCoMqtFTIA/exec';
+var params = new URLSearchParams(window.location.search);
+var ID = params.get('id');
+var TOKEN = params.get('token');
+function qs(id){return document.getElementById(id)}
+
+function showOverlay(title,msg,opts){opts=opts||{};qs('ov').classList.add('show');qs('ovspin').style.display=opts.spin?'block':'none';qs('ovcard').className='ocard'+(opts.err?' err':'');qs('ovtitle').innerHTML=(opts.icon?'<div class="'+(opts.icon==='check'?'chk':'envelope')+'">'+(opts.icon==='check'?'✓':'💌')+'</div>':'')+title;qs('ovtitle').style.color=opts.green?'#2e7d32':'#333';qs('ovmsg').textContent=msg||'';qs('ovcontact').style.display=opts.contact?'block':'none'}
+function hideOverlay(){qs('ov').classList.remove('show')}
+
+// ---- signature pad ----
+var c,x,w,d=false,s=false,lastW=0,initSigData='',needsInit=false;
+function updateBtn(){qs('btn').disabled=!(s&&(!needsInit||initSigData))}
+function initPad(){var r=c.getBoundingClientRect();lastW=r.width;c.width=r.width*2;c.height=r.height*2;x.scale(2,2);x.strokeStyle='#1a1a1a';x.lineWidth=2;x.lineCap='round';x.lineJoin='round';x.fillStyle='white';x.fillRect(0,0,c.width,c.height);setupInitials()}
+function onResize(){if(!c)return;var r=c.getBoundingClientRect();if(Math.abs(r.width-lastW)<2)return;var saved=s?c.toDataURL():null;initPad();if(saved){var im=new Image();im.onload=function(){x.drawImage(im,0,0,c.width/2,c.height/2)};im.src=saved;s=true;qs('sh').style.opacity='0';w.classList.add('active');updateBtn()}}
+function gp(e){var r=c.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}
+function sd(){s=true;qs('sh').style.opacity='0';w.classList.add('active');updateBtn()}
+function clr(){x.fillStyle='white';x.fillRect(0,0,c.width/2,c.height/2);s=false;qs('sh').style.opacity='1';w.classList.remove('active');updateBtn()}
+function bindPad(){
+  c.addEventListener('mousedown',function(e){d=true;var p=gp(e);x.beginPath();x.moveTo(p.x,p.y);sd()});
+  c.addEventListener('mousemove',function(e){if(!d)return;var p=gp(e);x.lineTo(p.x,p.y);x.stroke()});
+  c.addEventListener('mouseup',function(){d=false});
+  c.addEventListener('mouseleave',function(){d=false});
+  c.addEventListener('touchstart',function(e){e.preventDefault();d=true;var p=gp(e);x.beginPath();x.moveTo(p.x,p.y);sd()},{passive:false});
+  c.addEventListener('touchmove',function(e){e.preventDefault();if(!d)return;var p=gp(e);x.lineTo(p.x,p.y);x.stroke()},{passive:false});
+  c.addEventListener('touchend',function(e){e.preventDefault();d=false},{passive:false});
 }
+function setupInitials(){var cells=document.querySelectorAll('.init-cell');if(cells.length===0)return;needsInit=true;qs('initSection').style.display='block';var ic=qs('initCanvas');var ix=ic.getContext('2d');var iw=qs('initWrap');function iInit(){var r=ic.getBoundingClientRect();ic.width=r.width*2;ic.height=r.height*2;ix.scale(2,2);ix.strokeStyle='#1a1a1a';ix.lineWidth=1.5;ix.lineCap='round';ix.lineJoin='round';ix.fillStyle='white';ix.fillRect(0,0,ic.width,ic.height)}setTimeout(iInit,100);var iDraw=false;function iGp(e){var r=ic.getBoundingClientRect(),t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top}}ic.addEventListener('mousedown',function(e){iDraw=true;var p=iGp(e);ix.beginPath();ix.moveTo(p.x,p.y);qs('initHint').style.opacity='0';iw.style.borderColor='#C4A265';iw.style.borderStyle='solid'});ic.addEventListener('mousemove',function(e){if(!iDraw)return;var p=iGp(e);ix.lineTo(p.x,p.y);ix.stroke()});ic.addEventListener('mouseup',function(){iDraw=false});ic.addEventListener('touchstart',function(e){e.preventDefault();iDraw=true;var p=iGp(e);ix.beginPath();ix.moveTo(p.x,p.y);qs('initHint').style.opacity='0';iw.style.borderColor='#C4A265';iw.style.borderStyle='solid'},{passive:false});ic.addEventListener('touchmove',function(e){e.preventDefault();if(!iDraw)return;var p=iGp(e);ix.lineTo(p.x,p.y);ix.stroke()},{passive:false});ic.addEventListener('touchend',function(e){e.preventDefault();iDraw=false},{passive:false})}
+function clearInit(){var ic=qs('initCanvas');var ix=ic.getContext('2d');ix.fillStyle='white';ix.fillRect(0,0,ic.width/2,ic.height/2);qs('initHint').style.opacity='1';qs('initWrap').style.borderColor='#ddd';qs('initWrap').style.borderStyle='dashed';qs('initStatus').style.display='none';initSigData='';document.querySelectorAll('.init-cell').forEach(function(cell){cell.innerHTML=''});updateBtn()}
+function applyInitToAll(){var ic=qs('initCanvas');var sigImg=ic.toDataURL('image/png');initSigData=sigImg;document.querySelectorAll('.init-cell').forEach(function(cell){cell.textContent='';var img=document.createElement('img');img.src=sigImg;img.style.width='70px';img.style.height='35px';img.style.objectFit='contain';cell.appendChild(img)});qs('initStatus').style.display='block';updateBtn()}
+
+window.addEventListener('scroll',function(){var h=document.documentElement.scrollHeight-window.innerHeight;var p=h>0?(window.scrollY/h)*100:0;qs('pf').style.width=p+'%'});
+window.addEventListener('resize',onResize);
+
+// ---- submit via background POST (no browser navigation to script.google.com) ----
+function sub(){
+  if(!s)return;
+  if(needsInit&&!initSigData){alert('Please add your initials: draw them in the Initials box, then tap “Apply to All Measurements”.');return}
+  var b=qs('btn');b.disabled=true;b.textContent='Saving...';qs('mc').classList.add('ld');
+  var sig=c.toDataURL('image/png');
+  fetch(SCRIPT_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:'submitSign',orderId:ID,token:TOKEN,signatureData:sig,initialsJson:initSigData})})
+    .then(function(r){return r.json()})
+    .then(function(res){
+      if(res&&res.success){showOverlay('Signed!','Thank you. Your signed contract is on file. You will receive a confirmation email shortly.',{icon:'check',green:true})}
+      else{b.disabled=false;b.textContent='Sign & Confirm';qs('mc').classList.remove('ld');alert((res&&res.error)?res.error:'Something went wrong. Please try again.')}
+    })
+    .catch(function(){b.disabled=false;b.textContent='Sign & Confirm';qs('mc').classList.remove('ld');alert('Connection error. Please try again.')});
+}
+
+// ---- load contract data ----
+function boot(){
+  if(!ID||!TOKEN){showOverlay('Hmm, something seems off','This link does not seem to be working. Please reach out and we will send you a fresh one.',{icon:'envelope',contact:true});return}
+  fetch(SCRIPT_URL+'?action=getSignData&id='+encodeURIComponent(ID)+'&token='+encodeURIComponent(TOKEN),{redirect:'follow'})
+    .then(function(r){return r.json()})
+    .then(function(data){
+      if(!data||!data.ok){showOverlay('Need a New Link?',(data&&data.error)?data.error:'This contract could not be found.',{icon:'envelope',contact:true});return}
+      if(data.alreadySigned){showOverlay('Already Signed','This contract has already been signed.'+(data.clientName?' Thank you, '+data.clientName.split(' ')[0]+'!':''),{icon:'check',green:true});return}
+      qs('hdrName').textContent=data.clientName||'';
+      qs('contract').innerHTML=data.contractHtml||'';
+      qs('mc').style.display='block';qs('sb').style.display='block';
+      hideOverlay();
+      c=qs('sc');x=c.getContext('2d');w=qs('cw');
+      bindPad();initPad();
+    })
+    .catch(function(){showOverlay('Connection Problem','We could not load your contract. Please check your connection and try again.',{icon:'envelope',contact:true})});
+}
+window.addEventListener('load',boot);
 </script>
 </body>
 </html>

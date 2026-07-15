@@ -35,6 +35,7 @@
             --dusty: #d4b5b0; --gold: #d4a855;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         body { font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.5; }
         .app { display: flex; min-height: 100vh; }
 
@@ -3832,8 +3833,25 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
     <div class="toast" id="toast"></div>
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
-        // ========== CONFIG ==========
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxh6qeTRhQI047aN28it9f-BgKdUNkc1zW793oVrLuvuEs2yoJVScuvhp-xhKoVxCZbEA/exec';
+        // ========== CONFIG — Supabase ==========
+        // PASTE YOUR TWO VALUES BELOW (Supabase > Project Settings > API):
+        const SUPABASE_URL = 'https://fhiouxeeiylmmxzybibl.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_JZc4Qq55WI8vPiIZx3L5Lw_JHApFQjT';
+
+        // App "sheet" name -> Supabase table name
+        const TABLES = {
+            Clients:'clients', Appointments:'appointments', TopOptions:'topoptions',
+            Orders:'orders', Alterations:'alterations', Designers:'designers',
+            Consultants:'consultants', VisitNotes:'visitnotes',
+            Announcements:'announcements', EmailTemplates:'emailtemplates'
+        };
+
+        // OLD Google Apps Script backend — kept for rollback (delete once Supabase is stable):
+        // const API_URL = 'https://script.google.com/macros/s/AKfycbxh6qeTRhQI047aN28it9f-BgKdUNkc1zW793oVrLuvuEs2yoJVScuvhp-xhKoVxCZbEA/exec';
+
+        // e-signature pages are still served by the Apps Script web app (Supabase can't serve HTML).
+        // Keep that Apps Script deployed for this one feature:
+        const ESIGN_URL = 'https://script.google.com/macros/s/AKfycbwqIDrN80TWbF0srEYW_4NoWFYlg-VBzyrv1wfA-OShDFlyXXYZjJNvsEAdpCoMqtFTIA/exec';
 
         // ========== DATA ==========
         const CACHE_KEY = 'estrelle_data_cache';
@@ -4275,6 +4293,111 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             return `${t.months}m ${t.weeks}w`;
         };
 
+        // ========== AUTH ==========
+        const AUTH = {
+            session: JSON.parse(localStorage.getItem('estrelle_session') || 'null'),
+            save(s){ this.session = s; localStorage.setItem('estrelle_session', JSON.stringify(s)); },
+            clear(){ this.session = null; localStorage.removeItem('estrelle_session'); },
+            token(){ return this.session && this.session.access_token; }
+        };
+        async function signIn(email, password) {
+            const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+                method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            if (!res.ok) throw new Error('Wrong email or password');
+            AUTH.save(await res.json());
+        }
+        async function refreshSession() {
+            if (!AUTH.session) return false;
+            const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+                method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
+                body: JSON.stringify({ refresh_token: AUTH.session.refresh_token })
+            });
+            if (!res.ok) { AUTH.clear(); return false; }
+            AUTH.save(await res.json()); return true;
+        }
+        function signOut(){ AUTH.clear(); location.reload(); }
+
+        // ========== API — Supabase (drop-in replacement) ==========
+        function sbHead(extra) {
+            return Object.assign(
+                { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + (AUTH.token() || SUPABASE_KEY),
+                  'Content-Type': 'application/json' }, extra || {});
+        }
+        function setSync(msg, cls) {
+            const s = document.getElementById('syncStatus');
+            if (s) { s.textContent = msg; s.className = 'sync-status ' + (cls || ''); }
+        }
+        async function api(method, body = null) {
+            setSync('● Syncing...', 'syncing');
+            try {
+                if (method === 'GET' || !body) {
+                    const tables = Object.values(TABLES);
+                    const out = {};
+                    await Promise.all(tables.map(async (t) => {
+                        const res = await fetch(SUPABASE_URL + '/rest/v1/' + t + '?select=*', { headers: sbHead() });
+                        if (!res.ok) throw new Error(t + ' ' + res.status);
+                        out[t] = (await res.json()).map(row => Object.assign({}, row.data, { ID: row.id }));
+                    }));
+                    setSync('● Synced ' + new Date().toLocaleTimeString(), '');
+                    return out;
+                }
+                // --- Email / contract / e-sign-email actions run on the Google Apps Script (Gmail + PDF + Drive) ---
+                if (body.action === 'sendEmail' || body.action === 'sendContract' || body.action === 'sendESignEmail') {
+                    const gsRes = await fetch(ESIGN_URL, {
+                        method: 'POST',
+                        redirect: 'follow',
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify(body)
+                    });
+                    if (!gsRes.ok) throw new Error('Mail server error: ' + gsRes.status);
+                    const gsJson = await gsRes.json();
+                    setSync('\u25cf Synced ' + new Date().toLocaleTimeString(), '');
+                    if (gsJson && gsJson.success === false) throw new Error(gsJson.error || 'Send failed');
+                    return gsJson;
+                }
+
+                const table = TABLES[body.sheet];
+                if (!table) throw new Error('Unknown sheet: ' + body.sheet);
+                if (body.action === 'add' || body.action === 'bulkAdd') {
+                    const list = body.action === 'bulkAdd' ? body.records : [body.record];
+                    const rows = list.map(r => {
+                        const rec = Object.assign({}, r);
+                        const id = rec.ID || ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2,9));
+                        delete rec.ID;
+                        return { id, data: rec };
+                    });
+                    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table,
+                        { method:'POST', headers: sbHead({ Prefer:'return=representation' }), body: JSON.stringify(rows) });
+                    if (!res.ok) throw new Error('add ' + res.status);
+                    const saved = await res.json();
+                    setSync('● Synced ' + new Date().toLocaleTimeString(), '');
+                    return body.action === 'bulkAdd' ? { ids: saved.map(x => x.id) } : { id: saved[0].id };
+                }
+                if (body.action === 'update') {
+                    const patch = body.record || body.updates || {};
+                    const res = await fetch(SUPABASE_URL + '/rest/v1/rpc/merge_record',
+                        { method:'POST', headers: sbHead(), body: JSON.stringify({ tbl: table, rec_id: String(body.id), patch }) });
+                    if (!res.ok) throw new Error('update ' + res.status);
+                    setSync('● Synced ' + new Date().toLocaleTimeString(), '');
+                    return { id: body.id };
+                }
+                if (body.action === 'delete') {
+                    const res = await fetch(SUPABASE_URL + '/rest/v1/' + table + '?id=eq.' + encodeURIComponent(body.id),
+                        { method:'DELETE', headers: sbHead({ Prefer:'return=minimal' }) });
+                    if (!res.ok) throw new Error('delete ' + res.status);
+                    setSync('● Synced ' + new Date().toLocaleTimeString(), '');
+                    return { id: body.id };
+                }
+                throw new Error('Unknown action: ' + body.action);
+            } catch (e) {
+                setSync('● Error: ' + e.message, 'error');
+                throw e;
+            }
+        }
+
+        /* ===== OLD Apps Script api() — kept for rollback; delete once stable =====
         // ========== API ==========
         async function api(method, body = null, _retryCount = 0) {
             $('syncStatus').textContent = '● Syncing...';
@@ -4340,6 +4463,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 throw e;
             }
         }
+        ===== end old api() ===== */
 
         function loadCachedData() {
             try {
@@ -4452,9 +4576,11 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 saveCachedData();
                 renderDash();
                 if (showToast) toast('Data refreshed', 'success');
+                return true;
             } catch (e) { 
                 console.error('loadData error:', e);
                 toast('Failed to load: ' + e.message, 'error'); 
+                return false;
             }
         }
 
@@ -4720,7 +4846,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
 
         // ========== ANNOUNCEMENTS ==========
         function getAnnouncements() {
-            return data.announcements || [];
+            // Exclude the system designer-config record (stored in announcements for sync)
+            return (data.announcements || []).filter(a =>
+                a.ID !== 'DESIGNERS_CONFIG' && a.Title !== 'DESIGNERS_CONFIG' && a.Type !== 'system');
         }
         
         function renderAnnouncements() {
@@ -15479,8 +15607,23 @@ The {storeName} Team`
         }
         function saveDesignerData() {
             localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
-            // Also save to Google Sheets so it persists across browsers/downloads
-            updateRecord('Announcements', 'DESIGNERS_CONFIG', { Title: 'DESIGNERS_CONFIG', Details: JSON.stringify(designerData), Type: 'system' });
+            // Save the shared designer list to Supabase so all staff/devices stay in sync
+            saveDesignersToServer();
+        }
+
+        async function saveDesignersToServer() {
+            try {
+                const rec = { Title: 'DESIGNERS_CONFIG', Details: JSON.stringify(designerData), Type: 'system' };
+                const res = await fetch(SUPABASE_URL + '/rest/v1/announcements?on_conflict=id', {
+                    method: 'POST',
+                    headers: sbHead({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+                    body: JSON.stringify({ id: 'DESIGNERS_CONFIG', data: rec })
+                });
+                if (!res.ok) console.warn('saveDesignersToServer status', res.status);
+                const existing = (data.announcements || []).find(a => a.ID === 'DESIGNERS_CONFIG');
+                if (existing) { Object.assign(existing, rec); }
+                else { (data.announcements = data.announcements || []).push(Object.assign({ ID: 'DESIGNERS_CONFIG' }, rec)); }
+            } catch (e) { console.warn('saveDesignersToServer failed', e); }
         }
         
         function loadDesignerDataFromSheets() {
@@ -16324,7 +16467,7 @@ The {storeName} Team`
         
         function getESignLinkForEmail(orderId) {
             // For emails: wrap in redirect to prevent Gmail from intercepting script.google.com
-            const directLink = API_URL + '?action=esign&id=' + orderId + '&token=' + generateSignToken(orderId);
+            const directLink = ESIGN_URL + '?action=esign&id=' + orderId + '&token=' + generateSignToken(orderId);
             return directLink;
         }
         
@@ -16872,8 +17015,7 @@ The {storeName} Team`
             // Force fresh data reload before parsing
             toast('Loading latest data...', '');
             try {
-                const response = await fetch(API_URL);
-                const freshData = await response.json();
+                const freshData = await api('GET');
                 if (freshData && freshData.clients) {
                     data.clients = freshData.clients || [];
                     data.appointments = freshData.appointments || [];
@@ -21420,23 +21562,67 @@ www.estrellebridal.com`;
         });
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
         
-        // Load cached data first for instant UI, then fetch fresh from server
+        // Load cached data first for instant UI
         loadCachedData();
         showPage('dashboard');
-        
-        // Load fresh data and re-render current view
-        loadData().then(() => {
-            // Re-render dashboard with fresh data
+
+        // ===== First-load loader + Retry (staff never guess-click) =====
+        function showLoader(msg) {
+            let el = document.getElementById('bootLoader');
+            if (!el) { el = document.createElement('div'); el.id = 'bootLoader'; document.body.appendChild(el); }
+            el.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:#faf8f6;font-family:inherit';
+            el.innerHTML = '<div style="width:34px;height:34px;border:3px solid #eae6e1;border-top-color:#a68b6a;border-radius:50%;animation:spin .8s linear infinite"></div><div style="color:#8a837a;font-size:14px">' + msg + '</div>';
+        }
+        function hideLoader(){ const el = document.getElementById('bootLoader'); if (el) el.remove(); }
+        function showRetry() {
+            showLoader('');
+            document.getElementById('bootLoader').innerHTML = '<div style="color:#2c2825;font-size:16px;font-weight:600">Could not reach the server</div><button onclick="bootData()" style="padding:12px 22px;border:none;border-radius:10px;background:#a68b6a;color:#fff;font-weight:600;cursor:pointer;font-family:inherit">Retry</button>';
+        }
+        async function bootData() {
+            showLoader('Loading Estrelle...');
+            const ok = await loadData(true);
+            if (!ok) { showRetry(); return; }
+            hideLoader();
+            // Adopt the shared designer list from the server, or seed it the first time
+            try {
+                if ((data.announcements || []).some(a => a.ID === 'DESIGNERS_CONFIG' || a.Title === 'DESIGNERS_CONFIG')) {
+                    loadDesignerDataFromSheets();
+                } else {
+                    saveDesignersToServer();
+                }
+            } catch(e) {}
             renderDash();
-            // If orders tab needs rendering, do it
-            if (ordersView === 'orders') {
-                renderOrders();
-            } else if (ordersView === 'alterations') {
-                renderAlts();
-            }
-            // One-time silent cleanup of messy type names in Google Sheet
-            cleanUpAppointmentTypes();
-        });
+            if (ordersView === 'orders') renderOrders(); else if (ordersView === 'alterations') renderAlts();
+            try { cleanUpAppointmentTypes(); } catch(e) {}
+        }
+
+        // ===== Login gate (shared store login) =====
+        function showLogin() {
+            const el = document.createElement('div');
+            el.id = 'loginGate';
+            el.style.cssText = 'position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:#faf8f6;font-family:inherit';
+            el.innerHTML = '<form id="loginForm" style="width:300px;display:flex;flex-direction:column;gap:12px"><div style="font-size:24px;font-weight:800;color:#2c2825;text-align:center;letter-spacing:-0.5px">Estrelle</div><div style="font-size:13px;color:#8a837a;text-align:center;margin-bottom:4px">Sign in to continue</div><input name="email" type="email" placeholder="Email" required autocomplete="username" style="padding:12px;border:1px solid #eae6e1;border-radius:10px;font:inherit"><input name="password" type="password" placeholder="Password" required autocomplete="current-password" style="padding:12px;border:1px solid #eae6e1;border-radius:10px;font:inherit"><button style="padding:12px;border:none;border-radius:10px;background:#a68b6a;color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Sign in</button><div id="loginErr" style="color:#c07070;font-size:13px;text-align:center;min-height:16px"></div></form>';
+            document.body.appendChild(el);
+            document.getElementById('loginForm').onsubmit = async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = 'Signing in...';
+                try {
+                    await signIn(e.target.email.value.trim(), e.target.password.value);
+                    el.remove(); startApp();
+                } catch (err) {
+                    document.getElementById('loginErr').textContent = err.message;
+                    btn.disabled = false; btn.textContent = 'Sign in';
+                }
+            };
+        }
+        function startApp() {
+            bootData();
+            setInterval(refreshSession, 50 * 60 * 1000);   // keep session fresh
+        }
+        (async () => {
+            if (AUTH.token()) await refreshSession();
+            if (AUTH.token()) startApp(); else showLogin();
+        })();
         
         // ========== AUTO-REFRESH ==========
         // Poll for updates every 60 seconds when app is visible
