@@ -8770,7 +8770,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             let initialImg = '';
             const initSig = order.InitialSignature || order.ESignInitials || '';
             if (initSig && initSig.indexOf('data:image') === 0 && initSig.length > 100 && initSig.endsWith('=')) {
-                initialImg = `<img src="${initSig}" style="width:70px;height:35px;object-fit:contain">`;
+                initialImg = `<img src="${initSig}" style="max-width:80px;max-height:36px">`;
             } else if (initSig && initSig.length > 0 && initSig.length < 20) {
                 // Text initials (e.g. "JP")
                 initialImg = `<span style="font-weight:bold;font-size:14px">${initSig}</span>`;
@@ -20074,8 +20074,8 @@ p{margin:6px 0;}
             }
             
             const coreRows = coreMeas.filter(m => m.value && m.value !== '—' && m.value.trim()).map(m => {
-                const initialHtml = o.initialSignature ? 
-                    `<img src="${o.initialSignature}" style="width:70px;height:35px;object-fit:contain">` : 
+                const initialHtml = o.initialSignature ?
+                    `<img src="${o.initialSignature}" style="max-width:80px;max-height:36px">` :
                     (initials[m.key] || '');
                 return `<tr><td>${m.label}</td><td>${m.value} ${m.u}</td><td style="text-align:center">${initialHtml}</td></tr>`;
             }).join('');
@@ -20083,8 +20083,8 @@ p{margin:6px 0;}
             const otherWithValues = otherMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim());
             let otherRow = '';
             if (otherWithValues.length > 0) {
-                const otherInitialHtml = o.initialSignature ? 
-                    `<img src="${o.initialSignature}" style="width:70px;height:35px;object-fit:contain">` : 
+                const otherInitialHtml = o.initialSignature ?
+                    `<img src="${o.initialSignature}" style="max-width:80px;max-height:36px">` :
                     (initials['other'] || '');
                 otherRow = `<tr><td>Other</td><td>${otherWithValues.map(m => `${m.label}: ${m.value}${m.u}`).join(', ')}</td><td style="text-align:center">${otherInitialHtml}</td></tr>`;
             }
