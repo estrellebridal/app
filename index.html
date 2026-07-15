@@ -16472,9 +16472,19 @@ The {storeName} Team`
             return directLink;
         }
         
+        function _contractIsSigned(rec) {
+            if (!rec) return false;
+            var s = String(rec.CustomerSignature || '');
+            return s.indexOf('data:image') === 0 || String(rec.ESignedDate || '').length > 5;
+        }
+        async function confirmESignOverwrite(rec) {
+            if (!_contractIsSigned(rec)) return true;
+            return await appConfirmDanger('This contract already has a signature on file \u2014 it looks like the customer already signed (in person or online). Sending an e-sign link is not needed, and asks them to sign again. Send an e-sign link anyway?', '\u26a0 Already Signed');
+        }
         async function sendForESign(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) { toast('Order not found', 'error'); return; }
+            if (!(await confirmESignOverwrite(order))) return;
             
             const client = order.ClientID ? getClient(order.ClientID) : null;
             const email = client?.Email || order.Email;
@@ -20729,7 +20739,14 @@ www.estrellebridal.com`;
             
             // Capture contract HTML before any state changes
             currentOrder._capturedContractHtml = typeof getContractHtml === 'function' ? getContractHtml() : '';
-            
+
+            // E-SIGN PATH: the customer signs remotely, so this new order must be saved
+            // WITHOUT a customer signature. Otherwise the CustomerSignature from the
+            // creation screen's signature pad carries over and the e-sign link reports
+            // "already signed." (In-store signing uses saveAndSendSigned, which keeps it.)
+            currentOrder.signatureData = '';
+            currentOrder._capturedSigData = null;
+
             toast('Saving order...', 'success');
             
             // Upload photos if any
@@ -21296,6 +21313,7 @@ www.estrellebridal.com`;
             
             const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
             if (!alt) { toast('No alteration record found', 'error'); return; }
+            if (!(await confirmESignOverwrite(alt))) return;
             
             // Save dates back
             const weddingDate = $('altContractWeddingDate').value;
