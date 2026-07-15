@@ -8,7 +8,7 @@
 var params = new URLSearchParams(window.location.search);
 var id = params.get('id');
 var token = params.get('token');
-var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxh6qeTRhQI047aN28it9f-BgKdUNkc1zW793oVrLuvuEs2yoJVScuvhp-xhKoVxCZbEA/exec';
+var SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwqIDrN80TWbF0srEYW_4NoWFYlg-VBzyrv1wfA-OShDFlyXXYZjJNvsEAdpCoMqtFTIA/exec';
 
 if (id && token) {
   var url = SCRIPT_URL + '?action=sign&id=' + id + '&token=' + token;
