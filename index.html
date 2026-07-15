@@ -8606,7 +8606,7 @@ The Estrelle Bridal Team`;
             // Find this client's orders, most recent first
             const clientOrders = data.orders
                 .filter(o => String(o.ClientID) === String(currentClient.ID))
-                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                .sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
             
             if (clientOrders.length === 0) { toast('No orders found', 'error'); return; }
             
@@ -16313,7 +16313,7 @@ The {storeName} Team`
                 return;
             }
             
-            const sorted = [...clientOrders].sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            const sorted = [...clientOrders].sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
             
             $('cContracts').innerHTML = sorted.map(o => {
                 const hasContract = !!(o.ContractHtml || o.Items);
@@ -16589,7 +16589,7 @@ The {storeName} Team`
             // Find the most recent order for this client (just created by finalizeContract)
             const clientOrders = data.orders
                 .filter(o => String(o.ClientID) === String(currentClient.ID))
-                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                .sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
             
             if (clientOrders.length === 0) {
                 toast('No order found', 'error');
@@ -20654,7 +20654,7 @@ www.estrellebridal.com`;
                         .then(res => {
                             const clientOrders = data.orders
                                 .filter(o => String(o.ClientID) === String(c.ID))
-                                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                                .sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
                             if (clientOrders.length > 0) {
                                 const updates = { ContractSentDate: new Date().toISOString() };
                                 if (res.driveLink) updates.DriveLink = res.driveLink;
@@ -20755,7 +20755,7 @@ www.estrellebridal.com`;
             // Find the just-saved order (most recent for this client)
             const clientOrders = data.orders
                 .filter(o => String(o.ClientID) === String(c.ID))
-                .sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                .sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
             
             if (clientOrders.length === 0) {
                 toast('Order saved but could not find it to send e-sign. Send from the client profile.', 'error');
@@ -20918,7 +20918,7 @@ www.estrellebridal.com`;
                 .then(res => {
                     toast('Email sent to ' + brideEmail + '!', 'success');
                     // Mark the most recent order for this client as sent
-                    const clientOrders = data.orders.filter(o => String(o.ClientID) === String(c.ID)).sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+                    const clientOrders = data.orders.filter(o => String(o.ClientID) === String(c.ID)).sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
                     if (clientOrders.length > 0) {
                         updateRecord('Orders', clientOrders[0].ID, { ContractSentDate: new Date().toISOString() });
                     }
@@ -21382,7 +21382,7 @@ www.estrellebridal.com`;
                 });
             }
             
-            allContracts.sort((a, b) => (b.OrderDate || '').localeCompare(a.OrderDate || ''));
+            allContracts.sort((a, b) => ((Number(b.ID)||0) - (Number(a.ID)||0)));
             
             function getTotal(o) {
                 if (o._type === 'alteration') { const pt = o.AlterationTotal || 0; return pt > 0 ? pt * 1.13 : 0; }
