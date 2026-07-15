@@ -8789,9 +8789,48 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             }
             
             const measRows = allMeas.filter(m => m.value && m.value !== '—' && String(m.value).trim()).map(m => `<tr><td>${m.label}</td><td>${m.value}${m.u ? ' ' + m.u : ''}</td><td style="text-align:center">${initialImg}</td></tr>`).join('');
-            
+
+            // Sample sales get a different heading, omit measurements/initials, and carry FINAL-SALE terms.
+            const isSample = order.SaleType === 'sample-sale';
+            const heading = isSample ? 'SAMPLE SALE CONTRACT' : 'SALES CONTRACT';
+            const contractLabel = isSample ? 'Sample Sale Contract' : 'Sales Contract';
+            const measurementsBlock = isSample ? '' : `
+                <h2>MEASUREMENTS</h2>
+                ${measurements.takenBy ? `<p style="font-size:9px;margin-bottom:6px"><b>Measured by:</b> ${measurements.takenBy}</p>` : ''}
+                <table>
+                    <tr><th>Item</th><th>Measurement</th><th>Client's Initial</th></tr>
+                    ${measRows}
+                </table>
+                ${measurements.notes ? `<p><b>Important measurement notes:</b> ${measurements.notes}</p>` : ''}`;
+            const paymentTermsBlock = isSample ? `
+                <h2>PAYMENT TERMS — SAMPLE SALE</h2>
+                <p>This is a <b>FINAL SALE</b>. The Customer agrees to pay the total purchase price in full at the time of purchase. No deposits or payment plans are available for sample sale items.</p>
+
+                <h2>SAMPLE SALE CONDITIONS</h2>
+                <p>The Customer acknowledges that the dress purchased is a sample/floor model sold "as-is." The Customer has inspected the dress and accepts its current condition, including any wear, alterations, or imperfections.</p>
+                <p>The Seller makes no guarantees regarding the fit, condition, or suitability of the sample dress. Any alterations required are the sole responsibility and expense of the Customer.</p>
+
+                <h2>PICKUP / COLLECTION</h2>
+                <p>The Customer may take the dress home on the day of purchase, or leave it in-store for alterations. If left for alterations, the dress must be picked up within 30 days of the final alteration appointment.</p>
+
+                <h2>NO REFUNDS, RETURNS, OR EXCHANGES</h2>
+                <p>ALL SAMPLE SALES ARE FINAL. No returns, refunds, exchanges, or cancellations will be accepted under any circumstances. The Customer acknowledges and agrees to this policy.</p>` : `
+                <h2>PAYMENT TERMS</h2>
+                <p>The Customer agrees to make an initial deposit of at least 50% of the total purchase price upon placing the order, which is non-refundable.</p>
+                <p>The Seller will send a balance finalization request to the Buyer by the end of the production, and the Customer agrees to pay the remaining balance in full before shipment.</p>
+
+                <h2>DELIVERY AND SHIPPING</h2>
+                <p>The delivery of the goods (hereinafter referred to as the "Delivery") will be at Estrelle Bridal.</p>
+                <p>The shipping method will be decided by the suppliers and Seller will be responsible for the costs of the shipment.</p>
+
+                <h2>NO REFUNDS OR RETURNS</h2>
+                <p>The Customer acknowledges that the wedding dress is made-to-order or customized to their specifications. Therefore, NO returns or refunds will be accepted after the order has been confirmed and production has started.</p>
+
+                <h2>CANCELLATION OF ORDERS</h2>
+                <p>The Customer who cancels their sales contract are NOT entitled to a refund of ANY monies paid up to and including the cancellation date. The Customer is required to make full payment as per the original order agreement, even in the event of order cancellation, costs will still be incurred to the suppliers and to the Seller regardless of any circumstance.</p>`;
+
             return `
-                <h1 style="text-align:center;font-size:16px;">SALES CONTRACT</h1>
+                <h1 style="text-align:center;font-size:16px;">${heading}</h1>
                 
                 <div style="background:#f9f7f5;padding:10px;border-radius:4px;margin-bottom:15px">
                     <h2 style="margin:0 0 8px 0;font-size:11px">CUSTOMER INFORMATION</h2>
@@ -8803,7 +8842,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 </div>
                 
                 <h2>PARTIES</h2>
-                <p>This Sales Contract (hereinafter referred to as the "Contract") is entered into on <b>${orderDate}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${clientName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
+                <p>This ${contractLabel} (hereinafter referred to as the "Contract") is entered into on <b>${orderDate}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${clientName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
                 
                 <h2>GOODS AND PRICE</h2>
                 <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
@@ -8814,29 +8853,9 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                     <tr><td colspan="4" style="text-align:right;font-weight:bold">TOTAL</td><td style="font-weight:bold">${money(total)}</td></tr>
                 </table>
                 ${order.Notes ? `<p><b>Important ordering details:</b> ${order.Notes}</p>` : ''}
-                
-                <h2>MEASUREMENTS</h2>
-                ${measurements.takenBy ? `<p style="font-size:9px;margin-bottom:6px"><b>Measured by:</b> ${measurements.takenBy}</p>` : ''}
-                <table>
-                    <tr><th>Item</th><th>Measurement</th><th>Client's Initial</th></tr>
-                    ${measRows}
-                </table>
-                ${measurements.notes ? `<p><b>Important measurement notes:</b> ${measurements.notes}</p>` : ''}
-                
-                <h2>PAYMENT TERMS</h2>
-                <p>The Customer agrees to make an initial deposit of at least 50% of the total purchase price upon placing the order, which is non-refundable.</p>
-                <p>The Seller will send a balance finalization request to the Buyer by the end of the production, and the Customer agrees to pay the remaining balance in full before shipment.</p>
-                
-                <h2>DELIVERY AND SHIPPING</h2>
-                <p>The delivery of the goods (hereinafter referred to as the "Delivery") will be at Estrelle Bridal.</p>
-                <p>The shipping method will be decided by the suppliers and Seller will be responsible for the costs of the shipment.</p>
-                
-                <h2>NO REFUNDS OR RETURNS</h2>
-                <p>The Customer acknowledges that the wedding dress is made-to-order or customized to their specifications. Therefore, NO returns or refunds will be accepted after the order has been confirmed and production has started.</p>
-                
-                <h2>CANCELLATION OF ORDERS</h2>
-                <p>The Customer who cancels their sales contract are NOT entitled to a refund of ANY monies paid up to and including the cancellation date. The Customer is required to make full payment as per the original order agreement, even in the event of order cancellation, costs will still be incurred to the suppliers and to the Seller regardless of any circumstance.</p>
-                
+                ${measurementsBlock}
+                ${paymentTermsBlock}
+
                 <h2>INSPECTION</h2>
                 <p>Hereby, the Customer acknowledges that it has relied solely on the investigations, examinations, and inspections that the Customer has chosen to make and that the Seller has afforded the Customer the opportunity for full and complete investigations, examinations, and inspections.</p>
                 
@@ -21321,10 +21340,14 @@ www.estrellebridal.com`;
             if (neededBy) updateRecord('Alterations', alt.ID, { DueDate: neededBy });
             
             const contractHtml = getAltContractHtml();
-            updateRecord('Alterations', alt.ID, { 
+            // Persist the consultant's signature so the e-signed alteration PDF renders it.
+            const altConsultant = data.consultants.find(cn => cn.Name === consultantName);
+            const altConsultSig = (altConsultant && altConsultant.Signature && altConsultant.Signature.indexOf('data:image') === 0) ? altConsultant.Signature : '';
+            updateRecord('Alterations', alt.ID, {
                 AlterationTotal: preTax,
                 ContractHtml: contractHtml,
-                ContractConsultant: consultantName
+                ContractConsultant: consultantName,
+                ConsultantSignature: altConsultSig
             });
             
             const clientName = `${c.FirstName} ${c.LastName}`;
