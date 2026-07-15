@@ -4364,8 +4364,10 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     const list = body.action === 'bulkAdd' ? body.records : [body.record];
                     const rows = list.map((r, i) => {
                         const rec = Object.assign({}, r);
+                        var pid = rec.ID;
                         delete rec.ID;
-                        return { id: String(Date.now() + i), data: rec };
+                        var newId = (pid !== undefined && pid !== null && /^[0-9]+$/.test(String(pid))) ? String(pid) : String(Date.now() + i);
+                        return { id: newId, data: rec };
                     });
                     const res = await fetch(SUPABASE_URL + '/rest/v1/' + table,
                         { method:'POST', headers: sbHead({ Prefer:'return=representation' }), body: JSON.stringify(rows) });
@@ -4643,7 +4645,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             
             // Send to server and WAIT for real ID
             try {
-                const res = await api('POST', { action: 'add', sheet, record });
+                const res = await api('POST', { action: 'add', sheet, record: newRecord });
                 // Update temp ID with real ID from server
                 if (res && res.id && data[sheetKey]) {
                     const idx = data[sheetKey].findIndex(r => r.ID === tempId);
