@@ -4362,11 +4362,10 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 if (!table) throw new Error('Unknown sheet: ' + body.sheet);
                 if (body.action === 'add' || body.action === 'bulkAdd') {
                     const list = body.action === 'bulkAdd' ? body.records : [body.record];
-                    const rows = list.map(r => {
+                    const rows = list.map((r, i) => {
                         const rec = Object.assign({}, r);
-                        const id = rec.ID || ('id_' + Date.now() + '_' + Math.random().toString(36).slice(2,9));
                         delete rec.ID;
-                        return { id, data: rec };
+                        return { id: String(Date.now() + i), data: rec };
                     });
                     const res = await fetch(SUPABASE_URL + '/rest/v1/' + table,
                         { method:'POST', headers: sbHead({ Prefer:'return=representation' }), body: JSON.stringify(rows) });
