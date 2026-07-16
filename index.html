@@ -16920,9 +16920,14 @@ The {storeName} Team`
                 toast('Measurements saved!', 'success');
             }
             
+            const historyJson = JSON.stringify(measurements);
+            // Keep the in-memory client in sync so the re-render below shows the change
+            // immediately (updateRecord swaps the data.clients slot for a fresh object).
+            currentClient.MeasurementHistory = historyJson;
+
             // Save to client
-            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: historyJson });
+
             editingMeasurementIdx = null;
             closeModal('addMeasurement');
             renderClientMeasurements();
@@ -16974,18 +16979,25 @@ The {storeName} Team`
             // Get existing measurements
             const measurements = getClientMeasurements();
             measurements.push(measurement);
-            
+
+            const historyJson = JSON.stringify(measurements);
+            // Update the in-memory client immediately so the profile re-renders with the
+            // new record right away (updateRecord swaps the data.clients slot for a fresh
+            // object, but currentClient keeps referencing the old one, so set it here too).
+            currentClient.MeasurementHistory = historyJson;
+
             // Save to client
-            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: historyJson });
+
             // Also store in currentOrder so it persists
             currentOrder.measurements = { ...measurement };
             currentOrder.measurementsSaved = true;
-            
+
             toast('Measurements saved to client profile!', 'success');
             setMeasSaveState('saved');
 
-            // Update the dropdown to show the new measurement
+            // Repaint the profile's measurement list and the saved-measurements dropdown
+            renderClientMeasurements();
             populateSavedMeasurementsDropdown();
         }
         
@@ -18033,16 +18045,12 @@ The {storeName} Team`
                 else if (itemCount > 0) desc = `${itemCount} item${itemCount > 1 ? 's' : ''}`;
                 else desc = 'measurements';
 
-                // When measurements are present, be explicit that they're saved to the
-                // draft, and offer to also commit them to the client's profile so they
-                // land in MeasurementHistory (not just the recoverable draft).
-                let msg = `Your work is saved (${desc}). You can continue later from the client's profile or dashboard.`;
+                let msg = `Saved (${desc}).`;
                 const buttons = [
                     { label: '✓ Close', style: 'primary', action: () => { closeModal('choice'); closeModal('yes'); renderClientProfile(); renderDash(); } },
                     { label: '← Keep Editing', style: 'secondary', action: () => { closeModal('choice'); startDraftAutoSave(); } }
                 ];
                 if (hasMeasurements) {
-                    msg = `Your measurements are saved to this draft (${desc}) and will be here when you return. To also file them on the client's profile now, choose "Save to client profile".`;
                     buttons.splice(1, 0, {
                         label: '📋 Save to client profile',
                         style: 'secondary',
@@ -18056,7 +18064,7 @@ The {storeName} Team`
                     });
                 }
 
-                showChoiceDialog('Draft Auto-Saved', msg, buttons);
+                showChoiceDialog('Saved', msg, buttons);
             } else {
                 closeModal('yes');
             }
