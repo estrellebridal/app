@@ -4746,9 +4746,16 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
           try {
             // Auto-save unsaved notes when leaving consult page
             const currentPage = document.querySelector('.section.active')?.id;
-            if (!skipUnsavedCheck && currentPage === 'page-consult' && name !== 'consult') {
+            const leavingConsult = currentPage === 'page-consult' && name !== 'consult';
+            if (!skipUnsavedCheck && leavingConsult) {
                 if (hasUnsavedClientNotes()) saveClientNotes(true);
                 currentClient = null;
+            }
+            // Whenever we actually leave the client profile (including back-button /
+            // programmatic nav where skipUnsavedCheck is true), drop the #client/<id>
+            // hash so a later refresh doesn't reopen a profile the user already left.
+            if (leavingConsult && location.hash.indexOf('#client/') === 0) {
+                try { history.replaceState(null, '', location.pathname + location.search); } catch(e) { location.hash = ''; }
             }
             
             // Track page history
@@ -15439,12 +15446,27 @@ The {storeName} Team`
             renderVisitHistory();
             showPage('consult', true); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
-            
+
+            // Reflect the open client in the URL so a browser refresh restores this
+            // profile instead of bouncing back to the dashboard.
+            try { location.hash = 'client/' + encodeURIComponent(id); } catch(e) {}
+
             // Scroll to top of page
             window.scrollTo(0, 0);
             $('page-consult')?.scrollTo(0, 0);
         }
-        
+
+        // If the URL carries #client/<id> (e.g. after a browser refresh), reopen that
+        // profile once client data is available. Returns true if a client was restored.
+        function restoreClientFromHash() {
+            const m = (location.hash || '').match(/^#client\/(.+)$/);
+            if (!m) return false;
+            const id = decodeURIComponent(m[1]);
+            if (!getClient(id)) return false; // unknown/deleted id — ignore, stay on dashboard
+            openClient(id);
+            return true;
+        }
+
         function hasUnsavedClientNotes() {
             if (!currentClient) return false;
             return $('cStyle').value !== originalClientNotes.style ||
@@ -21691,6 +21713,9 @@ www.estrellebridal.com`;
             renderDash();
             if (ordersView === 'orders') renderOrders(); else if (ordersView === 'alterations') renderAlts();
             try { cleanUpAppointmentTypes(); } catch(e) {}
+            // Restore a client profile from the URL (#client/<id>) after a refresh, now
+            // that client data is loaded. No-op if the hash isn't a client route.
+            try { restoreClientFromHash(); } catch(e) {}
         }
 
         // ===== Login gate (shared store login) =====
