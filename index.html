@@ -3782,13 +3782,19 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                     <!-- Phase 2: Email (shown after save) -->
                     <div id="yStep6Email" style="display:none">
-                        <div style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);padding:14px;border-radius:10px;margin-bottom:16px;border:1.5px solid #81c784">
+                        <div id="yStep6SavedBanner" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);padding:14px;border-radius:10px;margin-bottom:16px;border:1.5px solid #81c784">
                             <div style="font-size:14px;font-weight:700;color:#2e7d32;margin-bottom:2px">✓ Contract Saved!</div>
                             <div style="font-size:11px;color:#558b2f">Order and contract saved. Now send for e-sign — the signed contract will auto-save to Google Drive once the customer signs.</div>
                         </div>
-                        
+
+                        <!-- Shown instead of e-sign when the customer already signed in person -->
+                        <div id="yStep6SignedInPerson" style="display:none;background:linear-gradient(135deg,#e8f5e9,#c8e6c9);padding:16px;border-radius:10px;margin-bottom:16px;border:1.5px solid #81c784">
+                            <div style="font-size:14px;font-weight:700;color:#2e7d32;margin-bottom:2px">✓ Signed in person</div>
+                            <div style="font-size:11px;color:#558b2f">The customer signed on the tablet. No e-sign link needed — you're all done.</div>
+                        </div>
+
                         <!-- E-Sign option (recommended) -->
-                        <div style="background:linear-gradient(135deg,#fdf8f0,#faf3e6);border:1.5px solid #C4A265;border-radius:10px;padding:16px;margin-bottom:16px">
+                        <div id="yStep6ESignBlock" style="background:linear-gradient(135deg,#fdf8f0,#faf3e6);border:1.5px solid #C4A265;border-radius:10px;padding:16px;margin-bottom:16px">
                             <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
                                 <span style="font-size:24px">📱</span>
                                 <div>
@@ -18570,6 +18576,20 @@ The {storeName} Team`
             if (yStep === 2) {
                 // Ensure items are rendered
                 renderOrderItems();
+                // Restore order notes + tax settings when returning to this step so
+                // they aren't lost when navigating back and forth.
+                if ($('oiDetails') && currentOrder.orderDetails != null) {
+                    $('oiDetails').value = currentOrder.orderDetails;
+                }
+                if (currentOrder.taxType) {
+                    if (currentOrder.taxType === 'hst' && $('taxHst')) $('taxHst').checked = true;
+                    else if (currentOrder.taxType === 'custom' && $('taxCustom')) {
+                        $('taxCustom').checked = true;
+                        if ($('customTaxRate') && currentOrder.customTaxRate) $('customTaxRate').value = currentOrder.customTaxRate;
+                    }
+                    else if (currentOrder.taxType === 'none' && $('taxNone')) $('taxNone').checked = true;
+                    if (typeof updateTaxOption === 'function') updateTaxOption();
+                }
             }
             
             if (yStep === 4) genContract();
@@ -18608,21 +18628,11 @@ The {storeName} Team`
         }
 
         function yNext() {
+            // Always capture what's on the current step before moving on, so going
+            // forward never silently drops typed data (measurements, order notes, tax,
+            // consultant/initials). Back/jump navigation already does this; do it here too.
+            saveCurrentStepData();
             if (yStep === 1) {
-                // Capture measurements first so nothing typed is ever discarded.
-                currentOrder.measurements = {
-                    bust: $('mBust').value,
-                    cup: $('mCup').value,
-                    waist: $('mWaist').value,
-                    hip: $('mHip').value,
-                    height: $('mHeight').value,
-                    waistToFloor: $('mWaistToFloor').value,
-                    heels: $('mHeels').value,
-                    notes: $('mNotes').value,
-                    unit: measUnit,
-                    custom: [...customMeasurements],
-                    takenBy: $('mTakenBy').value
-                };
                 // "Measured by" is a reminder, not a blocker — warn but allow proceeding.
                 if (!$('mTakenBy').value) {
                     toast('Tip: set who took the measurements when you get a chance', 'warning');
@@ -20581,6 +20591,23 @@ p{margin:6px 0;}
             `;
         }
 
+        // Toggle Step 6 (Phase 2) between "send e-sign" and "signed in person".
+        // The customer signs in person on the tablet, which captures a signature into
+        // currentOrder.signatureData. When that's present, there's no point offering an
+        // e-sign link, so we swap in a "signed in person" confirmation instead.
+        function applyStep6SignedState() {
+            const signedInPerson = !!(currentOrder.signatureData &&
+                String(currentOrder.signatureData).startsWith('data:image'));
+            const esign = $('yStep6ESignBlock');
+            const signedMsg = $('yStep6SignedInPerson');
+            const savedBanner = $('yStep6SavedBanner');
+            if (esign) esign.style.display = signedInPerson ? 'none' : 'block';
+            if (signedMsg) signedMsg.style.display = signedInPerson ? 'block' : 'none';
+            // The green "Contract Saved / now send for e-sign" banner only makes sense
+            // when e-sign is still the next step; hide it once signed in person.
+            if (savedBanner) savedBanner.style.display = signedInPerson ? 'none' : 'block';
+        }
+
         async function finalizeContract() {
             const c = currentClient;
             if (!c) return;
@@ -20622,6 +20649,11 @@ p{margin:6px 0;}
             $('yStep6Save').style.display = 'none';
             $('yStep6Email').style.display = 'block';
             prepareEmail();
+
+            // If the customer already signed in person (on the tablet), there's no
+            // reason to also send an e-sign link. Hide the e-sign block and show a
+            // "signed in person" confirmation instead. Otherwise show e-sign as usual.
+            applyStep6SignedState();
             
             // Store captured data for email functions
             currentOrder._capturedContractHtml = contractHtml;
