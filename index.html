@@ -20861,10 +20861,26 @@ www.estrellebridal.com`;
         async function saveAndSendESign() {
             const c = currentClient;
             if (!c) return;
-            
+
+            // GUARD: if the customer already signed in person, sending an e-sign link would
+            // blank their signature (this flow saves the order without one). Confirm first.
+            const canvasHasSig = (typeof sigPadCustomer !== 'undefined' && sigPadCustomer?.canvas && !isCanvasBlank(sigPadCustomer.canvas));
+            const alreadySigned = canvasHasSig || (currentOrder.signatureData && String(currentOrder.signatureData).startsWith('data:image'));
+            if (alreadySigned) {
+                const ok = await appConfirm(
+                    'Customer already signed in person. Save with that signature instead of sending an e-sign link?',
+                    'Already signed'
+                );
+                // Keep their signature and save it as a signed order — no e-sign link.
+                if (canvasHasSig) currentOrder.signatureData = sigPadCustomer.canvas.toDataURL();
+                if (ok) { return saveAndSendSigned(); }
+                // If they decline, do nothing (don't wipe the signature).
+                return;
+            }
+
             const email = c.Email;
             if (!email) { toast('No email address for this client. Save the order first, then add their email.', 'error'); return; }
-            
+
             // Capture signatures from canvas before saving
             if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
                 currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
