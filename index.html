@@ -3859,6 +3859,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [], visitnotes: [], announcements: [] };
         let currentClient = null;
         let currentOrder = { items: [], measurements: {} };
+        // Route the browser was showing when the script first ran, captured before any
+        // navigation overwrites it, so a refresh can be replayed by restoreViewFromHash().
+        const _initialRoute = location.hash || '';
         let editingDesigner = null;
         let originalClientNotes = { style: '', notes: '', budget: '' };
         
@@ -4751,13 +4754,16 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 if (hasUnsavedClientNotes()) saveClientNotes(true);
                 currentClient = null;
             }
-            // Whenever we actually leave the client profile (including back-button /
-            // programmatic nav where skipUnsavedCheck is true), drop the #client/<id>
-            // hash so a later refresh doesn't reopen a profile the user already left.
-            if (leavingConsult && location.hash.indexOf('#client/') === 0) {
-                try { history.replaceState(null, '', location.pathname + location.search); } catch(e) { location.hash = ''; }
+            // Record the current page in the URL so a browser refresh restores exactly
+            // where the user was instead of bouncing to the dashboard. The client
+            // profile uses the more specific #client/<id> hash, written by openClient()
+            // right after it calls showPage('consult'); for that page we leave the hash
+            // alone here so we don't clobber it.
+            if (name !== 'consult') {
+                try { history.replaceState(null, '', location.pathname + location.search + '#page/' + name); }
+                catch(e) { location.hash = 'page/' + name; }
             }
-            
+
             // Track page history
             if (!skipUnsavedCheck && pageHistory[pageHistory.length - 1] !== name) {
                 pageHistory.push(name);
@@ -15456,15 +15462,29 @@ The {storeName} Team`
             $('page-consult')?.scrollTo(0, 0);
         }
 
-        // If the URL carries #client/<id> (e.g. after a browser refresh), reopen that
-        // profile once client data is available. Returns true if a client was restored.
-        function restoreClientFromHash() {
-            const m = (location.hash || '').match(/^#client\/(.+)$/);
-            if (!m) return false;
-            const id = decodeURIComponent(m[1]);
-            if (!getClient(id)) return false; // unknown/deleted id — ignore, stay on dashboard
-            openClient(id);
-            return true;
+        // Restore the view from the URL after a browser refresh so staff land back
+        // exactly where they were instead of on the dashboard. Handles:
+        //   #client/<id>  → reopen that client profile
+        //   #page/<name>  → switch to that page
+        // Returns true if a view was restored. No-op / false for unknown routes.
+        const VALID_PAGES = ['dashboard','clients','schedule','orders','alterations','reporting','settings'];
+        function restoreViewFromHash() {
+            // Use the route captured at page load (_initialRoute); the live location.hash
+            // may already have been overwritten by the default showPage('dashboard').
+            const hash = _initialRoute || '';
+            const cm = hash.match(/^#client\/(.+)$/);
+            if (cm) {
+                const id = decodeURIComponent(cm[1]);
+                if (!getClient(id)) return false; // unknown/deleted id — stay on dashboard
+                openClient(id);
+                return true;
+            }
+            const pm = hash.match(/^#page\/([a-z]+)$/);
+            if (pm && VALID_PAGES.includes(pm[1]) && pm[1] !== 'dashboard') {
+                showPage(pm[1], true); // dashboard is already the default; skip redundant work
+                return true;
+            }
+            return false;
         }
 
         function hasUnsavedClientNotes() {
@@ -21682,6 +21702,8 @@ www.estrellebridal.com`;
         document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('active'); }));
         
         // Load cached data first for instant UI
+        // (_initialRoute was captured at the top of the script, before this default
+        // showPage overwrites the hash, so restoreViewFromHash() can replay it later.)
         loadCachedData();
         showPage('dashboard');
 
@@ -21713,9 +21735,9 @@ www.estrellebridal.com`;
             renderDash();
             if (ordersView === 'orders') renderOrders(); else if (ordersView === 'alterations') renderAlts();
             try { cleanUpAppointmentTypes(); } catch(e) {}
-            // Restore a client profile from the URL (#client/<id>) after a refresh, now
-            // that client data is loaded. No-op if the hash isn't a client route.
-            try { restoreClientFromHash(); } catch(e) {}
+            // Restore the last view from the URL (#client/<id> or #page/<name>) after a
+            // refresh, now that data is loaded. No-op if the hash isn't a known route.
+            try { restoreViewFromHash(); } catch(e) {}
         }
 
         // ===== Login gate (shared store login) =====
