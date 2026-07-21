@@ -4331,12 +4331,17 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         }
         async function refreshSession() {
             if (!AUTH.session) return false;
-            const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-                method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
-                body: JSON.stringify({ refresh_token: AUTH.session.refresh_token })
-            });
-            if (!res.ok) { AUTH.clear(); return false; }
-            AUTH.save(await res.json()); return true;
+            try {
+                const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+                    method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
+                    body: JSON.stringify({ refresh_token: AUTH.session.refresh_token })
+                });
+                if (res.ok) { AUTH.save(await res.json()); return true; }
+                // Refresh token rejected (expired/revoked) — a real sign-in is required.
+                // Only clear on a definitive 4xx; a 5xx/network blip must NOT log us out.
+                if (res.status >= 400 && res.status < 500) { AUTH.clear(); return false; }
+            } catch (e) { /* offline / network blip — keep the session, try again later */ }
+            return false;
         }
         function signOut(){ AUTH.clear(); location.reload(); }
 
@@ -4361,12 +4366,24 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         // up to 3 times with 1s/2s/4s backoff. Never retry on 4xx (client errors).
         async function api(method, body = null) {
             let lastErr;
+            let didAuthRefresh = false;
             for (let attempt = 0; attempt < 4; attempt++) {
                 try {
                     return await _apiOnce(method, body);
                 } catch (e) {
                     lastErr = e;
                     const status = e && e.httpStatus;
+                    // Expired access token (e.g. device slept past the keep-alive timer):
+                    // refresh the session once and retry with the new token.
+                    if ((status === 401 || status === 403) && !didAuthRefresh) {
+                        didAuthRefresh = true;
+                        if (await refreshSession()) continue;
+                        // Session is truly gone — surface the sign-in screen right away
+                        // instead of a mystery failure.
+                        if (!document.getElementById('loginGate')) showLogin();
+                        setSync('● Signed out', 'error');
+                        throw new Error('Signed out — sign in again');
+                    }
                     const isServerErr = typeof status === 'number' && status >= 500;
                     const isNetworkErr = !status && (e.name === 'TypeError' || e.message === 'Failed to fetch' || e.message === 'Load failed' || e.message === 'NetworkError when attempting to fetch resource.');
                     if (attempt < 3 && (isServerErr || isNetworkErr)) {
@@ -4647,7 +4664,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     if (idx >= 0) data[sheetKey].splice(idx, 1);
                     saveCachedData();
                 }
-                toast('Save failed - please refresh', 'error');
+                toast('Save failed — ' + (e && e.message ? e.message : 'check connection'), 'error');
                 return { id: tempId };
             }
         }
@@ -4655,10 +4672,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         let _refreshTimer = null;
         function scheduleRefreshUI() {
             if (_refreshTimer) clearTimeout(_refreshTimer);
-            _refreshTimer = setTimeout(() => {
-                // Don't refresh while a modal is open — it can interfere with buttons
+            _refreshTimer = setTimeout(function tick() {
+                // Don't refresh while a modal is open — it can interfere with buttons.
+                // Keep retrying instead of dropping, so the refresh lands as soon as
+                // the modal closes (dropping it left the page stale until re-navigation).
                 const anyModalOpen = document.querySelector('.modal-overlay.active');
-                if (anyModalOpen) return;
+                if (anyModalOpen) { _refreshTimer = setTimeout(tick, 500); return; }
                 refreshUI();
             }, 500);
         }
@@ -21859,10 +21878,17 @@ www.estrellebridal.com`;
                 }
             };
         }
+        let _sessionTimer = null;
         function startApp() {
             bootData();
-            setInterval(refreshSession, 50 * 60 * 1000);   // keep session fresh
+            if (_sessionTimer) clearInterval(_sessionTimer);
+            _sessionTimer = setInterval(refreshSession, 50 * 60 * 1000);   // keep session fresh
         }
+        // Timers don't fire while an iPad/tab is asleep, so the keep-alive above can
+        // miss by hours. Refresh the session whenever the app becomes visible again.
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && AUTH.session) refreshSession();
+        });
         (async () => {
             if (AUTH.token()) await refreshSession();
             if (AUTH.token()) startApp(); else showLogin();
