@@ -6532,12 +6532,15 @@ The Estrelle Bridal Team`;
             
             // Show toast with undo option
             toastWithUndo(`Marked ${clientName}'s appointment as confirmed`);
+            // Repaint every surface the ✓ button lives on, not just the dashboard,
+            // so the button flips immediately wherever it was clicked.
             renderDash();
+            try { renderAllAppointments(); renderWeek(); } catch(e) {}
         }
-        
+
         function undoLastAction() {
             if (!lastAction) return;
-            
+
             if (lastAction.type === 'confirm') {
                 const appt = data.appointments.find(a => String(a.ID) === String(lastAction.apptId));
                 if (appt) {
@@ -6546,6 +6549,7 @@ The Estrelle Bridal Team`;
                     saveCachedData();
                     toast('Undone!', 'success');
                     renderDash();
+                    try { renderAllAppointments(); renderWeek(); } catch(e) {}
                 }
             }
             
@@ -7844,6 +7848,9 @@ The Estrelle Bridal Team`;
                                 // Also update any appointments that reference the temp ID
                                 data.appointments.filter(a => a.ClientID == tempClientId).forEach(a => a.ClientID = result.id);
                                 saveCachedData();
+                                // Repaint so appointment cards link to the real client id
+                                // (a card baked with the temp id opens nothing on tap).
+                                scheduleRefreshUI();
                             }
                         })
                         .catch(e => console.warn('Client sync failed (saved locally):', e));
@@ -11655,6 +11662,9 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                             newAlt.ID = result?.id || 'alt_' + Date.now();
                             data.alterations.push(newAlt);
                             saveCachedData();
+                            // Repaint the list — it rendered before this push, so the new
+                            // record wouldn't show until some later refresh.
+                            renderAlts();
                             console.log('[ALTS] Created new record in Google Sheets:', newAlt.ID);
                         })
                         .catch(e => {
@@ -12219,8 +12229,10 @@ www.estrellebridal.com`;
             
             toast(`Fitting scheduled: ${fmtDate(date)} at ${fmtTime(time)}`, 'success');
             
-            // Save to server in background (non-blocking)
-            saveRecord('Appointments', newAppt).then(result => {
+            // Save to server in background (non-blocking). Post directly — we already
+            // pushed the optimistic row above; saveRecord would push a second copy and
+            // the fitting would show up twice until reload.
+            api('POST', { action: 'add', sheet: 'Appointments', record: newAppt }).then(result => {
                 // Update temp ID with real ID
                 if (result?.id) {
                     const idx = data.appointments.findIndex(a => a.ID === tempId);
@@ -12228,8 +12240,25 @@ www.estrellebridal.com`;
                     const pendingIdx = altPendingNextFittings.indexOf(String(tempId));
                     if (pendingIdx >= 0) altPendingNextFittings[pendingIdx] = String(result.id);
                     saveCachedData();
+                    // Re-render the modal lists so their buttons carry the real id.
+                    renderAltNextFitting();
+                    const updated = data.appointments.filter(a =>
+                        String(a.ClientID) === String(currentAltClientId) &&
+                        ((a.Type||'').toLowerCase().includes('fitting'))
+                    ).sort((a, b) => parseDate(a.Date) - parseDate(b.Date));
+                    renderAltFittingsList(updated);
+                    scheduleRefreshUI();
                 }
-            }).catch(e => console.error('Save fitting failed:', e));
+            }).catch(e => {
+                // Roll back the optimistic row so a failed save doesn't linger as a ghost.
+                const idx = data.appointments.findIndex(a => a.ID === tempId);
+                if (idx >= 0) data.appointments.splice(idx, 1);
+                const pendingIdx = altPendingNextFittings.indexOf(String(tempId));
+                if (pendingIdx >= 0) altPendingNextFittings.splice(pendingIdx, 1);
+                saveCachedData();
+                renderAltNextFitting();
+                toast('Save failed — ' + (e && e.message ? e.message : 'check connection'), 'error');
+            });
         }
         
         function saveFittingNote(fittingId, note) {
@@ -12312,7 +12341,7 @@ www.estrellebridal.com`;
                 }
                 const bgColor = isToday ? '#e8f5e9' : (isPast ? 'var(--cream)' : 'var(--blush)');
                 const circleColor = isToday ? '#27ae60' : (isPast ? 'var(--champagne)' : 'var(--dusty)');
-                return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${bgColor};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt(${f.ID})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+                return `<div style="display:flex;align-items:center;gap:8px;padding:8px;${isPast ? 'opacity:0.7' : ''};background:${bgColor};border-radius:4px;margin-bottom:4px;cursor:pointer;transition:all 0.2s" onclick="editFittingFromAlt('${f.ID}')" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
                     <div style="width:24px;height:24px;background:${circleColor};color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600">${idx + 1}</div>
                     <div style="flex:1">
                         <div style="font-size:11px;font-weight:500">${f.Type} - ${fmtDate(f.Date)}${isToday ? ' (TODAY)' : ''} @ ${timeStr}</div>
@@ -12595,6 +12624,9 @@ www.estrellebridal.com`;
                         if (res && res.id) {
                             const idx = data.emailtemplates.findIndex(t => t.ID === tempId);
                             if (idx >= 0) data.emailtemplates[idx].ID = res.id;
+                            saveCachedData();
+                            // Re-render so Edit/Delete buttons carry the real id, not the temp one.
+                            renderEmailTemplates();
                         }
                     });
                 toast('Template created!', 'success');
@@ -17050,13 +17082,21 @@ The {storeName} Team`
             if (!confirmed) return;
             
             const measurements = getClientMeasurements();
+            // The list renders date-sorted (newest first) and bakes that index into
+            // the buttons — sort the same way here so we delete the row that was
+            // actually clicked, not whichever sat at that index in stored order.
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             const deletedMeasurement = measurements[idx];
             const deletedIdx = idx;
-            
+
             measurements.splice(idx, 1);
-            
-            updateRecord('Clients', currentClient.ID, { MeasurementHistory: JSON.stringify(measurements) });
-            
+
+            const historyJson = JSON.stringify(measurements);
+            // Keep the in-memory client in sync so the re-render below drops the row
+            // immediately (updateRecord swaps the data.clients slot for a fresh object).
+            currentClient.MeasurementHistory = historyJson;
+            updateRecord('Clients', currentClient.ID, { MeasurementHistory: historyJson });
+
             renderClientMeasurements();
             toast('Measurement deleted', 'success', true);
             
@@ -17082,10 +17122,13 @@ The {storeName} Team`
             
             // Insert back at original position
             measurements.splice(idx, 0, measurement);
-            
-            updateRecord('Clients', clientId, { MeasurementHistory: JSON.stringify(measurements) });
-            
+
+            const historyJson = JSON.stringify(measurements);
+            updateRecord('Clients', clientId, { MeasurementHistory: historyJson });
+
             if (currentClient && currentClient.ID == clientId) {
+                // Sync the in-memory client so the restored row shows right away.
+                currentClient.MeasurementHistory = historyJson;
                 renderClientMeasurements();
             }
             
