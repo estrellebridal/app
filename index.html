@@ -16147,6 +16147,9 @@ The {storeName} Team`
                             const idx = data.topoptions.findIndex(r => r.ID === tempId);
                             if (idx >= 0) data.topoptions[idx].ID = res.id;
                             saveCachedData();
+                            // Re-render so the card buttons (Edit/Delete/favorite) carry the
+                            // real server id instead of the stale tempId (which made them no-ops).
+                            renderClientOptions();
                         }
                     })
                     .catch(e => {
@@ -16154,7 +16157,7 @@ The {storeName} Team`
                         if (idx >= 0) data.topoptions.splice(idx, 1);
                         saveCachedData();
                         renderClientOptions();
-                        toast('Save failed', 'error');
+                        toast('Save failed — ' + (e && e.message ? e.message : 'check connection'), 'error');
                     });
             }
             
@@ -16167,7 +16170,9 @@ The {storeName} Team`
         
         function editOption(id) {
             const opt = data.topoptions.find(o => o.ID == id);
-            if (!opt) { toast('Option not found', 'error'); return; }
+            // Stale button id (e.g. right after an add) — refresh the cards so the
+            // next click carries the current id.
+            if (!opt) { renderClientOptions(); toast('Please try again', 'warning'); return; }
             
             // Set modal to edit mode
             $('optionModalTitle').textContent = 'Edit Top Option';
@@ -16214,7 +16219,8 @@ The {storeName} Team`
 
         async function toggleFavorite(id) {
             const opt = data.topoptions.find(o => o.ID == id);
-            if (!opt) return;
+            // Stale button id — refresh so the next click carries the current id.
+            if (!opt) { renderClientOptions(); return; }
             const newValue = !(opt.IsFavorite === true || opt.IsFavorite === 'TRUE');
             opt.IsFavorite = newValue ? 'TRUE' : '';
             saveCachedData();
@@ -16225,7 +16231,9 @@ The {storeName} Team`
         async function deleteOptionConfirm(id) {
             // Find and save option for undo
             const option = data.topoptions.find(o => o.ID == id);
-            if (!option) return;
+            // Stale button id (e.g. right after an add) — refresh the cards so the
+            // next click carries the current id.
+            if (!option) { renderClientOptions(); toast('Please try again', 'warning'); return; }
             
             const optionCopy = { ...option };
             
