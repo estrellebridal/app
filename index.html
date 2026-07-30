@@ -1447,7 +1447,13 @@
                     
                     <!-- Monthly Sales Chart -->
                     <div class="card" style="margin-bottom:16px">
-                        <div class="card-header"><h2 class="card-title">📈 Monthly Sales</h2></div>
+                        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+                            <h2 class="card-title">📈 Monthly Sales</h2>
+                            <div style="display:flex;gap:6px">
+                                <button type="button" class="btn btn-sm" id="chartTaxPre" onclick="setChartTaxMode('pre')">Pre-tax</button>
+                                <button type="button" class="btn btn-sm" id="chartTaxWith" onclick="setChartTaxMode('with')">With tax</button>
+                            </div>
+                        </div>
                         <div class="card-body">
                             <div id="salesChart" style="height:250px;display:flex;align-items:flex-end;gap:8px;padding:20px 0"></div>
                             <div id="salesChartLabels" style="display:flex;gap:8px;font-size:10px;color:var(--text-secondary);margin-top:8px"></div>
@@ -1460,7 +1466,7 @@
                             <div class="card-header"><h2 class="card-title">💰 Monthly Breakdown</h2></div>
                             <div class="card-body" style="max-height:400px;overflow-y:auto">
                                 <table class="table" id="monthlyBreakdownTable">
-                                    <thead><tr><th>Month</th><th>Orders</th><th>Pre-Tax</th><th>Tax</th><th>Total</th></tr></thead>
+                                    <thead><tr><th>Month</th><th>Orders</th><th>Pre-Tax</th><th>Tax</th><th>With Tax</th></tr></thead>
                                     <tbody></tbody>
                                 </table>
                             </div>
@@ -3114,7 +3120,20 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <label class="form-label">Est. Arrival (ETA)</label>
                     <input type="date" class="form-input" id="editOrderArrival">
                 </div>
-                
+
+                <!-- Price -->
+                <div class="form-group">
+                    <label class="form-label">Price (pre-tax)</label>
+                    <div style="display:grid;grid-template-columns:1fr 110px;gap:12px">
+                        <input type="text" class="form-input" id="editOrderPreTax" placeholder="$0" inputmode="decimal" oninput="updateEditOrderTax()">
+                        <select class="form-input" id="editOrderTaxType" onchange="updateEditOrderTax()">
+                            <option value="hst">13% HST</option>
+                            <option value="none">No tax</option>
+                        </select>
+                    </div>
+                    <div id="editOrderTaxPreview" style="font-size:11px;color:var(--taupe);margin-top:4px"></div>
+                </div>
+
                 <!-- Order Submitted Tracking -->
                 <div style="background:#f0f7ff;padding:12px;border-radius:5px;margin-bottom:16px;border-left:3px solid #3498db">
                     <div style="font-weight:600;font-size:12px;margin-bottom:8px">📋 Order Submitted to Designer</div>
@@ -8498,6 +8517,12 @@ The Estrelle Bridal Team`;
             updateOrderSelection();
         }
         
+        function updateEditOrderTax() {
+            const pre = parseFloat(String($('editOrderPreTax').value).replace(/[$,]/g, '')) || 0;
+            const tax = $('editOrderTaxType').value === 'hst' ? Math.round(pre * 0.13 * 100) / 100 : 0;
+            $('editOrderTaxPreview').textContent = pre ? `Tax ${money(tax)} · With tax ${money(pre + tax)}` : '';
+        }
+
         function viewOrderDetails(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) return;
@@ -8515,6 +8540,13 @@ The Estrelle Bridal Team`;
             // Order fields
             $('editOrderPO').value = order.PO || '';
             $('editOrderDate').value = order.OrderDate || '';
+
+            // Price fields — pre-fill from stored money or the items' prices
+            const preTaxVal = getOrderPreTax(order);
+            $('editOrderPreTax').value = preTaxVal ? String(preTaxVal) : '';
+            const storedTax = parseFloat(order.HST);
+            $('editOrderTaxType').value = (!isNaN(storedTax) && storedTax === 0 && preTaxVal) ? 'none' : 'hst';
+            updateEditOrderTax();
             
             // Parse items - check if Items JSON exists
             let items = [];
@@ -9084,6 +9116,16 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 SubmittedBy: $('editOrderSubmittedBy').value,
                 SubmittedDate: $('editOrderSubmittedDate').value
             };
+
+            // Price: only write money fields when a price was entered, so clearing
+            // the box never wipes existing figures.
+            const preTax = parseFloat(String($('editOrderPreTax').value).replace(/[$,]/g, ''));
+            if (!isNaN(preTax) && preTax > 0) {
+                const taxAmt = $('editOrderTaxType').value === 'hst' ? Math.round(preTax * 0.13 * 100) / 100 : 0;
+                updates.Subtotal = preTax;
+                updates.HST = taxAmt;
+                updates.Total = Math.round((preTax + taxAmt) * 100) / 100;
+            }
             
             // Update Items JSON if we have items
             if (items.length > 0) {
@@ -10287,6 +10329,11 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         // ========== ANALYTICS ==========
+        let chartTaxMode = 'pre'; // 'pre' | 'with' — Monthly Sales chart toggle
+        function setChartTaxMode(mode) {
+            chartTaxMode = mode;
+            renderAnalytics();
+        }
         function renderAnalytics() {
             // Default to current year
             if (!$('analyticsYear').dataset.init) {
@@ -10302,18 +10349,21 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             // Calculate totals
             let totalPreTax = 0;
             let totalTax = 0;
+            let anyEstTax = false;
             yearOrders.forEach(o => {
                 totalPreTax += getOrderPreTax(o);
-                totalTax += parseFloat(o.HST) || 0;
+                const t = getOrderTax(o);
+                totalTax += t.amount;
+                if (t.estimated && t.amount > 0) anyEstTax = true;
             });
             const totalWithTax = totalPreTax + totalTax;
             const avgOrder = yearOrders.length > 0 ? totalPreTax / yearOrders.length : 0;
-            
+
             $('analyticsTotalPreTax').textContent = money(totalPreTax);
             $('analyticsTotalWithTax').textContent = money(totalWithTax);
             $('analyticsTotalOrders').textContent = yearOrders.length;
             $('analyticsAvgOrder').textContent = money(avgOrder);
-            
+
             // Monthly data
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             const monthlyData = months.map((m, i) => {
@@ -10322,28 +10372,47 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     return d && d.getMonth() === i;
                 });
                 const preTax = monthOrders.reduce((s, o) => s + (getOrderPreTax(o)), 0);
-                const tax = monthOrders.reduce((s, o) => s + (parseFloat(o.HST) || 0), 0);
-                return { month: m, orders: monthOrders.length, preTax, tax, total: preTax + tax };
+                let tax = 0, hasEst = false;
+                monthOrders.forEach(o => {
+                    const t = getOrderTax(o);
+                    tax += t.amount;
+                    if (t.estimated && t.amount > 0) hasEst = true;
+                });
+                return { month: m, orders: monthOrders.length, preTax, tax, hasEst, total: preTax + tax };
             });
-            
-            // Sales chart
-            const maxSales = Math.max(...monthlyData.map(d => d.preTax), 1);
+
+            // Sales chart — toggle between pre-tax and with-tax
+            const chartVal = d => chartTaxMode === 'with' ? d.total : d.preTax;
+            const preBtn = $('chartTaxPre'), withBtn = $('chartTaxWith');
+            if (preBtn && withBtn) {
+                const on = (b, active) => {
+                    b.style.background = active ? 'var(--taupe)' : 'white';
+                    b.style.color = active ? 'white' : 'var(--taupe)';
+                    b.style.borderColor = active ? 'var(--taupe)' : 'var(--border)';
+                };
+                on(preBtn, chartTaxMode !== 'with');
+                on(withBtn, chartTaxMode === 'with');
+            }
+            const maxSales = Math.max(...monthlyData.map(chartVal), 1);
             $('salesChart').innerHTML = monthlyData.map((d, i) => {
-                const height = Math.max((d.preTax / maxSales) * 200, 4);
+                const v = chartVal(d);
+                const height = Math.max((v / maxSales) * 200, 4);
                 const isCurrentMonth = new Date().getFullYear() === year && new Date().getMonth() === i;
                 return `<div style="flex:1;display:flex;flex-direction:column;align-items:center">
-                    <div style="font-size:10px;margin-bottom:4px">${d.preTax > 0 ? money(d.preTax) : ''}</div>
+                    <div style="font-size:10px;margin-bottom:4px">${v > 0 ? money(v) : ''}</div>
                     <div style="width:100%;height:${height}px;background:${isCurrentMonth ? 'var(--dusty)' : 'var(--champagne)'};border-radius:3px 3px 0 0"></div>
                 </div>`;
             }).join('');
             $('salesChartLabels').innerHTML = months.map(m => `<div style="flex:1;text-align:center">${m}</div>`).join('');
-            
-            // Monthly breakdown table
-            $('monthlyBreakdownTable').querySelector('tbody').innerHTML = monthlyData.map(d => 
-                `<tr><td>${d.month}</td><td>${d.orders}</td><td>${money(d.preTax)}</td><td>${money(d.tax)}</td><td><b>${money(d.total)}</b></td></tr>`
+
+            // Monthly breakdown table. Tax marked * where estimated (older orders
+            // never stored a tax amount, so those months use 13% of pre-tax).
+            const estMark = ' style="color:var(--taupe)" title="Includes 13% estimate for orders without recorded tax"';
+            $('monthlyBreakdownTable').querySelector('tbody').innerHTML = monthlyData.map(d =>
+                `<tr><td>${d.month}</td><td>${d.orders}</td><td>${money(d.preTax)}</td><td${d.hasEst ? estMark : ''}>${money(d.tax)}${d.hasEst ? '*' : ''}</td><td><b>${money(d.total)}</b></td></tr>`
             ).join('') + `<tr style="background:var(--cream);font-weight:600">
-                <td>TOTAL</td><td>${yearOrders.length}</td><td>${money(totalPreTax)}</td><td>${money(totalTax)}</td><td>${money(totalWithTax)}</td>
-            </tr>`;
+                <td>TOTAL</td><td>${yearOrders.length}</td><td>${money(totalPreTax)}</td><td${anyEstTax ? estMark : ''}>${money(totalTax)}${anyEstTax ? '*' : ''}</td><td>${money(totalWithTax)}</td>
+            </tr>` + (anyEstTax ? `<tr><td colspan="5" style="font-size:10px;color:var(--taupe);border:none">* includes 13% estimate for orders without recorded tax</td></tr>` : '');
             
             // Customer stats
             const yearClients = data.clients.filter(c => {
@@ -13132,6 +13201,16 @@ The {StoreName} Team
                 } catch(e) {}
             }
             return preTax;
+        }
+
+        // Tax for an order. Orders made before the app tracked tax never stored an HST
+        // amount, so for those we estimate 13% HST on the pre-tax amount and flag it.
+        function getOrderTax(o) {
+            const stored = parseFloat(o.HST);
+            if (o.HST !== undefined && o.HST !== null && o.HST !== '' && !isNaN(stored)) {
+                return { amount: stored, estimated: false };
+            }
+            return { amount: Math.round(getOrderPreTax(o) * 0.13 * 100) / 100, estimated: true };
         }
         
         function setOrderPaymentMethod(orderId, method) {
