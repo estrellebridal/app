@@ -11357,10 +11357,15 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 // Note section — show saved note as badge, show input only when needs-adjustment
                 let noteHtml = '';
                 if (needsAdj) {
+                    const rounds = item.adjustments || (item.note ? [item.note] : ['']);
+                    const prior = rounds.slice(0, -1).filter(n => n && n.trim());
+                    const nth = rounds.length || 1;
+                    const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
                     noteHtml = `<div style="margin-top:6px">
-                        <input type="text" class="form-input" placeholder="What needs adjusting? (e.g. Take in 1 more inch at waist)" 
-                            value="${(item.note || '').replace(/"/g, '&quot;')}" 
-                            onchange="saveAltItemNote(${idx}, this.value)" 
+                        ${prior.map((n, i2) => `<div style="font-size:10px;color:#999;margin-bottom:2px">✓ ${ord(i2 + 1)} adjustment: ${n}</div>`).join('')}
+                        <input type="text" class="form-input" placeholder="${nth > 1 ? ord(nth) + ' adjustment — what needs changing?' : 'What needs adjusting? (e.g. Take in 1 more inch at waist)'}"
+                            value="${(item.note || '').replace(/"/g, '&quot;')}"
+                            onchange="saveAltItemNote(${idx}, this.value)"
                             style="font-size:11px;padding:6px 8px;border-color:#e67e22;background:#fff8f0">
                     </div>`;
                 } else if (item.note) {
@@ -11417,8 +11422,13 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         function saveAltItemNote(idx, note) {
-            if (!currentAltItems[idx]) return;
-            currentAltItems[idx].note = note.trim();
+            const item = currentAltItems[idx];
+            if (!item) return;
+            item.note = note.trim();
+            // Keep the current adjustment round in sync with the note.
+            if (item.adjustments && item.adjustments.length) {
+                item.adjustments[item.adjustments.length - 1] = item.note;
+            }
             saveAltItemsLocal();
         }
         
@@ -11635,6 +11645,24 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             `;
         }
         
+        // Copy a client-facing price quote (client price = cost ×2, $800 minimum
+        // when 3+ priced items — same math as the totals bar).
+        function copyAltQuote() {
+            const c = getClient(currentAltClientId);
+            let totalCost = 0, pricedCount = 0;
+            currentAltItems.forEach(i => { if (i.cost) { totalCost += i.cost; pricedCount++; } });
+            let price = totalCost * 2;
+            if (pricedCount >= 3 && price < 800) price = 800;
+            let text = `Alterations quote${c ? ` — ${c.FirstName} ${c.LastName}` : ''}\n`;
+            currentAltItems.forEach(i => {
+                text += `  - ${i.name}${i.cost ? ` — $${(i.cost * 2).toLocaleString()}` : ''}\n`;
+            });
+            text += `Total: $${price.toLocaleString()}\n`;
+            navigator.clipboard.writeText(text)
+                .then(() => toast('Quote copied!', 'success'))
+                .catch(() => toast('Copy failed', 'error'));
+        }
+
         // Keep these for backward compat
         function populateAltItemDropdown() {}
         function manageSavedAltItems() {}
@@ -11645,11 +11673,22 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         }
         
         function updateAltItemStatus(idx, status) {
-            if (currentAltItems[idx]) {
-                currentAltItems[idx].status = status;
-                saveAltItemsLocal();
-                renderAltItems();
+            const item = currentAltItems[idx];
+            if (!item) return;
+            // Each "needs adjustment" starts a new round instead of overwriting the
+            // previous note. item.adjustments keeps every round; item.note always
+            // mirrors the current round (bride email + badges read item.note).
+            if (status === 'needs-adjustment' && item.status !== 'needs-adjustment') {
+                if (!item.adjustments) item.adjustments = item.note ? [item.note] : [];
+                const last = item.adjustments[item.adjustments.length - 1];
+                if (!item.adjustments.length || (last && last.trim() !== '')) {
+                    item.adjustments.push('');
+                }
+                item.note = item.adjustments[item.adjustments.length - 1] || '';
             }
+            item.status = status;
+            saveAltItemsLocal();
+            renderAltItems();
         }
         
         async function removeAltItem(idx) {
@@ -12100,37 +12139,36 @@ www.estrellebridal.com`;
             }
             text += `\n`;
             
-            // Items to do
+            // Items to do — the seamstress only needs open work, so done items are
+            // left out entirely.
             const pending = currentAltItems.filter(i => i.status === 'pending');
             const inProgress = currentAltItems.filter(i => i.status === 'in-progress');
             const needsAdj = currentAltItems.filter(i => i.status === 'needs-adjustment');
-            const done = currentAltItems.filter(i => i.status === 'done');
-            
+
             if (needsAdj.length > 0) {
+                const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
                 text += `NEEDS ADJUSTMENT:\n`;
                 needsAdj.forEach(i => {
-                    text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}`;
-                    if (i.note) text += ` (${i.note})`;
-                    text += `\n`;
+                    const all = i.adjustments || (i.note ? [i.note] : []);
+                    const prior = all.slice(0, -1).filter(n => n && n.trim());
+                    const nth = all.length || 1;
+                    text += `  - ${i.name}${nth > 1 ? ` (${ord(nth)} adjustment)` : ''}\n`;
+                    if (i.details) text += `    Done: ${i.details}\n`;
+                    if (i.note) text += `    Change: ${i.note}\n`;
+                    prior.forEach((n, i2) => text += `    ${ord(i2 + 1)} adjustment (done): ${n}\n`);
                 });
                 text += `\n`;
             }
-            
+
             if (inProgress.length > 0) {
                 text += `IN PROGRESS:\n`;
                 inProgress.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
-            
+
             if (pending.length > 0) {
                 text += `TO DO:\n`;
                 pending.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
-                text += `\n`;
-            }
-            
-            if (done.length > 0) {
-                text += `DONE:\n`;
-                done.forEach(i => text += `  - ${i.name}${i.details ? ' — ' + i.details : ''}\n`);
                 text += `\n`;
             }
             
