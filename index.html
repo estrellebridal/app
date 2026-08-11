@@ -17511,13 +17511,16 @@ The {storeName} Team`
                             }
                         }
                         
-                        // If the Timely service changed for an existing appointment
-                        // (e.g. fittings renamed per seamstress), queue a type sync.
-                        // Applied only when the user confirms the import.
+                        // If the Timely service or staff member changed for an existing
+                        // appointment (e.g. fittings renamed per seamstress, consultant
+                        // reassigned), queue a sync. Applied only on confirm.
                         if (existingAppt) {
                             const mappedType = mapServiceType(service);
-                            if (mappedType && existingAppt.Type !== mappedType) {
-                                timelyTypeFixes.push({ id: existingAppt.ID, type: mappedType });
+                            const rec = {};
+                            if (mappedType && existingAppt.Type !== mappedType) rec.Type = mappedType;
+                            if (staff && (existingAppt.Consultant || '') !== staff) rec.Consultant = staff;
+                            if (Object.keys(rec).length) {
+                                timelyTypeFixes.push({ id: existingAppt.ID, rec });
                             }
                         }
 
@@ -17815,16 +17818,16 @@ The {storeName} Team`
                     }
                 }
                 
-                // Sync appointment types whose Timely service changed (e.g. fittings
-                // renamed per seamstress) so existing rows show the current name.
+                // Sync appointments whose Timely service or staff member changed
+                // (e.g. fittings renamed per seamstress, consultant reassigned).
                 let typesFixed = 0;
                 for (const fix of timelyTypeFixes) {
                     const appt = data.appointments.find(a => String(a.ID) === String(fix.id));
-                    if (appt) appt.Type = fix.type;
+                    if (appt) Object.assign(appt, fix.rec);
                     try {
-                        await api('POST', { action: 'update', sheet: 'Appointments', id: fix.id, record: { Type: fix.type } });
+                        await api('POST', { action: 'update', sheet: 'Appointments', id: fix.id, record: fix.rec });
                         typesFixed++;
-                    } catch (e) { console.warn('Type sync failed for', fix.id, e); }
+                    } catch (e) { console.warn('Appt sync failed for', fix.id, e); }
                 }
 
                 // AUTO-DELETE DISABLED — too risky, has caused data loss
