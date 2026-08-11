@@ -17818,19 +17818,36 @@ The {storeName} Team`
                     return type.includes('fitting');
                 });
                 
+                let seamstressFilled = 0;
                 for (const item of fittingItems) {
                     const clientId = item.existingClientId || batchClientIds[timelyImportData.indexOf(item)] || (item.batchClientIdx !== null ? batchClientIds[item.batchClientIdx] : null);
                     if (!clientId) continue;
-                    
+
+                    // Seamstress comes from the per-seamstress fitting service
+                    // ("fitting - Rowena" → "Rowena").
+                    const sm = /^fitting\s*-\s*(.+)$/i.exec(item.type || '');
+                    const seamstress = sm ? sm[1].trim() : '';
+
                     // Check for existing alteration (no duplicates)
                     const existingAlt = data.alterations.find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
-                    if (existingAlt) continue;
-                    
+                    if (existingAlt) {
+                        // Fill a BLANK seamstress from the fitting service — never
+                        // overwrite one that staff set deliberately.
+                        if (seamstress && !(existingAlt.Seamstress || '').trim()) {
+                            try {
+                                await updateRecord('Alterations', existingAlt.ID, { Seamstress: seamstress });
+                                existingAlt.Seamstress = seamstress;
+                                seamstressFilled++;
+                            } catch (e) { console.error('Seamstress fill failed:', e); }
+                        }
+                        continue;
+                    }
+
                     const client = getClient(clientId);
                     if (!client) continue;
-                    
+
                     const order = data.orders.find(o => String(o.ClientID) === String(clientId) && o.Status !== 'picked up');
-                    
+
                     const altRecord = {
                         ClientID: String(clientId),
                         ClientName: `${client.FirstName} ${client.LastName}`,
@@ -17840,7 +17857,7 @@ The {storeName} Team`
                         Status: 'in progress',
                         StartDate: today(),
                         DueDate: client.WeddingDate || '',
-                        Seamstress: ''
+                        Seamstress: seamstress
                     };
                     
                     try {
@@ -17878,6 +17895,9 @@ The {storeName} Team`
                 let msg = 'Imported! ' + clientsCreated + ' clients, ' + apptsCreated + ' appointments';
                 if (altsCreated > 0) {
                     msg += ', ' + altsCreated + ' alteration(s)';
+                }
+                if (seamstressFilled > 0) {
+                    msg += ', ' + seamstressFilled + ' seamstress assigned';
                 }
                 if (apptsDeleted > 0) {
                     msg += '. ' + apptsDeleted + ' removed (not in Timely)';
