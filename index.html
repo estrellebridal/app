@@ -17257,6 +17257,7 @@ The {storeName} Team`
         // ========== TIMELY IMPORT ==========
         let timelyImportData = [];
         let timelyAllAppointments = []; // Track ALL appointments in file (including skipped) for delete logic
+        let timelyTypeFixes = []; // Existing appointments whose Timely service (type) changed — applied on confirm
         
         const SERVICE_TYPE_MAP = {
             'signature bridal consultation': 'consultation',
@@ -17366,6 +17367,7 @@ The {storeName} Team`
                     
                     timelyImportData = [];
                     timelyAllAppointments = []; // Reset tracking array
+                    timelyTypeFixes = [];
                     
                     // Track clients we're adding in this batch (by email)
                     const batchClients = {}; // email -> index in timelyImportData
@@ -17509,6 +17511,16 @@ The {storeName} Team`
                             }
                         }
                         
+                        // If the Timely service changed for an existing appointment
+                        // (e.g. fittings renamed per seamstress), queue a type sync.
+                        // Applied only when the user confirms the import.
+                        if (existingAppt) {
+                            const mappedType = mapServiceType(service);
+                            if (mappedType && existingAppt.Type !== mappedType) {
+                                timelyTypeFixes.push({ id: existingAppt.ID, type: mappedType });
+                            }
+                        }
+
                         // Determine action
                         let action = 'new_client';
                         if (existingClient && existingAppt) {
@@ -17803,6 +17815,18 @@ The {storeName} Team`
                     }
                 }
                 
+                // Sync appointment types whose Timely service changed (e.g. fittings
+                // renamed per seamstress) so existing rows show the current name.
+                let typesFixed = 0;
+                for (const fix of timelyTypeFixes) {
+                    const appt = data.appointments.find(a => String(a.ID) === String(fix.id));
+                    if (appt) appt.Type = fix.type;
+                    try {
+                        await api('POST', { action: 'update', sheet: 'Appointments', id: fix.id, record: { Type: fix.type } });
+                        typesFixed++;
+                    } catch (e) { console.warn('Type sync failed for', fix.id, e); }
+                }
+
                 // AUTO-DELETE DISABLED — too risky, has caused data loss
                 // Appointments are only added/updated by import, never removed
                 // Cancelled appointments should be deleted manually
@@ -17899,6 +17923,9 @@ The {storeName} Team`
                 if (seamstressFilled > 0) {
                     msg += ', ' + seamstressFilled + ' seamstress assigned';
                 }
+                if (typesFixed > 0) {
+                    msg += ', ' + typesFixed + ' names corrected';
+                }
                 if (apptsDeleted > 0) {
                     msg += '. ' + apptsDeleted + ' removed (not in Timely)';
                 }
@@ -17923,6 +17950,7 @@ The {storeName} Team`
             // Reset modal for next import
             timelyImportData = [];
             timelyAllAppointments = [];
+            timelyTypeFixes = [];
             $('importStep1').style.display = 'block';
             $('importStep2').style.display = 'none';
             $('btnConfirmImport').style.display = 'none';
