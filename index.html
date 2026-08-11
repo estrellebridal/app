@@ -17281,8 +17281,11 @@ The {storeName} Team`
             for (const [key, value] of Object.entries(SERVICE_TYPE_MAP)) {
                 if (lower.indexOf(key) >= 0) return value;
             }
-            // Default to consultation
-            return 'consultation';
+            // Any other service keeps its own name as the type (minus duration/price
+            // parentheses), so "The YES Moment" or "Elite Bridal Experience" show as
+            // their own appointment types instead of collapsing into "Consultation".
+            const own = String(timelyService || '').replace(/\(.*?\)/g, '').replace(/\s+/g, ' ').trim();
+            return own || 'consultation';
         }
         
         async function parseTimelyFile(input) {
