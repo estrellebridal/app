@@ -16593,6 +16593,44 @@ The {storeName} Team`
         let measModalUnit = 'in';
         let modalCustomMeasurements = [];
         
+        // ===== Measurement safety =====
+        // Fetch ONE client's current server record (fast, single row). Returns the
+        // jsonb data or null (offline/error) — callers fail open.
+        async function fetchClientRecord(clientId) {
+            try {
+                const res = await fetch(SUPABASE_URL + '/rest/v1/' + TABLES['Clients'] + '?id=eq.' + encodeURIComponent(clientId) + '&select=data', { headers: sbHead() });
+                if (!res.ok) return null;
+                const rows = await res.json();
+                return rows.length ? rows[0].data : null;
+            } catch (e) { return null; }
+        }
+
+        // Union-merge measurement lists so a save from another device is never lost
+        // to last-writer-wins. Identity = date + takenBy (a local EDIT of the same
+        // record wins; a record only the server has is re-added, not dropped).
+        function mergeMeasurementLists(localList, serverJson) {
+            let serverList = [];
+            try { serverList = serverJson ? JSON.parse(serverJson) : []; } catch (e) { serverList = []; }
+            if (!Array.isArray(serverList) || !serverList.length) return localList;
+            const idKey = m => (m.date || '') + '|' + (m.takenBy || '');
+            const localKeys = new Set(localList.map(idKey));
+            const extras = serverList.filter(m => !localKeys.has(idKey(m)));
+            return extras.length ? localList.concat(extras) : localList;
+        }
+
+        // Local backup journal: keep the last 10 versions of a client's measurement
+        // history on this device before every overwrite, so nothing is ever more
+        // than one restore away even if something goes wrong server-side.
+        function snapshotMeasurements(clientId, json) {
+            try {
+                const key = 'meas_backup_' + clientId;
+                const list = JSON.parse(localStorage.getItem(key) || '[]');
+                list.push({ ts: new Date().toISOString(), json: json || '' });
+                while (list.length > 10) list.shift();
+                localStorage.setItem(key, JSON.stringify(list));
+            } catch (e) {}
+        }
+
         function getClientMeasurements() {
             if (!currentClient) return [];
             try {
@@ -17184,7 +17222,13 @@ The {storeName} Team`
                 toast('Measurements saved!', 'success');
             }
             
-            const historyJson = JSON.stringify(measurements);
+            // Back up the previous version locally, then merge with the latest server
+            // copy so a save from another device is never lost (fails open if offline).
+            snapshotMeasurements(currentClient.ID, currentClient.MeasurementHistory);
+            const serverData = await fetchClientRecord(currentClient.ID);
+            const merged = serverData ? mergeMeasurementLists(measurements, serverData.MeasurementHistory) : measurements;
+
+            const historyJson = JSON.stringify(merged);
             // Keep the in-memory client in sync so the re-render below shows the change
             // immediately (updateRecord swaps the data.clients slot for a fresh object).
             currentClient.MeasurementHistory = historyJson;
@@ -17244,7 +17288,13 @@ The {storeName} Team`
             const measurements = getClientMeasurements();
             measurements.push(measurement);
 
-            const historyJson = JSON.stringify(measurements);
+            // Back up the previous version locally, then merge with the latest server
+            // copy so a save from another device is never lost (fails open if offline).
+            snapshotMeasurements(currentClient.ID, currentClient.MeasurementHistory);
+            const serverData = await fetchClientRecord(currentClient.ID);
+            const merged = serverData ? mergeMeasurementLists(measurements, serverData.MeasurementHistory) : measurements;
+
+            const historyJson = JSON.stringify(merged);
             // Update the in-memory client immediately so the profile re-renders with the
             // new record right away (updateRecord swaps the data.clients slot for a fresh
             // object, but currentClient keeps referencing the old one, so set it here too).
@@ -17278,6 +17328,9 @@ The {storeName} Team`
             const deletedIdx = idx;
 
             measurements.splice(idx, 1);
+
+            // Back up the pre-delete version locally (recoverable even beyond Undo).
+            snapshotMeasurements(currentClient.ID, currentClient.MeasurementHistory);
 
             const historyJson = JSON.stringify(measurements);
             // Keep the in-memory client in sync so the re-render below drops the row
@@ -20358,9 +20411,14 @@ The {storeName} Team`
                 // actually captured measurements. Prevents an empty {} from blanking
                 // out good data if measurements weren't entered this time.
                 const hasNewMeas = o.measurements && (o.measurements.bust || o.measurements.waist || o.measurements.hip);
+                // Back up + merge with the server copy so a concurrent save from
+                // another device is never lost (fails open if offline).
+                snapshotMeasurements(c.ID, currentClient ? currentClient.MeasurementHistory : '');
+                const srvData = await fetchClientRecord(c.ID);
+                const mergedHistory = srvData ? mergeMeasurementLists(existingMeasurements, srvData.MeasurementHistory) : existingMeasurements;
                 const clientUpdate = {
                     Status: 'ordered',
-                    MeasurementHistory: JSON.stringify(existingMeasurements),
+                    MeasurementHistory: JSON.stringify(mergedHistory),
                     OrderDraft: '',
                     SaidYes: 'TRUE',
                     SaidYesDate: today(),
@@ -20368,7 +20426,7 @@ The {storeName} Team`
                 };
                 if (hasNewMeas) clientUpdate.Measurements = JSON.stringify(o.measurements);
                 await updateRecord('Clients', c.ID, clientUpdate);
-                currentClient.MeasurementHistory = JSON.stringify(existingMeasurements);
+                currentClient.MeasurementHistory = clientUpdate.MeasurementHistory;
                 currentClient.OrderDraft = '';
                 currentClient.SaidYes = 'TRUE';
                 currentClient.SaidYesDate = today();
