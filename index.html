@@ -5089,11 +5089,20 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 const isNoShow = a.Status === 'no-show';
                 const isFittingAppt = (a.Type||'').toLowerCase().includes('fitting');
                 const clickAction = isFittingAppt ? `openAlterationForClient('${a.ClientID}')` : `openClient('${a.ClientID}')`;
+                // Until a consultant is picked by hand, show a small inline chooser
+                // (Timely only knows the two room calendars, not the real consultant).
+                const consultantChosen = a.ConsultantChosen === '1' || a.ConsultantChosen === true;
+                const consultantBit = consultantChosen
+                    ? (a.Consultant || '')
+                    : `<select onclick="event.stopPropagation()" onchange="assignApptConsultant('${a.ID}', this.value)" style="font-size:10px;padding:1px 6px;border:1px solid #e67e22;border-radius:6px;background:#fff8f0;color:#b35a10;font-weight:600;cursor:pointer">
+                        <option value="">consultant?</option>
+                        ${(data.consultants||[]).map(cn => `<option value="${cn.Name}">${cn.Name}</option>`).join('')}
+                       </select>`;
                 return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="${clickAction}">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
                     <div class="item-info">
                         <div class="item-name">${c.FirstName} ${c.LastName}${isNoShow ? ' <span style="color:var(--red);font-size:10px">NO-SHOW</span>' : ''}${a.ConfirmationSent ? ` <span class="confirmed-badge" onclick="event.stopPropagation();unmarkConfirmed('${a.ID}')" style="cursor:pointer" title="Click to undo">✓</span>` : ''}</div>
-                        <div class="item-meta">${fmtTime(a.Time)} · <span style="color:${getTypeColor(a.Type)};font-weight:600">${normalizeApptType(a.Type)}</span> · ${a.Consultant||''}</div>
+                        <div class="item-meta">${fmtTime(a.Time)} · <span style="color:${getTypeColor(a.Type)};font-weight:600">${normalizeApptType(a.Type)}</span> · ${consultantBit}</div>
                     </div>
                     <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
                         ${!isNoShow ? `<button class="btn btn-sm btn-secondary" onclick="openConfirmEmailModal('${a.ID}')" title="Send email">📧</button>` : ''}
@@ -7524,6 +7533,19 @@ The Estrelle Bridal Team`;
             updateRecord('Appointments', a.ID, { Consultant: name, ConsultantChosen: '1' });
             viewAppt(currentViewApptId); // re-render — the chooser disappears
             renderDash();
+            toast('Consultant: ' + name, 'success');
+        }
+
+        // Same as above, from the dashboard's inline dropdown.
+        function assignApptConsultant(apptId, name) {
+            if (!name) return;
+            const a = data.appointments.find(x => String(x.ID) === String(apptId));
+            if (!a) return;
+            a.Consultant = name;
+            a.ConsultantChosen = '1';
+            updateRecord('Appointments', apptId, { Consultant: name, ConsultantChosen: '1' });
+            renderDash();
+            try { renderAllAppointments(); renderWeek(); } catch(e) {}
             toast('Consultant: ' + name, 'success');
         }
 
