@@ -5089,14 +5089,17 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 const isNoShow = a.Status === 'no-show';
                 const isFittingAppt = (a.Type||'').toLowerCase().includes('fitting');
                 const clickAction = isFittingAppt ? `openAlterationForClient('${a.ClientID}')` : `openClient('${a.ClientID}')`;
-                // Until a consultant is picked by hand, show a small inline chooser
-                // (Timely only knows the two room calendars, not the real consultant).
+                // Consultant is always changeable (appointments get swapped). Orange
+                // "consultant?" only until first pick; neutral quiet dropdown after.
                 const consultantChosen = a.ConsultantChosen === '1' || a.ConsultantChosen === true;
-                const consultantBit = consultantChosen
-                    ? (a.Consultant || '')
-                    : `<select onclick="event.stopPropagation()" onchange="assignApptConsultant('${a.ID}', this.value)" style="font-size:10px;padding:1px 6px;border:1px solid #e67e22;border-radius:6px;background:#fff8f0;color:#b35a10;font-weight:600;cursor:pointer">
-                        <option value="">consultant?</option>
-                        ${(data.consultants||[]).map(cn => `<option value="${cn.Name}">${cn.Name}</option>`).join('')}
+                const consultantNames = (data.consultants || []).map(cn => cn.Name);
+                if (consultantChosen && a.Consultant && !consultantNames.includes(a.Consultant)) consultantNames.unshift(a.Consultant);
+                const selStyle = consultantChosen
+                    ? 'font-size:10px;padding:1px 2px;border:none;border-radius:6px;background:transparent;color:var(--taupe);font-weight:600;cursor:pointer'
+                    : 'font-size:10px;padding:1px 6px;border:1px solid #e67e22;border-radius:6px;background:#fff8f0;color:#b35a10;font-weight:600;cursor:pointer';
+                const consultantBit = `<select onclick="event.stopPropagation()" onchange="assignApptConsultant('${a.ID}', this.value)" style="${selStyle}">
+                        ${consultantChosen ? '' : '<option value="">consultant?</option>'}
+                        ${consultantNames.map(n => `<option value="${n}" ${consultantChosen && a.Consultant === n ? 'selected' : ''}>${n}</option>`).join('')}
                        </select>`;
                 return `<div class="list-item" style="border-left:3px solid ${getTypeColor(a.Type)};${isNoShow ? 'opacity:0.5;background:#f5f5f5;' : ''}" onclick="${clickAction}">
                     <div class="avatar">${initials(c.FirstName, c.LastName)}</div>
@@ -7579,20 +7582,20 @@ The Estrelle Bridal Team`;
                 .replace(/✨\s*Style:[^\n]+\n?/gi, '')
                 .trim();
             
-            // Consultant: Timely only knows the two fitting-room calendars, so until
-            // a staff member picks the real consultant, offer a one-tap chooser.
-            // Inline and dismissible — closing the modal is always free; once tapped
-            // (ConsultantChosen flag) it never asks again for this appointment.
+            // Consultant chooser: always available (appointments get swapped between
+            // consultants). Orange "Consultant?" label only until the first pick;
+            // afterwards a neutral label with the current pick highlighted. Inline
+            // and dismissible — closing the modal is always free.
             const consultantChosen = a.ConsultantChosen === '1' || a.ConsultantChosen === true;
             const consultantHtml = consultantChosen
                 ? `${normalizeApptType(a.Type)} · ${a.Consultant || ''}`
                 : normalizeApptType(a.Type);
-            const chooserHtml = consultantChosen ? '' : `
+            const chooserHtml = `
                 <div style="margin-top:8px">
-                    <div style="font-size:10px;font-weight:600;color:#e67e22;margin-bottom:4px">CONSULTANT?</div>
+                    <div style="font-size:10px;font-weight:600;color:${consultantChosen ? 'var(--taupe)' : '#e67e22'};margin-bottom:4px">${consultantChosen ? 'CONSULTANT' : 'CONSULTANT?'}</div>
                     <div style="display:flex;gap:6px;flex-wrap:wrap">
                         ${(data.consultants || []).map(con => {
-                            const sel = a.Consultant === con.Name;
+                            const sel = consultantChosen && a.Consultant === con.Name;
                             return `<button type="button" onclick="chooseApptConsultant('${con.Name.replace(/'/g, "\\'")}')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid ${sel ? 'var(--accent)' : 'var(--champagne)'};background:${sel ? 'var(--accent)' : 'white'};color:${sel ? 'white' : 'var(--text)'}">${con.Name}</button>`;
                         }).join('')}
                     </div>
@@ -7989,7 +7992,17 @@ The Estrelle Bridal Team`;
                 FollowUpNotes: $('aFollowUpNotes').value.trim(),
                 FollowUpDone: false
             };
-            
+
+            // If staff changed the type by hand while editing, protect it from the
+            // Timely import's type sync (never overwrite what was set in the app).
+            {
+                const editingId = $('editApptId').value;
+                const prevAppt = editingId ? data.appointments.find(x => String(x.ID) === String(editingId)) : null;
+                if (prevAppt && normalizeApptType(prevAppt.Type || '') !== record.Type) {
+                    record.TypeChosen = '1';
+                }
+            }
+
             // Check if this is a reschedule
             const rescheduleFrom = $('editApptId').dataset?.rescheduleFrom;
             if (rescheduleFrom && id) {
@@ -17573,7 +17586,11 @@ The {storeName} Team`
                         if (existingAppt) {
                             const mappedType = mapServiceType(service);
                             const rec = {};
-                            if (mappedType && existingAppt.Type !== mappedType) rec.Type = mappedType;
+                            // Type: sync with Timely's service UNLESS staff set the type
+                            // by hand in the app (TypeChosen) — never overwrite that.
+                            if (mappedType && existingAppt.Type !== mappedType && existingAppt.TypeChosen !== '1') {
+                                rec.Type = mappedType;
+                            }
                             // Consultant: Timely staff are room calendars, not the real
                             // consultant — only fill a blank, never overwrite a staff pick.
                             if (staff && !(existingAppt.Consultant || '').trim()) rec.Consultant = staff;
