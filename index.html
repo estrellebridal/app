@@ -7516,6 +7516,17 @@ The Estrelle Bridal Team`;
         // ========== VIEW APPOINTMENT ==========
         let currentViewApptId = null;
         
+        function chooseApptConsultant(name) {
+            const a = data.appointments.find(x => x.ID == currentViewApptId);
+            if (!a) return;
+            a.Consultant = name;
+            a.ConsultantChosen = '1';
+            updateRecord('Appointments', a.ID, { Consultant: name, ConsultantChosen: '1' });
+            viewAppt(currentViewApptId); // re-render — the chooser disappears
+            renderDash();
+            toast('Consultant: ' + name, 'success');
+        }
+
         function viewAppt(id) {
             const a = data.appointments.find(x => x.ID == id);
             if (!a) return;
@@ -7546,13 +7557,33 @@ The Estrelle Bridal Team`;
                 .replace(/✨\s*Style:[^\n]+\n?/gi, '')
                 .trim();
             
+            // Consultant: Timely only knows the two fitting-room calendars, so until
+            // a staff member picks the real consultant, offer a one-tap chooser.
+            // Inline and dismissible — closing the modal is always free; once tapped
+            // (ConsultantChosen flag) it never asks again for this appointment.
+            const consultantChosen = a.ConsultantChosen === '1' || a.ConsultantChosen === true;
+            const consultantHtml = consultantChosen
+                ? `${normalizeApptType(a.Type)} · ${a.Consultant || ''}`
+                : normalizeApptType(a.Type);
+            const chooserHtml = consultantChosen ? '' : `
+                <div style="margin-top:8px">
+                    <div style="font-size:10px;font-weight:600;color:#e67e22;margin-bottom:4px">CONSULTANT?</div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        ${(data.consultants || []).map(con => {
+                            const sel = a.Consultant === con.Name;
+                            return `<button type="button" onclick="chooseApptConsultant('${con.Name.replace(/'/g, "\\'")}')" style="padding:6px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid ${sel ? 'var(--accent)' : 'var(--champagne)'};background:${sel ? 'var(--accent)' : 'white'};color:${sel ? 'white' : 'var(--text)'}">${con.Name}</button>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+
             // Build details HTML
             let detailsHtml = `
                 <div style="background:var(--cream);padding:12px;border-radius:6px;margin-bottom:12px">
                     <div style="font-size:16px;font-weight:600;margin-bottom:4px">${c ? c.FirstName + ' ' + c.LastName : 'Unknown Client'}</div>
                     <div style="font-size:12px;color:var(--rose)">${fmtDate(a.Date)} at ${fmtTime(a.Time)}</div>
-                    <div style="font-size:11px;color:var(--taupe);margin-top:4px">${normalizeApptType(a.Type)} · ${a.Consultant || 'No consultant'}</div>
+                    <div style="font-size:11px;color:var(--taupe);margin-top:4px">${consultantHtml}</div>
                     ${reason ? `<div style="font-size:11px;color:var(--accent);margin-top:4px">🎯 ${reason}</div>` : ''}
+                    ${chooserHtml}
                 </div>
             `;
             
@@ -7927,7 +7958,10 @@ The Estrelle Bridal Team`;
                 Date: $('aDate').value, 
                 Time: $('aTime').value, 
                 Type: normalizeApptType($('aType').value), 
-                Consultant: $('aConsultant').value, 
+                Consultant: $('aConsultant').value,
+                // A consultant picked by hand counts as chosen — the view modal
+                // stops offering its one-tap chooser for this appointment.
+                ConsultantChosen: $('aConsultant').value ? '1' : '',
                 Notes: noteParts.join('\n\n'),
                 FollowUpDate: followUpDate,
                 FollowUpNotes: $('aFollowUpNotes').value.trim(),
@@ -17518,7 +17552,9 @@ The {storeName} Team`
                             const mappedType = mapServiceType(service);
                             const rec = {};
                             if (mappedType && existingAppt.Type !== mappedType) rec.Type = mappedType;
-                            if (staff && (existingAppt.Consultant || '') !== staff) rec.Consultant = staff;
+                            // Consultant: Timely staff are room calendars, not the real
+                            // consultant — only fill a blank, never overwrite a staff pick.
+                            if (staff && !(existingAppt.Consultant || '').trim()) rec.Consultant = staff;
                             if (Object.keys(rec).length) {
                                 timelyTypeFixes.push({ id: existingAppt.ID, rec });
                             }
