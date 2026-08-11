@@ -195,6 +195,8 @@
         .appt-actions { display: flex; gap: 6px; margin-top: 10px; }
         .appt-type-consultation, .appt-type-bridal-consultation { border-left: 4px solid var(--accent); }
         .appt-type-fitting { border-left: 4px solid var(--blue); }
+        /* Per-seamstress fittings, e.g. "Fitting - Rowena" → appt-type-fitting---rowena */
+        [class*="appt-type-fitting-"] { border-left: 4px solid var(--blue); }
         .appt-type-final-fitting { border-left: 4px solid #9b59b6; }
         .appt-type-pickup { border-left: 4px solid var(--sage); }
         .appt-type-measurement { border-left: 4px solid var(--honey); }
@@ -17258,13 +17260,24 @@ The {storeName} Team`
         
         const SERVICE_TYPE_MAP = {
             'signature bridal consultation': 'consultation',
-            'bridal fitting appointment': 'fitting',
             'final fitting': 'final fitting',
+            'pick-up': 'pickup',
+            'pick up': 'pickup',
             'pickup': 'pickup'
         };
-        
+
         function mapServiceType(timelyService) {
             const lower = (timelyService || '').toLowerCase();
+            // Timely splits fitting services per seamstress ("Bridal Fitting
+            // Appointment- Rowena"). Keep the name in the type ("fitting - Rowena")
+            // so staff see who the fitting is with; every fitting behavior in the
+            // app matches on the word "fitting", so these act like any fitting.
+            if (lower.indexOf('final fitting') === -1 && lower.indexOf('fitting') >= 0) {
+                const cleaned = String(timelyService || '').replace(/\(.*?\)/g, '').trim();
+                const m = cleaned.match(/-\s*([^-]+)$/);
+                const who = m ? m[1].trim() : '';
+                return who ? 'fitting - ' + who : 'fitting';
+            }
             for (const [key, value] of Object.entries(SERVICE_TYPE_MAP)) {
                 if (lower.indexOf(key) >= 0) return value;
             }
