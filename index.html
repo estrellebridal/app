@@ -11425,19 +11425,24 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 const needsAdj = item.status === 'needs-adjustment';
                 const isDone = item.status === 'done';
                 
-                // Note section — show saved note as badge, show input only when needs-adjustment
+                // Note section — open change inputs while needs-adjustment (one per
+                // open round, stackable via ＋); resolved rounds shown as history.
                 let noteHtml = '';
                 if (needsAdj) {
-                    const rounds = item.adjustments || (item.note ? [item.note] : ['']);
-                    const prior = rounds.slice(0, -1).filter(n => n && n.trim());
-                    const nth = rounds.length || 1;
+                    if (!item.adjustments || !item.adjustments.length) item.adjustments = [item.note || ''];
+                    if (!item.openCount || item.openCount < 1) item.openCount = 1;
+                    if (item.openCount > item.adjustments.length) item.openCount = item.adjustments.length;
+                    const total = item.adjustments.length;
+                    const openStart = total - item.openCount;
+                    const resolved = item.adjustments.slice(0, openStart).filter(n => n && n.trim());
                     const ord = n => n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : n + 'th';
                     noteHtml = `<div style="margin-top:6px">
-                        ${prior.map((n, i2) => `<div style="font-size:10px;color:#999;margin-bottom:2px">✓ ${ord(i2 + 1)} adjustment: ${n}</div>`).join('')}
-                        <input type="text" class="form-input" placeholder="${nth > 1 ? ord(nth) + ' adjustment — what needs changing?' : 'What needs adjusting? (e.g. Take in 1 more inch at waist)'}"
-                            value="${(item.note || '').replace(/"/g, '&quot;')}"
-                            onchange="saveAltItemNote(${idx}, this.value)"
-                            style="font-size:11px;padding:6px 8px;border-color:#e67e22;background:#fff8f0">
+                        ${resolved.map((n, i2) => `<div style="font-size:10px;color:#999;margin-bottom:2px">✓ ${ord(i2 + 1)} adjustment (done): ${n}</div>`).join('')}
+                        ${item.adjustments.slice(openStart).map((n, i2) => `<input type="text" class="form-input" placeholder="${total > 1 ? ord(openStart + i2 + 1) + ' adjustment — what needs changing?' : 'What needs adjusting? (e.g. Take in 1 more inch at waist)'}"
+                            value="${(n || '').replace(/"/g, '&quot;')}"
+                            onchange="saveAltAdjRound(${idx}, ${openStart + i2}, this.value)"
+                            style="font-size:11px;padding:6px 8px;border-color:#e67e22;background:#fff8f0;margin-bottom:4px">`).join('')}
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="addAltAdjustmentRound(${idx})" style="font-size:10px;padding:3px 10px">＋ another change</button>
                     </div>`;
                 } else if (item.note) {
                     noteHtml = `<div style="font-size:10px;color:#e67e22;margin-top:4px;padding:4px 8px;background:#fef3e2;border-radius:4px;border-left:2px solid #e67e22">📝 ${item.note}</div>`;
@@ -11490,17 +11495,6 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                     </div>
                 `;
             }
-        }
-        
-        function saveAltItemNote(idx, note) {
-            const item = currentAltItems[idx];
-            if (!item) return;
-            item.note = note.trim();
-            // Keep the current adjustment round in sync with the note.
-            if (item.adjustments && item.adjustments.length) {
-                item.adjustments[item.adjustments.length - 1] = item.note;
-            }
-            saveAltItemsLocal();
         }
         
         async function editAltItem(idx) {
@@ -11743,21 +11737,55 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             $('addAltItemForm').style.display = 'none';
         }
         
+        // item.note always mirrors the OPEN change(s) — the bride email and status
+        // badges read it. item.adjustments keeps every round; item.openCount says how
+        // many trailing rounds are still open (unresolved).
+        function syncAltItemNote(item) {
+            const total = (item.adjustments || []).length;
+            const openCount = Math.min(item.openCount || 1, total);
+            item.note = (item.adjustments || []).slice(total - openCount).filter(n => n && n.trim()).join('; ');
+        }
+
         function updateAltItemStatus(idx, status) {
             const item = currentAltItems[idx];
             if (!item) return;
-            // Each "needs adjustment" starts a new round instead of overwriting the
-            // previous note. item.adjustments keeps every round; item.note always
-            // mirrors the current round (bride email + badges read item.note).
+            // Entering "needs adjustment" starts a new round instead of overwriting
+            // the previous note; leaving it resolves all open rounds into history.
             if (status === 'needs-adjustment' && item.status !== 'needs-adjustment') {
                 if (!item.adjustments) item.adjustments = item.note ? [item.note] : [];
                 const last = item.adjustments[item.adjustments.length - 1];
                 if (!item.adjustments.length || (last && last.trim() !== '')) {
                     item.adjustments.push('');
                 }
-                item.note = item.adjustments[item.adjustments.length - 1] || '';
+                item.openCount = 1;
+                syncAltItemNote(item);
+            }
+            if (status !== 'needs-adjustment' && item.status === 'needs-adjustment') {
+                if (item.adjustments) item.adjustments = item.adjustments.filter(n => n && n.trim());
+                item.openCount = 0;
             }
             item.status = status;
+            saveAltItemsLocal();
+            renderAltItems();
+        }
+
+        function saveAltAdjRound(idx, roundIdx, value) {
+            const item = currentAltItems[idx];
+            if (!item || !item.adjustments) return;
+            item.adjustments[roundIdx] = value.trim();
+            syncAltItemNote(item);
+            saveAltItemsLocal();
+        }
+
+        // "＋ another change": stack a further open change on an item that is
+        // already flagged, without overwriting the one before it.
+        function addAltAdjustmentRound(idx) {
+            const item = currentAltItems[idx];
+            if (!item) return;
+            if (!item.adjustments) item.adjustments = item.note ? [item.note] : [''];
+            if (!item.openCount || item.openCount < 1) item.openCount = 1;
+            item.adjustments.push('');
+            item.openCount++;
             saveAltItemsLocal();
             renderAltItems();
         }
@@ -12221,12 +12249,16 @@ www.estrellebridal.com`;
                 text += `NEEDS ADJUSTMENT:\n`;
                 needsAdj.forEach(i => {
                     const all = i.adjustments || (i.note ? [i.note] : []);
-                    const prior = all.slice(0, -1).filter(n => n && n.trim());
-                    const nth = all.length || 1;
+                    const total = all.length;
+                    const openCount = Math.min(i.openCount || 1, total);
+                    const openStart = Math.max(0, total - openCount);
+                    const open = all.slice(openStart).filter(n => n && n.trim());
+                    const resolved = all.slice(0, openStart).filter(n => n && n.trim());
+                    const nth = total || 1;
                     text += `  - ${i.name}${nth > 1 ? ` (${ord(nth)} adjustment)` : ''}\n`;
                     if (i.details) text += `    Done: ${i.details}\n`;
-                    if (i.note) text += `    Change: ${i.note}\n`;
-                    prior.forEach((n, i2) => text += `    ${ord(i2 + 1)} adjustment (done): ${n}\n`);
+                    open.forEach(n => text += `    Change: ${n}\n`);
+                    resolved.forEach((n, i2) => text += `    ${ord(i2 + 1)} adjustment (done): ${n}\n`);
                 });
                 text += `\n`;
             }
