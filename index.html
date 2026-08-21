@@ -3676,9 +3676,24 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                             
                             <!-- Discount -->
                             <div id="oiDiscountFields" style="display:none">
+                                <div style="display:flex;gap:12px;margin-bottom:10px">
+                                    <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+                                        <input type="radio" name="oiDiscountKind" value="fixed" checked onchange="toggleDiscountKind()"> Fixed Amount
+                                    </label>
+                                    <label style="display:flex;align-items:center;gap:4px;font-size:11px;cursor:pointer">
+                                        <input type="radio" name="oiDiscountKind" value="percent" onchange="toggleDiscountKind()"> Percentage
+                                    </label>
+                                </div>
                                 <div class="form-row">
                                     <div class="form-group"><label class="form-label">Discount Reason</label><input type="text" class="form-input" id="oiDiscountName" placeholder="e.g. Sample sale, Loyalty discount"></div>
-                                    <div class="form-group"><label class="form-label">Amount</label><input type="text" class="form-input" id="oiDiscountAmount" placeholder="$0" oninput="formatPriceInput(this)"></div>
+                                    <div class="form-group" id="oiDiscountAmountGroup"><label class="form-label">Amount</label><input type="text" class="form-input" id="oiDiscountAmount" placeholder="$0" oninput="formatPriceInput(this)"></div>
+                                </div>
+                                <div id="oiDiscountPercentGroup" style="display:none">
+                                    <div class="form-row">
+                                        <div class="form-group"><label class="form-label">Percent</label><input type="number" class="form-input" id="oiDiscountPercent" placeholder="10" oninput="calculateDiscountPercent()"></div>
+                                        <div class="form-group"><label class="form-label">Applies To</label><select class="form-input" id="oiDiscountApplyTo" onchange="calculateDiscountPercent()"></select></div>
+                                    </div>
+                                    <div id="oiDiscountCalculated" style="font-size:11px;color:var(--sage);margin-bottom:8px"></div>
                                 </div>
                                 <div style="font-size:10px;color:var(--taupe);margin-top:-8px;margin-bottom:8px">Enter the discount amount as a positive number (e.g. $200 for $200 off)</div>
                             </div>
@@ -4338,10 +4353,16 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         // ========== AUTH ==========
         const AUTH = {
             session: JSON.parse(localStorage.getItem('estrelle_session') || 'null'),
+            // Re-read from storage before using the token: another tab may have
+            // rotated it since this one loaded. Trusting the in-memory copy is what
+            // used to sign every tab out — see refreshSession below.
+            load(){ this.session = JSON.parse(localStorage.getItem('estrelle_session') || 'null'); return this.session; },
             save(s){ this.session = s; localStorage.setItem('estrelle_session', JSON.stringify(s)); },
             clear(){ this.session = null; localStorage.removeItem('estrelle_session'); },
             token(){ return this.session && this.session.access_token; }
         };
+        // Pick up a sign-in, refresh or sign-out performed in another tab.
+        window.addEventListener('storage', e => { if (e.key === 'estrelle_session') AUTH.load(); });
         async function signIn(email, password) {
             const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
                 method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
@@ -4350,19 +4371,36 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             if (!res.ok) throw new Error('Wrong email or password');
             AUTH.save(await res.json());
         }
+        let _refreshing = null;
         async function refreshSession() {
-            if (!AUTH.session) return false;
-            try {
-                const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-                    method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
-                    body: JSON.stringify({ refresh_token: AUTH.session.refresh_token })
-                });
-                if (res.ok) { AUTH.save(await res.json()); return true; }
-                // Refresh token rejected (expired/revoked) — a real sign-in is required.
-                // Only clear on a definitive 4xx; a 5xx/network blip must NOT log us out.
-                if (res.status >= 400 && res.status < 500) { AUTH.clear(); return false; }
-            } catch (e) { /* offline / network blip — keep the session, try again later */ }
-            return false;
+            // Single-flight: overlapping refreshes in one tab would rotate the token
+            // out from under each other and force a spurious sign-out.
+            if (_refreshing) return _refreshing;
+            _refreshing = (async () => {
+                const tried = AUTH.load() && AUTH.session.refresh_token;
+                if (!tried) return false;
+                try {
+                    const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+                        method:'POST', headers:{ apikey: SUPABASE_KEY, 'Content-Type':'application/json' },
+                        body: JSON.stringify({ refresh_token: tried })
+                    });
+                    if (res.ok) { AUTH.save(await res.json()); return true; }
+                    // Refresh token rejected (expired/revoked) — a real sign-in is required.
+                    // Only clear on a definitive 4xx; a 5xx/network blip must NOT log us out.
+                    if (res.status >= 400 && res.status < 500) {
+                        // ...unless another tab rotated the token while this call was in
+                        // flight. Supabase invalidates the old token on rotation, so this
+                        // 4xx is expected and harmless — adopt the newer session instead
+                        // of logging everyone out.
+                        AUTH.load();
+                        if (AUTH.session && AUTH.session.refresh_token !== tried) return true;
+                        AUTH.clear();
+                        return false;
+                    }
+                } catch (e) { /* offline / network blip — keep the session, try again later */ }
+                return false;
+            })();
+            try { return await _refreshing; } finally { _refreshing = null; }
         }
         function signOut(){ AUTH.clear(); location.reload(); }
 
@@ -19354,6 +19392,7 @@ The {storeName} Team`
             $('oiCustomFields').style.display = type === 'customization' ? 'block' : 'none';
             $('oiFeeFields').style.display = type === 'fee' ? 'block' : 'none';
             $('oiDiscountFields').style.display = type === 'discount' ? 'block' : 'none';
+            if (type === 'discount') toggleDiscountKind();
             $('oiCustomItemFields').style.display = type === 'custom' ? 'block' : 'none';
             
             // Reset rush options when switching types
@@ -19424,36 +19463,79 @@ The {storeName} Team`
             $('oiRushPercent').oninput = calculateRushPercent;
         }
         
-        function calculateRushPercent() {
-            const percent = parseFloat($('oiRushPercent').value) || 0;
-            const applyTo = $('oiRushApplyTo').value;
-            let baseAmount = 0;
-            
+        // Base amount a percentage applies to: the whole order (items + customizations,
+        // excluding fees/discounts) or one specific item.
+        function percentBaseAmount(applyTo) {
+            let base = 0;
             if (applyTo === 'all') {
-                // Calculate from all items (excluding fees and discounts)
-                currentOrder.items.forEach(item => {
-                    if (item.type !== 'fee' && item.type !== 'discount') {
-                        baseAmount += item.price || 0;
-                        if (item.customizations) {
-                            item.customizations.forEach(c => baseAmount += c.price || 0);
-                        }
+                currentOrder.items.forEach(i => {
+                    if (i.type !== 'fee' && i.type !== 'discount') {
+                        base += i.price || 0;
+                        (i.customizations || []).forEach(c => base += c.price || 0);
                     }
                 });
             } else {
-                // Calculate from specific item
-                const item = currentOrder.items.find(i => i.id === applyTo);
-                if (item) {
-                    baseAmount = item.price || 0;
-                    if (item.customizations) {
-                        item.customizations.forEach(c => baseAmount += c.price || 0);
-                    }
+                const t = currentOrder.items.find(i => i.id === applyTo);
+                if (t) {
+                    base = t.price || 0;
+                    (t.customizations || []).forEach(c => base += c.price || 0);
                 }
             }
-            
+            return base;
+        }
+
+        // Percentage fees/discounts always track the CURRENT order contents. Without
+        // this, a "10% of order" fee added early goes stale when items change later —
+        // which is why totals stopped matching the Square invoice.
+        function recomputePercentItems() {
+            (currentOrder.items || []).forEach(item => {
+                const pct = item.rushPercent || item.discountPercent;
+                if (!pct) return;
+                const applyTo = item.rushApplyTo || item.discountApplyTo || 'all';
+                const amt = Math.round(percentBaseAmount(applyTo) * pct / 100 * 100) / 100;
+                item.price = item.discountPercent ? -Math.abs(amt) : amt;
+            });
+        }
+
+        function calculateRushPercent() {
+            const percent = parseFloat($('oiRushPercent').value) || 0;
+            const applyTo = $('oiRushApplyTo').value;
+            const baseAmount = percentBaseAmount(applyTo);
             const rushAmount = Math.round(baseAmount * percent / 100 * 100) / 100;
             const applyLabel = applyTo === 'all' ? 'entire order' : $('oiRushApplyTo').options[$('oiRushApplyTo').selectedIndex].text;
-            $('oiRushCalculated').innerHTML = percent > 0 ? 
+            $('oiRushCalculated').innerHTML = percent > 0 ?
                 `${percent}% of ${money(baseAmount)} (${applyLabel}) = <b>${money(rushAmount)}</b>` : '';
+        }
+
+        function toggleDiscountKind() {
+            const kind = document.querySelector('input[name="oiDiscountKind"]:checked')?.value || 'fixed';
+            $('oiDiscountAmountGroup').style.display = kind === 'percent' ? 'none' : 'block';
+            $('oiDiscountPercentGroup').style.display = kind === 'percent' ? 'block' : 'none';
+            if (kind === 'percent') { populateDiscountApplyTo(); calculateDiscountPercent(); }
+        }
+
+        function populateDiscountApplyTo() {
+            let html = '<option value="all">Entire order</option>';
+            currentOrder.items.forEach(item => {
+                if (item.type === 'fee' || item.type === 'discount') return;
+                const label = item.designer ? `${item.designer} ${item.name}` : item.name;
+                html += `<option value="${item.id}">${label}</option>`;
+            });
+            const sel = $('oiDiscountApplyTo');
+            const prev = sel.value;
+            sel.innerHTML = html;
+            if (prev) sel.value = prev;
+            if (!sel.value) sel.value = 'all';
+        }
+
+        function calculateDiscountPercent() {
+            const percent = parseFloat($('oiDiscountPercent').value) || 0;
+            const applyTo = $('oiDiscountApplyTo').value || 'all';
+            const base = percentBaseAmount(applyTo);
+            const amt = Math.round(base * percent / 100 * 100) / 100;
+            const label = applyTo === 'all' ? 'entire order' : ($('oiDiscountApplyTo').options[$('oiDiscountApplyTo').selectedIndex]?.text || 'item');
+            $('oiDiscountCalculated').innerHTML = percent > 0 ?
+                `${percent}% of ${money(base)} (${label}) = <b>−${money(amt)}</b>` : '';
         }
         
         function populateDesignerDropdown() {
@@ -19611,11 +19693,32 @@ The {storeName} Team`
                 document.querySelector('input[name="oiRushType"][value="fixed"]').checked = true;
                 toggleRushType();
             } else if (type === 'discount') {
-                item.name = $('oiDiscountName').value.trim() || 'Discount';
-                const amount = parsePriceInput($('oiDiscountAmount').value);
-                item.price = -Math.abs(amount); // Store as negative
-                if (!amount) { toast('Enter discount amount'); return; }
-                ['oiDiscountName','oiDiscountAmount'].forEach(i => $(i).value = '');
+                const kind = document.querySelector('input[name="oiDiscountKind"]:checked')?.value || 'fixed';
+                if (kind === 'percent') {
+                    const percent = parseFloat($('oiDiscountPercent').value) || 0;
+                    if (!percent) { toast('Enter discount percentage'); return; }
+                    const applyTo = $('oiDiscountApplyTo').value || 'all';
+                    const baseName = $('oiDiscountName').value.trim() || 'Discount';
+                    let targetLabel = 'order';
+                    if (applyTo !== 'all') {
+                        const t = currentOrder.items.find(i => i.id === applyTo);
+                        targetLabel = t ? (t.designer ? `${t.designer} ${t.name}` : t.name) : 'item';
+                    }
+                    item.name = `${baseName} (${percent}% of ${targetLabel})`;
+                    item.discountPercent = percent;
+                    item.discountApplyTo = applyTo;
+                    item.price = -Math.round(percentBaseAmount(applyTo) * percent / 100 * 100) / 100;
+                    ['oiDiscountName','oiDiscountPercent'].forEach(i => $(i).value = '');
+                    $('oiDiscountCalculated').innerHTML = '';
+                    document.querySelector('input[name="oiDiscountKind"][value="fixed"]').checked = true;
+                    toggleDiscountKind();
+                } else {
+                    item.name = $('oiDiscountName').value.trim() || 'Discount';
+                    const amount = parsePriceInput($('oiDiscountAmount').value);
+                    item.price = -Math.abs(amount); // Store as negative
+                    if (!amount) { toast('Enter discount amount'); return; }
+                    ['oiDiscountName','oiDiscountAmount'].forEach(i => $(i).value = '');
+                }
             } else if (type === 'custom') {
                 item.name = $('oiCustomItemName').value.trim();
                 item.price = parsePriceInput($('oiCustomItemPrice').value);
@@ -19665,7 +19768,7 @@ The {storeName} Team`
                 item.color = newColor.trim();
                 item.price = parseFloat(newPrice) || item.price;
                 
-            } else if (item.type === 'inhouse') {
+            } else if (item.type === 'inhouse' || item.type === 'custom') {
                 const newName = await appPrompt('Item Name:', item.name, 'Edit Item');
                 if (newName === null) return;
                 
@@ -19693,9 +19796,12 @@ The {storeName} Team`
         }
 
         function renderOrderItems() {
+            // Percentage fees/discounts follow the current items — recompute first.
+            recomputePercentItems();
             // Group items by type
             const designers = {}; // Group dress/accessory by designer
             const inhouse = currentOrder.items.filter(i => i.type === 'inhouse');
+            const customs = currentOrder.items.filter(i => i.type === 'custom');
             const fees = currentOrder.items.filter(i => i.type === 'fee');
             const discounts = currentOrder.items.filter(i => i.type === 'discount');
             
@@ -19764,6 +19870,28 @@ The {storeName} Team`
                 html += `</div>`;
             }
             
+            // Custom items (were previously invisible here — counted in the total
+            // but rendered no row, so they couldn't be removed)
+            if (customs.length > 0) {
+                html += `<div style="margin-bottom:12px">
+                    <div style="font-size:9px;font-weight:600;color:var(--taupe);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px">Custom</div>`;
+                customs.forEach(item => {
+                    const itemIdx = currentOrder.items.indexOf(item);
+                    html += `<div class="order-item">
+                        <div class="order-item-info" style="cursor:pointer" onclick="editOrderItem(${itemIdx})">
+                            <div class="order-item-name">${item.name}</div>
+                            ${item.notes ? `<div class="order-item-meta" style="font-style:italic">${item.notes.substring(0, 50)}${item.notes.length > 50 ? '...' : ''}</div>` : ''}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px">
+                            <div class="order-item-price">${money(item.price)}</div>
+                            <button class="action-btn" onclick="editOrderItem(${itemIdx})" title="Edit">✏️</button>
+                            <button class="order-remove" onclick="removeOrderItem(${itemIdx})">×</button>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            }
+
             // Fees
             if (fees.length > 0) {
                 html += `<div style="margin-bottom:12px">
@@ -20336,7 +20464,10 @@ The {storeName} Team`
             stopDraftAutoSave();
             const c = currentClient;
             const o = currentOrder;
-            
+
+            // Make sure percentage fees/discounts reflect the final item list.
+            recomputePercentItems();
+
             // Calculate totals with new structure
             let subtotal = 0;
             o.items.forEach(item => {
