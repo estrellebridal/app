@@ -3241,8 +3241,16 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
                     <div id="modalCustomMeasList"></div>
                     <div class="form-row" style="margin-top:6px">
-                        <input type="text" class="form-input" id="modalCustomMeasName" placeholder="Name (e.g. Shoulder)">
+                        <select class="form-input" id="modalCustomMeasName" onchange="toggleMeasOther('modalCustomMeasName')">
+                            <option value="">Measurement…</option>
+                            <option>High Hip</option>
+                            <option>Low Hip</option>
+                            <option>Over Bust</option>
+                            <option>Under Bust</option>
+                            <option value="__other">Other…</option>
+                        </select>
                         <div style="display:flex;gap:4px">
+                            <input type="text" class="form-input" id="modalCustomMeasNameOther" placeholder="Name" style="display:none">
                             <input type="text" class="form-input" id="modalCustomMeasValue" placeholder="Value" style="width:80px">
                             <button class="btn btn-sm btn-secondary" onclick="addModalCustomMeas()">+ Add</button>
                         </div>
@@ -3524,8 +3532,16 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
                         <div id="customMeasList"></div>
                         <div class="form-row" style="margin-top:6px">
-                            <input type="text" class="form-input" id="customMeasName" placeholder="Name (e.g. Shoulder)">
+                            <select class="form-input" id="customMeasName" onchange="toggleMeasOther('customMeasName')">
+                                <option value="">Measurement…</option>
+                                <option>High Hip</option>
+                                <option>Low Hip</option>
+                                <option>Over Bust</option>
+                                <option>Under Bust</option>
+                                <option value="__other">Other…</option>
+                            </select>
                             <div style="display:flex;gap:4px">
+                                <input type="text" class="form-input" id="customMeasNameOther" placeholder="Name" style="display:none">
                                 <input type="text" class="form-input" id="customMeasValue" placeholder="Value" style="width:80px">
                                 <button class="btn btn-sm btn-secondary" onclick="addCustomMeas()">+ Add</button>
                             </div>
@@ -15907,6 +15923,16 @@ The {storeName} Team`
                 rushTiers: [],
                 belowMin: { note: 'Inquiry required' },
                 minMonths: 5
+            },
+            {
+                name: 'Danielle Frankel',
+                standard: 7,
+                rushTiers: [
+                    { months: 6, fee: '20% rush' },
+                    { months: 5, fee: '30% rush' }
+                ],
+                belowMin: { note: 'Inquiry required — 3 months would be 100% rush' },
+                minMonths: 5
             }
         ];
         
@@ -17213,15 +17239,33 @@ The {storeName} Team`
             $('measUnitCm').style.color = measModalUnit === 'cm' ? 'white' : '';
         }
         
+        // The custom-measurement name is a dropdown of the extra measurements some
+        // designers require (e.g. Danielle Frankel), with "Other…" for freeform.
+        function toggleMeasOther(selId) {
+            const other = $(selId + 'Other');
+            if (other) other.style.display = $(selId).value === '__other' ? 'block' : 'none';
+        }
+
+        function readMeasName(selId) {
+            const v = $(selId).value;
+            return v === '__other' ? ($(selId + 'Other').value || '').trim() : v;
+        }
+
+        function resetMeasName(selId) {
+            $(selId).value = '';
+            const other = $(selId + 'Other');
+            if (other) { other.value = ''; other.style.display = 'none'; }
+        }
+
         function addModalCustomMeas() {
-            const name = $('modalCustomMeasName').value.trim();
+            const name = readMeasName('modalCustomMeasName');
             const value = $('modalCustomMeasValue').value.trim();
             if (!name || !value) {
                 toast('Enter name and value', 'error');
                 return;
             }
             modalCustomMeasurements.push({ name, value });
-            $('modalCustomMeasName').value = '';
+            resetMeasName('modalCustomMeasName');
             $('modalCustomMeasValue').value = '';
             renderModalCustomMeas();
         }
@@ -18266,11 +18310,11 @@ The {storeName} Team`
         }
 
         function addCustomMeas() {
-            const name = $('customMeasName').value.trim();
+            const name = readMeasName('customMeasName');
             const value = $('customMeasValue').value.trim();
             if (!name || !value) { toast('Enter name and value'); return; }
             customMeasurements.push({ name, value, unit: measUnit });
-            $('customMeasName').value = '';
+            resetMeasName('customMeasName');
             $('customMeasValue').value = '';
             renderCustomMeas();
             syncMeasurementsToOrder();
