@@ -2295,7 +2295,7 @@
                 <button class="btn btn-primary" onclick="saveAlterations()">💾 Save</button>
             </div>
             <div style="padding:0 20px 16px;text-align:right">
-                <button class="btn" onclick="saveAndMarkReady()" style="background:#27ae60;color:white;font-size:12px;padding:8px 20px;border:none;width:100%">✓ Save &amp; Mark Picked Up</button>
+                <button class="btn" onclick="saveAndMarkReady()" style="background:#27ae60;color:white;font-size:12px;padding:8px 20px;border:none;width:100%">✓ All Done &amp; Picked Up</button>
             </div>
         </div>
     </div>
@@ -4051,14 +4051,28 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         }
                     }
                     
-                    if (action.altRecordId && action.previousAltStatus) {
+                    if (action.prevAlts && action.prevAlts.length) {
+                        // Restore every alteration record (status + item states)
+                        for (const pa of action.prevAlts) {
+                            const altRecord = data.alterations?.find(a => a.ID == pa.id);
+                            if (altRecord) {
+                                altRecord.Status = pa.status;
+                                const upd = { Status: pa.status };
+                                if (pa.itemsJson) { altRecord.AlterationItems = pa.itemsJson; upd.AlterationItems = pa.itemsJson; }
+                                await updateRecord('Alterations', pa.id, upd);
+                            }
+                        }
+                        if (action.prevLocalItemsJson) {
+                            try { localStorage.setItem(`alts_${action.clientId}`, action.prevLocalItemsJson); } catch (e) {}
+                        }
+                    } else if (action.altRecordId && action.previousAltStatus) {
                         const altRecord = data.alterations?.find(a => a.ID == action.altRecordId);
                         if (altRecord) {
                             altRecord.Status = action.previousAltStatus;
                             await updateRecord('Alterations', action.altRecordId, { Status: action.previousAltStatus });
                         }
                     }
-                    
+
                     renderOrders();
                     renderAlts();
                     toast(`${action.clientName} restored to alterations!`, 'success');
@@ -11005,7 +11019,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                         <div style="display:flex;justify-content:flex-end;gap:6px">
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();deleteAlteration(${c.ID})" title="Remove from alterations" style="color:#e74c3c">✕</button>
                             <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();scheduleClientFitting(${c.ID})">📅 Schedule</button>
-                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markAlterationComplete(${c.ID})" style="background:#27ae60">✓ Picked Up</button>
+                            <button class="btn btn-sm btn-primary" onclick="event.stopPropagation();markAlterationComplete(${c.ID})" style="background:#27ae60">✓ Done &amp; Picked Up</button>
                         </div>
                     </div>
                 </div>`;
@@ -11987,46 +12001,76 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         async function markAlterationComplete(clientId) {
             const c = getClient(clientId);
             if (!c) return;
-            
+
             const clientName = `${c.FirstName} ${c.LastName}`;
-            
-            // Find order and save previous status for undo
-            const order = data.orders.find(o => String(o.ClientID) === String(clientId) && 
-                (o.Status === 'in alterations' || o.Status === 'QA complete' || o.Status === 'arrived - pending QA'));
-            
+
+            // Everything still open for this client. The old code completed the FIRST
+            // alteration record found — which could be an already-complete one from a
+            // previous dress, leaving the real record open and the bride stuck in the
+            // Alterations tab.
+            const openAlts = (data.alterations || []).filter(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete');
+            const order = data.orders.find(o => String(o.ClientID) === String(clientId) && o.Status !== 'picked up');
+
+            // Open alteration items (localStorage first, else the record)
+            let items = [];
+            const localJson = localStorage.getItem(`alts_${clientId}`);
+            if (localJson) { try { items = JSON.parse(localJson); } catch (e) {} }
+            if (!items.length && openAlts[0] && openAlts[0].AlterationItems) {
+                try { items = JSON.parse(openAlts[0].AlterationItems); } catch (e) {}
+            }
+            const openItemCount = items.filter(i => i.status !== 'done').length;
+
+            // Protection: confirm before marking everything done + picked up.
+            const confirmed = await appConfirm(
+                `Mark ${clientName} as picked up?` + (openItemCount ? `\n${openItemCount} open alteration item(s) will be marked done.` : ''),
+                'Confirm Pickup'
+            );
+            if (!confirmed) return;
+
             const previousOrderStatus = order ? order.Status : null;
-            
-            // Find alteration record
-            const altRecord = data.alterations?.find(a => String(a.ClientID) === String(clientId));
-            const previousAltStatus = altRecord ? altRecord.Status : null;
-            
+            const prevAlts = openAlts.map(a => ({ id: a.ID, status: a.Status, itemsJson: a.AlterationItems || '' }));
+            const prevLocalItemsJson = localJson || '';
+
+            // Mark every item done; resolve any open adjustment rounds.
+            items.forEach(it => {
+                it.status = 'done';
+                if (it.adjustments) it.adjustments = it.adjustments.filter(n => n && n.trim());
+                it.openCount = 0;
+            });
+            const itemsJson = JSON.stringify(items);
+            if (items.length) localStorage.setItem(`alts_${clientId}`, itemsJson);
+
             // Update order status to "picked up"
             if (order) {
                 order.Status = 'picked up';
                 updateRecord('Orders', order.ID, { Status: 'picked up' });
             }
-            
-            // Update alteration record if exists
-            if (altRecord) {
-                altRecord.Status = 'complete';
-                updateRecord('Alterations', altRecord.ID, { Status: 'complete' });
+
+            // Complete ALL open alteration records
+            for (const alt of openAlts) {
+                alt.Status = 'complete';
+                const upd = { Status: 'complete' };
+                if (items.length) { alt.AlterationItems = itemsJson; upd.AlterationItems = itemsJson; }
+                updateRecord('Alterations', alt.ID, upd);
             }
-            
+
             saveCachedData();
             renderAlts();
             renderOrders();
             try { renderAltsPage(); } catch(e) {}
             try { renderDash(); } catch(e) {}
-            
-            // Add to undo stack
-            addUndo({ 
-                type: 'picked_up', 
+
+            // Add to undo stack (restores order/alteration statuses AND item states)
+            addUndo({
+                type: 'picked_up',
                 clientId,
                 clientName,
                 orderId: order?.ID,
                 previousOrderStatus,
-                altRecordId: altRecord?.ID,
-                previousAltStatus
+                prevAlts,
+                prevLocalItemsJson,
+                altRecordId: openAlts[0]?.ID,
+                previousAltStatus: prevAlts[0]?.status || null
             });
             
             toast(`${clientName} marked as picked up!`, 'success', true);
