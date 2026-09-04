@@ -3230,9 +3230,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 </div>
                 <div class="meas-grid">
                     <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="measBust"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Over Bust</div><input type="text" class="meas-input" id="measOverBust"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Under Bust</div><input type="text" class="meas-input" id="measUnderBust"><div class="meas-unit" data-meas-unit>in</div></div>
                     <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="measCup" placeholder="e.g. 34C"></div>
                     <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="measWaist"><div class="meas-unit" data-meas-unit>in</div></div>
-                    <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="measHip"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">Hip <span style="font-size:9px;color:var(--taupe)">(Low Hip)</span></div><input type="text" class="meas-input" id="measHip"><div class="meas-unit" data-meas-unit>in</div></div>
+                    <div class="meas-item"><div class="meas-label">High Hip <span style="font-size:9px;color:var(--taupe)">(Hip bone)</span></div><input type="text" class="meas-input" id="measHighHip"><div class="meas-unit" data-meas-unit>in</div></div>
                     <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="measHeight"><div class="meas-unit">in</div></div>
                     <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="measHeels"><div class="meas-unit">in</div></div>
                     <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="measWaistToFloor"><div class="meas-unit" data-meas-unit>in</div></div>
@@ -3241,16 +3244,8 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
                     <div id="modalCustomMeasList"></div>
                     <div class="form-row" style="margin-top:6px">
-                        <select class="form-input" id="modalCustomMeasName" onchange="toggleMeasOther('modalCustomMeasName')">
-                            <option value="">Measurement…</option>
-                            <option>High Hip</option>
-                            <option>Low Hip</option>
-                            <option>Over Bust</option>
-                            <option>Under Bust</option>
-                            <option value="__other">Other…</option>
-                        </select>
+                        <input type="text" class="form-input" id="modalCustomMeasName" placeholder="Name (e.g. Shoulder)">
                         <div style="display:flex;gap:4px">
-                            <input type="text" class="form-input" id="modalCustomMeasNameOther" placeholder="Name" style="display:none">
                             <input type="text" class="form-input" id="modalCustomMeasValue" placeholder="Value" style="width:80px">
                             <button class="btn btn-sm btn-secondary" onclick="addModalCustomMeas()">+ Add</button>
                         </div>
@@ -3521,9 +3516,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     </div>
                     <div class="meas-grid">
                         <div class="meas-item"><div class="meas-label">Bust</div><input type="text" class="meas-input" id="mBust" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Over Bust</div><input type="text" class="meas-input" id="mOverBust" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Under Bust</div><input type="text" class="meas-input" id="mUnderBust" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Cup Size</div><input type="text" class="meas-input" id="mCup" placeholder="e.g. 34C" onblur="syncMeasurementsToOrder()"></div>
                         <div class="meas-item"><div class="meas-label">Waist</div><input type="text" class="meas-input" id="mWaist" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
-                        <div class="meas-item"><div class="meas-label">Hip</div><input type="text" class="meas-input" id="mHip" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">Hip <span style="font-size:9px;color:var(--taupe)">(Low Hip)</span></div><input type="text" class="meas-input" id="mHip" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
+                        <div class="meas-item"><div class="meas-label">High Hip <span style="font-size:9px;color:var(--taupe)">(Hip bone)</span></div><input type="text" class="meas-input" id="mHighHip" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
                         <div class="meas-item"><div class="meas-label">Height</div><input type="text" class="meas-input" id="mHeight" onblur="syncMeasurementsToOrder()"><div class="meas-unit">in</div></div>
                         <div class="meas-item"><div class="meas-label">Heels</div><input type="text" class="meas-input" id="mHeels" onblur="syncMeasurementsToOrder()"><div class="meas-unit">in</div></div>
                         <div class="meas-item"><div class="meas-label">Waist to Floor <span style="font-size:9px;color:var(--taupe)">(w/o heels)</span></div><input type="text" class="meas-input" id="mWaistToFloor" onblur="syncMeasurementsToOrder()"><div class="meas-unit" data-unit>in</div></div>
@@ -3532,16 +3530,8 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         <div style="font-size:9px;letter-spacing:0.06em;text-transform:uppercase;color:var(--rose);margin-bottom:6px">Custom Measurements</div>
                         <div id="customMeasList"></div>
                         <div class="form-row" style="margin-top:6px">
-                            <select class="form-input" id="customMeasName" onchange="toggleMeasOther('customMeasName')">
-                                <option value="">Measurement…</option>
-                                <option>High Hip</option>
-                                <option>Low Hip</option>
-                                <option>Over Bust</option>
-                                <option>Under Bust</option>
-                                <option value="__other">Other…</option>
-                            </select>
+                            <input type="text" class="form-input" id="customMeasName" placeholder="Name (e.g. Shoulder)">
                             <div style="display:flex;gap:4px">
-                                <input type="text" class="form-input" id="customMeasNameOther" placeholder="Name" style="display:none">
                                 <input type="text" class="form-input" id="customMeasValue" placeholder="Value" style="width:80px">
                                 <button class="btn btn-sm btn-secondary" onclick="addCustomMeas()">+ Add</button>
                             </div>
@@ -7105,7 +7095,12 @@ The Estrelle Bridal Team`;
             const body = $('clientEmailBody')?.value || '';
             
             if (!to) { toast('No email address', 'error'); return; }
-            
+
+            // Clear the draft BEFORE closing — otherwise closeModal's unsaved-draft
+            // guard asks "are you sure?" about the email we are sending right now.
+            $('clientEmailSubject').value = '';
+            $('clientEmailBody').value = '';
+            $('clientEmailBodyEditor').innerHTML = '';
             closeModal('clientEmail');
             sendEmailViaPreferredMethod(to, subject, body);
         }
@@ -8986,6 +8981,9 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             const allMeas = [
                 { label: 'Bust', value: measurements.bust, u: unit },
                 { label: 'Cup Size', value: measurements.cup, u: '' },
+                { label: 'Over Bust', value: measurements.overBust, u: unit },
+                { label: 'Under Bust', value: measurements.underBust, u: unit },
+                { label: 'High Hip', value: measurements.highHip, u: unit },
                 { label: 'Waist', value: measurements.waist, u: unit },
                 { label: 'Hip', value: measurements.hip, u: unit },
                 { label: 'Height', value: measurements.height, u: unit },
@@ -16882,6 +16880,9 @@ The {storeName} Team`
                     if ($('mCup')) $('mCup').value = measurements.cup || '';
                     if ($('mWaist')) $('mWaist').value = measurements.waist || '';
                     if ($('mHip')) $('mHip').value = measurements.hip || '';
+                    if ($('mHighHip')) $('mHighHip').value = measurements.highHip || '';
+                    if ($('mOverBust')) $('mOverBust').value = measurements.overBust || '';
+                    if ($('mUnderBust')) $('mUnderBust').value = measurements.underBust || '';
                     if ($('mHeight')) $('mHeight').value = measurements.height || '';
                     if ($('mHeels')) $('mHeels').value = measurements.heels || '';
                     if ($('mWaistToFloor')) $('mWaistToFloor').value = measurements.waistToFloor || '';
@@ -17171,10 +17172,13 @@ The {storeName} Team`
             const isHip = c => /hip/i.test(c.name || '');
             const e = [];
             if (m.bust) e.push({ label: 'Bust', value: m.bust, unit });
+            if (m.overBust) e.push({ label: 'Over Bust', value: m.overBust, unit });
+            if (m.underBust) e.push({ label: 'Under Bust', value: m.underBust, unit });
             customs.filter(isBust).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
             if (m.cup) e.push({ label: 'Cup', value: m.cup, unit: '' });
             if (m.waist) e.push({ label: 'Waist', value: m.waist, unit });
             if (m.hip) e.push({ label: 'Hip', value: m.hip, unit });
+            if (m.highHip) e.push({ label: 'High Hip', value: m.highHip, unit });
             customs.filter(isHip).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
             if (m.height) e.push({ label: 'Height', value: m.height, unit: 'in' });
             if (m.heels) e.push({ label: 'Heels', value: m.heels, unit: 'in' });
@@ -17237,6 +17241,9 @@ The {storeName} Team`
             $('measCup').value = '';
             $('measWaist').value = '';
             $('measHip').value = '';
+            $('measHighHip').value = '';
+            $('measOverBust').value = '';
+            $('measUnderBust').value = '';
             $('measHeight').value = '';
             $('measHeels').value = '';
             $('measWaistToFloor').value = '';
@@ -17273,6 +17280,9 @@ The {storeName} Team`
             $('measCup').value = m.cup || '';
             $('measWaist').value = m.waist || '';
             $('measHip').value = m.hip || '';
+            $('measHighHip').value = m.highHip || '';
+            $('measOverBust').value = m.overBust || '';
+            $('measUnderBust').value = m.underBust || '';
             $('measHeight').value = m.height || '';
             $('measHeels').value = m.heels || '';
             $('measWaistToFloor').value = m.waistToFloor || '';
@@ -17312,33 +17322,15 @@ The {storeName} Team`
             $('measUnitCm').style.color = measModalUnit === 'cm' ? 'white' : '';
         }
         
-        // The custom-measurement name is a dropdown of the extra measurements some
-        // designers require (e.g. Danielle Frankel), with "Other…" for freeform.
-        function toggleMeasOther(selId) {
-            const other = $(selId + 'Other');
-            if (other) other.style.display = $(selId).value === '__other' ? 'block' : 'none';
-        }
-
-        function readMeasName(selId) {
-            const v = $(selId).value;
-            return v === '__other' ? ($(selId + 'Other').value || '').trim() : v;
-        }
-
-        function resetMeasName(selId) {
-            $(selId).value = '';
-            const other = $(selId + 'Other');
-            if (other) { other.value = ''; other.style.display = 'none'; }
-        }
-
         function addModalCustomMeas() {
-            const name = readMeasName('modalCustomMeasName');
+            const name = $('modalCustomMeasName').value.trim();
             const value = $('modalCustomMeasValue').value.trim();
             if (!name || !value) {
                 toast('Enter name and value', 'error');
                 return;
             }
             modalCustomMeasurements.push({ name, value, unit: measModalUnit });
-            resetMeasName('modalCustomMeasName');
+            $('modalCustomMeasName').value = '';
             $('modalCustomMeasValue').value = '';
             renderModalCustomMeas();
         }
@@ -17371,6 +17363,9 @@ The {storeName} Team`
                 cup: $('measCup').value.trim(),
                 waist: $('measWaist').value.trim(),
                 hip: $('measHip').value.trim(),
+                highHip: $('measHighHip').value.trim(),
+                overBust: $('measOverBust').value.trim(),
+                underBust: $('measUnderBust').value.trim(),
                 height: $('measHeight').value.trim(),
                 heels: $('measHeels').value.trim(),
                 waistToFloor: $('measWaistToFloor').value.trim(),
@@ -17432,6 +17427,7 @@ The {storeName} Team`
         async function saveMeasurementsFromSayYes() {
             // Check if there's at least some measurement data
             const hasMeasurements = $('mBust').value || $('mWaist').value || $('mHip').value ||
+                                   $('mOverBust').value || $('mUnderBust').value || $('mHighHip').value ||
                                    $('mHeight').value || $('mWaistToFloor').value;
             if (!hasMeasurements) {
                 toast('Please enter at least one measurement', 'error');
@@ -17449,6 +17445,9 @@ The {storeName} Team`
                 cup: $('mCup').value.trim(),
                 waist: $('mWaist').value.trim(),
                 hip: $('mHip').value.trim(),
+                highHip: $('mHighHip').value.trim(),
+                overBust: $('mOverBust').value.trim(),
+                underBust: $('mUnderBust').value.trim(),
                 height: $('mHeight').value.trim(),
                 heels: $('mHeels').value.trim(),
                 waistToFloor: $('mWaistToFloor').value.trim(),
@@ -18383,11 +18382,11 @@ The {storeName} Team`
         }
 
         function addCustomMeas() {
-            const name = readMeasName('customMeasName');
+            const name = $('customMeasName').value.trim();
             const value = $('customMeasValue').value.trim();
             if (!name || !value) { toast('Enter name and value'); return; }
             customMeasurements.push({ name, value, unit: measUnit });
-            resetMeasName('customMeasName');
+            $('customMeasName').value = '';
             $('customMeasValue').value = '';
             renderCustomMeas();
             syncMeasurementsToOrder();
@@ -18456,7 +18455,7 @@ The {storeName} Team`
             populateDesignerDropdown();
             
             // Clear measurement fields
-            ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => { if ($(id)) $(id).value = ''; });
+            ['mBust','mOverBust','mUnderBust','mCup','mWaist','mHip','mHighHip','mHeight','mHeels','mWaistToFloor'].forEach(id => { if ($(id)) $(id).value = ''; });
             if ($('mNotes')) $('mNotes').value = '';
             if ($('customMeasList')) $('customMeasList').innerHTML = '';
             if ($('selectSavedMeasurement')) $('selectSavedMeasurement').value = '';
@@ -18570,7 +18569,7 @@ The {storeName} Team`
             
             if (idx === '') {
                 // Clear fields for manual entry
-                ['mBust','mCup','mWaist','mHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
+                ['mBust','mOverBust','mUnderBust','mCup','mWaist','mHip','mHighHip','mHeight','mHeels','mWaistToFloor'].forEach(id => $(id).value = '');
                 $('mNotes').value = '';
                 $('mTakenBy').value = '';
                 customMeasurements = [];
@@ -18593,6 +18592,9 @@ The {storeName} Team`
             $('mCup').value = m.cup || '';
             $('mWaist').value = m.waist || '';
             $('mHip').value = m.hip || '';
+            $('mHighHip').value = m.highHip || '';
+            $('mOverBust').value = m.overBust || '';
+            $('mUnderBust').value = m.underBust || '';
             $('mHeight').value = m.height || '';
             $('mHeels').value = m.heels || '';
             $('mWaistToFloor').value = m.waistToFloor || '';
@@ -18619,7 +18621,7 @@ The {storeName} Team`
             
             // Check if there's any data entered
             const hasItems = currentOrder.items && currentOrder.items.length > 0;
-            const hasMeasurements = $('mBust')?.value || $('mWaist')?.value || $('mHip')?.value;
+            const hasMeasurements = $('mBust')?.value || $('mWaist')?.value || $('mHip')?.value || $('mOverBust')?.value || $('mUnderBust')?.value || $('mHighHip')?.value;
             
             if (hasItems || hasMeasurements) {
                 // Auto-save silently first so nothing is lost
@@ -18772,6 +18774,9 @@ The {storeName} Team`
                 cup: $('mCup')?.value || '',
                 waist: $('mWaist')?.value || '',
                 hip: $('mHip')?.value || '',
+                highHip: $('mHighHip')?.value || '',
+                overBust: $('mOverBust')?.value || '',
+                underBust: $('mUnderBust')?.value || '',
                 height: $('mHeight')?.value || '',
                 waistToFloor: $('mWaistToFloor')?.value || '',
                 heels: $('mHeels')?.value || '',
@@ -18796,7 +18801,10 @@ The {storeName} Team`
                 bust: $('mBust')?.value || '',
                 cup: $('mCup')?.value || '',
                 waist: $('mWaist')?.value || '', 
-                hip: $('mHip')?.value || '', 
+                hip: $('mHip')?.value || '',
+                highHip: $('mHighHip')?.value || '',
+                overBust: $('mOverBust')?.value || '',
+                underBust: $('mUnderBust')?.value || '', 
                 height: $('mHeight')?.value || '', 
                 waistToFloor: $('mWaistToFloor')?.value || '',
                 heels: $('mHeels')?.value || '', 
@@ -18918,6 +18926,9 @@ The {storeName} Team`
                     $('mCup').value = draft.measurements.cup || '';
                     $('mWaist').value = draft.measurements.waist || '';
                     $('mHip').value = draft.measurements.hip || '';
+                    $('mHighHip').value = draft.measurements.highHip || '';
+                    $('mOverBust').value = draft.measurements.overBust || '';
+                    $('mUnderBust').value = draft.measurements.underBust || '';
                     $('mHeight').value = draft.measurements.height || '';
                     $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
                     $('mHeels').value = draft.measurements.heels || '';
@@ -19006,6 +19017,9 @@ The {storeName} Team`
                         $('mCup').value = draft.measurements.cup || '';
                         $('mWaist').value = draft.measurements.waist || '';
                         $('mHip').value = draft.measurements.hip || '';
+                        $('mHighHip').value = draft.measurements.highHip || '';
+                        $('mOverBust').value = draft.measurements.overBust || '';
+                        $('mUnderBust').value = draft.measurements.underBust || '';
                         $('mHeight').value = draft.measurements.height || '';
                         $('mWaistToFloor').value = draft.measurements.waistToFloor || '';
                         $('mHeels').value = draft.measurements.heels || '';
@@ -19138,6 +19152,9 @@ The {storeName} Team`
                 $('mCup').value = m.cup || '';
                 $('mWaist').value = m.waist || '';
                 $('mHip').value = m.hip || '';
+                $('mHighHip').value = m.highHip || '';
+                $('mOverBust').value = m.overBust || '';
+                $('mUnderBust').value = m.underBust || '';
                 $('mHeight').value = m.height || '';
                 $('mWaistToFloor').value = m.waistToFloor || '';
                 $('mHeels').value = m.heels || '';
@@ -20287,9 +20304,12 @@ The {storeName} Team`
                 <table>
                     <tr><th>Item</th><th>Measurement</th><th style="width:80px">Client's Initial</th></tr>
                     ${o.measurements.bust ? `<tr><td>Bust</td><td>${o.measurements.bust} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.overBust ? `<tr><td>Over Bust</td><td>${o.measurements.overBust} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.underBust ? `<tr><td>Under Bust</td><td>${o.measurements.underBust} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.cup ? `<tr><td>Cup Size</td><td>${o.measurements.cup}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.waist ? `<tr><td>Waist</td><td>${o.measurements.waist} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.hip ? `<tr><td>Hip</td><td>${o.measurements.hip} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+                    ${o.measurements.highHip ? `<tr><td>High Hip</td><td>${o.measurements.highHip} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.height ? `<tr><td>Height</td><td>${o.measurements.height} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.waistToFloor ? `<tr><td>Waist to Floor</td><td>${o.measurements.waistToFloor} ${unit}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
                     ${o.measurements.heels ? `<tr><td>Heels</td><td>${o.measurements.heels}"</td><td style="border:1px solid #ccc"></td></tr>` : ''}
@@ -20380,6 +20400,9 @@ The {storeName} Team`
             // Other measurements - grouped under one initial
             const otherMeasurements = [
                 { key: 'cup', label: 'Cup Size', value: o.measurements.cup, unit: '' },
+                { key: 'overBust', label: 'Over Bust', value: o.measurements.overBust, unit: unit },
+                { key: 'underBust', label: 'Under Bust', value: o.measurements.underBust, unit: unit },
+                { key: 'highHip', label: 'High Hip', value: o.measurements.highHip, unit: unit },
                 { key: 'height', label: 'Height', value: o.measurements.height, unit: unit },
                 { key: 'waistToFloor', label: 'Waist to Floor', value: o.measurements.waistToFloor, unit: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, unit: '"' }
@@ -20619,6 +20642,9 @@ The {storeName} Team`
                 cup: o.measurements.cup || '',
                 waist: o.measurements.waist || '',
                 hip: o.measurements.hip || '',
+                highHip: o.measurements.highHip || '',
+                overBust: o.measurements.overBust || '',
+                underBust: o.measurements.underBust || '',
                 height: o.measurements.height || '',
                 heels: o.measurements.heels || '',
                 waistToFloor: o.measurements.waistToFloor || '',
@@ -20878,6 +20904,9 @@ p{margin:6px 0;}
             
             const otherMeas = [
                 { key: 'cup', label: 'Cup Size', value: o.measurements.cup, u: '' },
+                { key: 'overBust', label: 'Over Bust', value: o.measurements.overBust, u: unit },
+                { key: 'underBust', label: 'Under Bust', value: o.measurements.underBust, u: unit },
+                { key: 'highHip', label: 'High Hip', value: o.measurements.highHip, u: unit },
                 { key: 'height', label: 'Height', value: o.measurements.height, u: unit },
                 { key: 'waistToFloor', label: 'Waist to Floor', value: o.measurements.waistToFloor, u: unit },
                 { key: 'heels', label: 'Heels', value: o.measurements.heels, u: '"' }
@@ -21149,6 +21178,9 @@ p{margin:6px 0;}
             
             const otherMeas = [
                 { label: 'Cup Size', value: meas.cup, u: '' },
+                { label: 'Over Bust', value: meas.overBust, u: unit },
+                { label: 'Under Bust', value: meas.underBust, u: unit },
+                { label: 'High Hip', value: meas.highHip, u: unit },
                 { label: 'Height', value: meas.height, u: unit },
                 { label: 'Waist to Floor', value: meas.waistToFloor, u: unit },
                 { label: 'Heels', value: meas.heels, u: '"' }
