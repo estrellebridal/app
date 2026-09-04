@@ -17137,11 +17137,10 @@ The {storeName} Team`
             measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
             
             $('cMeasurements').innerHTML = measurements.map((m, idx) => {
-                const unit = m.unit || 'in';
-                const customHtml = (m.custom && m.custom.length > 0) ? 
-                    `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--champagne);display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px">
-                        ${m.custom.map(c => `<div><span style="color:var(--taupe)">${c.name}:</span> ${c.value}</div>`).join('')}
-                    </div>` : '';
+                const entries = measurementEntries(m);
+                const gridHtml = entries.length
+                    ? entries.map(x => `<div><span style="color:var(--taupe)">${x.label === 'Waist to Floor' ? 'WtF' : x.label}:</span> ${x.value}${x.unit ? ' ' + x.unit : ''}</div>`).join('')
+                    : '<div style="color:var(--taupe)">No values</div>';
                 return `
                 <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative;cursor:pointer" onclick="editMeasurement(${idx})">
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -17154,33 +17153,39 @@ The {storeName} Team`
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px">
-                        <div><span style="color:var(--taupe)">Bust:</span> ${m.bust || '—'} ${m.bust ? unit : ''}</div>
-                        <div><span style="color:var(--taupe)">Cup:</span> ${m.cup || '—'}</div>
-                        <div><span style="color:var(--taupe)">Waist:</span> ${m.waist || '—'} ${m.waist ? unit : ''}</div>
-                        <div><span style="color:var(--taupe)">Hip:</span> ${m.hip || '—'} ${m.hip ? unit : ''}</div>
-                        <div><span style="color:var(--taupe)">Height:</span> ${m.height || '—'} ${m.height ? 'in' : ''}</div>
-                        <div><span style="color:var(--taupe)">Heels:</span> ${m.heels || '—'} ${m.heels ? 'in' : ''}</div>
-                        <div><span style="color:var(--taupe)">WtF:</span> ${m.waistToFloor || '—'} ${m.waistToFloor ? unit : ''}</div>
+                        ${gridHtml}
                     </div>
-                    ${customHtml}
                     ${m.notes ? `<div style="font-size:10px;color:var(--taupe);margin-top:6px;font-style:italic">${m.notes}</div>` : ''}
                 </div>`;
             }).join('');
         }
         
+        // Ordered label/value/unit entries: the bust family stays together (Bust,
+        // Over/Under Bust, Cup), the hip family too (Hip, High/Low Hip), and every
+        // value carries its unit. Shared by the profile card, copy, and email.
+        function measurementEntries(m) {
+            const unit = m.unit || 'in';
+            const customs = (m.custom || []).filter(c => c.value);
+            const cu = c => c.unit || unit;
+            const isBust = c => /bust/i.test(c.name || '');
+            const isHip = c => /hip/i.test(c.name || '');
+            const e = [];
+            if (m.bust) e.push({ label: 'Bust', value: m.bust, unit });
+            customs.filter(isBust).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
+            if (m.cup) e.push({ label: 'Cup', value: m.cup, unit: '' });
+            if (m.waist) e.push({ label: 'Waist', value: m.waist, unit });
+            if (m.hip) e.push({ label: 'Hip', value: m.hip, unit });
+            customs.filter(isHip).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
+            if (m.height) e.push({ label: 'Height', value: m.height, unit: 'in' });
+            if (m.heels) e.push({ label: 'Heels', value: m.heels, unit: 'in' });
+            if (m.waistToFloor) e.push({ label: 'Waist to Floor', value: m.waistToFloor, unit });
+            customs.filter(c => !isBust(c) && !isHip(c)).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
+            return e;
+        }
+
         // The measurement values as text lines (shared by copy + email-to-bride).
         function measurementLines(m) {
-            const unit = m.unit || 'in';
-            const lines = [];
-            if (m.bust) lines.push(`Bust: ${m.bust} ${unit}`);
-            if (m.cup) lines.push(`Cup: ${m.cup}`);
-            if (m.waist) lines.push(`Waist: ${m.waist} ${unit}`);
-            if (m.hip) lines.push(`Hip: ${m.hip} ${unit}`);
-            if (m.height) lines.push(`Height: ${m.height} in`);
-            if (m.heels) lines.push(`Heels: ${m.heels} in`);
-            if (m.waistToFloor) lines.push(`Waist to Floor: ${m.waistToFloor} ${unit}`);
-            (m.custom || []).forEach(c => { if (c.value) lines.push(`${c.name}: ${c.value}`); });
-            return lines;
+            return measurementEntries(m).map(x => `${x.label}: ${x.value}${x.unit ? ' ' + x.unit : ''}`);
         }
 
         function copyMeasurement(idx) {
@@ -17332,7 +17337,7 @@ The {storeName} Team`
                 toast('Enter name and value', 'error');
                 return;
             }
-            modalCustomMeasurements.push({ name, value });
+            modalCustomMeasurements.push({ name, value, unit: measModalUnit });
             resetMeasName('modalCustomMeasName');
             $('modalCustomMeasValue').value = '';
             renderModalCustomMeas();
@@ -17346,7 +17351,7 @@ The {storeName} Team`
         function renderModalCustomMeas() {
             $('modalCustomMeasList').innerHTML = modalCustomMeasurements.map((m, idx) => `
                 <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:var(--blush);border-radius:4px;margin-bottom:4px;font-size:11px">
-                    <span>${m.name}: ${m.value}</span>
+                    <span>${m.name}: ${m.value} ${m.unit || measModalUnit}</span>
                     <button class="action-btn" onclick="removeModalCustomMeas(${idx})" style="font-size:10px">×</button>
                 </div>
             `).join('');
