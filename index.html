@@ -17148,6 +17148,7 @@ The {storeName} Team`
                         <div style="font-weight:600;font-size:12px">📅 ${fmtDate(m.date)}${m.takenBy ? ` <span style="font-weight:400;color:var(--taupe)">by ${m.takenBy}</span>` : ''}</div>
                         <div style="display:flex;gap:4px" onclick="event.stopPropagation()">
                             <button class="action-btn" onclick="copyMeasurement(${idx})" title="Copy for email">📋</button>
+                            <button class="action-btn" onclick="emailMeasurement(${idx})" title="Email to bride">✉️</button>
                             <button class="action-btn" onclick="editMeasurement(${idx})" title="Edit">✏️</button>
                             <button class="action-btn" onclick="deleteMeasurement(${idx})" title="Delete">×</button>
                         </div>
@@ -17167,20 +17168,10 @@ The {storeName} Team`
             }).join('');
         }
         
-        function copyMeasurement(idx) {
-            const measurements = getClientMeasurements();
-            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-            const m = measurements[idx];
-            if (!m) return;
-            
+        // The measurement values as text lines (shared by copy + email-to-bride).
+        function measurementLines(m) {
             const unit = m.unit || 'in';
-            const clientName = currentClient ? `${currentClient.FirstName} ${currentClient.LastName}` : '';
-            
             const lines = [];
-            if (clientName) lines.push(`Client: ${clientName}`);
-            if (m.date) lines.push(`Date: ${fmtDate(m.date)}`);
-            if (m.takenBy) lines.push(`Measured by: ${m.takenBy}`);
-            lines.push('');
             if (m.bust) lines.push(`Bust: ${m.bust} ${unit}`);
             if (m.cup) lines.push(`Cup: ${m.cup}`);
             if (m.waist) lines.push(`Waist: ${m.waist} ${unit}`);
@@ -17188,15 +17179,48 @@ The {storeName} Team`
             if (m.height) lines.push(`Height: ${m.height} in`);
             if (m.heels) lines.push(`Heels: ${m.heels} in`);
             if (m.waistToFloor) lines.push(`Waist to Floor: ${m.waistToFloor} ${unit}`);
-            if (m.custom && m.custom.length > 0) {
-                m.custom.forEach(c => { if (c.value) lines.push(`${c.name}: ${c.value}`); });
-            }
+            (m.custom || []).forEach(c => { if (c.value) lines.push(`${c.name}: ${c.value}`); });
+            return lines;
+        }
+
+        function copyMeasurement(idx) {
+            const measurements = getClientMeasurements();
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const m = measurements[idx];
+            if (!m) return;
+
+            const clientName = currentClient ? `${currentClient.FirstName} ${currentClient.LastName}` : '';
+
+            const lines = [];
+            if (clientName) lines.push(`Client: ${clientName}`);
+            if (m.date) lines.push(`Date: ${fmtDate(m.date)}`);
+            if (m.takenBy) lines.push(`Measured by: ${m.takenBy}`);
+            lines.push('');
+            lines.push(...measurementLines(m));
             if (m.notes) { lines.push(''); lines.push(`Notes: ${m.notes}`); }
-            
+
             const text = lines.join('\n');
             navigator.clipboard.writeText(text).then(() => {
                 toast('Measurements copied!', 'success');
             }).catch(() => prompt('Copy measurements:', text));
+        }
+
+        // Email a measurement record to the bride: opens the client email composer
+        // prefilled, so staff review before sending.
+        function emailMeasurement(idx) {
+            if (!currentClient) return;
+            if (!currentClient.Email) { toast('This client has no email address. Add one first.', 'error'); return; }
+            const measurements = getClientMeasurements();
+            measurements.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+            const m = measurements[idx];
+            if (!m) return;
+
+            openClientEmailModal();
+            const store = getStoreInfo();
+            $('clientEmailSubject').value = `Your Measurements — ${store.name || 'Estrelle Bridal'}`;
+            const body = `Hi ${currentClient.FirstName},\n\nHere are your measurements taken on ${fmtDate(m.date)}:\n\n${measurementLines(m).join('\n')}\n\nIf you have any questions, we're always happy to help.\n\nWarmly,\n${store.name || 'Estrelle Bridal'}`;
+            $('clientEmailBody').value = body;
+            $('clientEmailBodyEditor').innerText = body;
         }
         
         let editingMeasurementIdx = null;
