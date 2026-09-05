@@ -16939,9 +16939,20 @@ The {storeName} Team`
                     if ($('taxNone')) $('taxNone').checked = true;
                 }
                 
+                // Preserve existing signatures — without this, re-saving an edited
+                // contract wiped the customer's signature and initials.
+                if (order.CustomerSignature && String(order.CustomerSignature).startsWith('data:image')) {
+                    currentOrder.signatureData = order.CustomerSignature;
+                }
+                if (order.ConsultantSignature && String(order.ConsultantSignature).startsWith('data:image')) {
+                    currentOrder.consultantSignatureData = order.ConsultantSignature;
+                }
+                if (order.InitialSignature) currentOrder.initialSignature = order.InitialSignature;
+                if (order.Initials) { try { currentOrder.initials = JSON.parse(order.Initials); } catch(e) {} }
+
                 // Store the original order ID so we can update instead of create new
                 currentOrder._editingOrderId = orderId;
-                
+
                 toast('Editing contract — make changes and save', 'success');
             }, 300);
         }
