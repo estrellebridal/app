@@ -5280,9 +5280,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         console.log('Filtering out confirmed appointment:', a.ID, a.ConfirmationSent);
                         return false; // Already confirmed
                     }
-                    // Only consultations need confirmation
+                    // Fittings and pickups have their own flows; everything else
+                    // (consultations, Yes Moments, Elite experiences, ...) needs a
+                    // confirmation. Was includes('consultation'), which silently
+                    // dropped own-named types like "The YES Moment".
                     const apptType = (a.Type || '').toLowerCase();
-                    if (!apptType.includes('consultation')) return false;
+                    if (apptType.includes('fitting') || apptType.includes('pickup') || apptType.includes('pick-up')) return false;
                     const apptDateStr = getDateStr(a.Date);
                     if (!apptDateStr) return false;
                     return apptDateStr >= todayStr && apptDateStr <= next7DaysStr;
@@ -6754,6 +6757,7 @@ The Estrelle Bridal Team`;
                     .replace(/\{\{appointmentType\}\}/g, appt.Type || 'Bridal Consultation');
             }
             
+            _confirmEmailKind = 'confirmation';
             $('confirmApptId').value = apptId;
             $('confirmTo').value = client.Email;
             $('confirmSubject').value = `${getStoreInfo().name || 'Estrelle Bridal'} - Appointment Confirmation for ${client.FirstName}`;
@@ -7133,27 +7137,39 @@ The Estrelle Bridal Team`;
             );
         }
 
+        let _confirmEmailKind = 'confirmation';
+
         async function sendConfirmationEmail() {
             // Sync editor content first
             syncEmailEditor();
-            
+
             const apptId = $('confirmApptId').value;
             const to = $('confirmTo').value;
             const subject = $('confirmSubject').value;
             const body = $('confirmBody').value;
-            
+
             if (!to) { toast('No email address', 'error'); return; }
-            
+
+            const kind = _confirmEmailKind;
             closeModal('confirmEmail');
-            
-            // Send via preferred method (Gmail or direct)
+
+            const markIt = () => {
+                if (kind === 'followup') markFollowUpDone(apptId);
+                else markConfirmed(apptId);
+            };
+
             sendEmailViaPreferredMethod(to, subject, body, () => {
-                // Don't auto-mark as sent - let user manually click done
-                
-                // Re-render views
-                renderDash();
-                renderWeek();
-                renderAllAppointments();
+                if (getEmailMode() === 'gmail') {
+                    // Gmail opens a compose window — the app can't see whether it was
+                    // actually sent, so ask before marking.
+                    showChoiceDialog(kind === 'followup' ? 'Follow-up sent?' : 'Confirmation sent?', '', [
+                        { label: kind === 'followup' ? '✓ Mark done' : '✓ Mark confirmed', style: 'primary', action: () => { closeModal('choice'); markIt(); } },
+                        { label: 'Not yet', style: 'secondary', action: () => closeModal('choice') }
+                    ]);
+                } else {
+                    // Direct send succeeded — mark it right away.
+                    markIt();
+                }
             });
         }
 
@@ -7196,6 +7212,7 @@ The Estrelle Bridal Team`;
                 .replace(/\{topOptions\}/g, topOptionsText)
                 .replace(/\{storeName\}/g, storeName);
             
+            _confirmEmailKind = 'followup';
             $('confirmApptId').value = apptId;
             $('confirmTo').value = client.Email;
             $('confirmSubject').value = subject;
