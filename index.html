@@ -22567,6 +22567,31 @@ www.estrellebridal.com`;
                 }
             };
         }
+        // ===== App update check =====
+        // GitHub Pages changes the ETag on every deploy. Compare it every few
+        // minutes (and on wake); when a new version exists, show a small banner —
+        // tapping reloads past the cache. Ends the stale-iPad problem.
+        let _appVersionTag = null;
+        async function checkAppVersion() {
+            try {
+                const res = await fetch(location.pathname, { method: 'HEAD', cache: 'no-store' });
+                const tag = res.headers.get('etag') || res.headers.get('last-modified') || '';
+                if (!tag) return;
+                if (_appVersionTag === null) { _appVersionTag = tag; return; }
+                if (tag !== _appVersionTag && !document.getElementById('updateBanner')) {
+                    const b = document.createElement('div');
+                    b.id = 'updateBanner';
+                    b.textContent = '⬆️ Update ready — tap to refresh';
+                    b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:var(--taupe,#a68b6a);color:#fff;padding:10px 22px;border-radius:22px;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25)';
+                    b.onclick = () => { location.href = location.pathname + '?v=' + Date.now() + location.hash; };
+                    document.body.appendChild(b);
+                }
+            } catch (e) { /* offline — try again later */ }
+        }
+        setInterval(checkAppVersion, 5 * 60 * 1000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) checkAppVersion(); });
+        checkAppVersion();
+
         let _sessionTimer = null;
         function startApp() {
             bootData();
