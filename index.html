@@ -16993,9 +16993,40 @@ The {storeName} Team`
             if (!_contractIsSigned(rec)) return true;
             return await appConfirmDanger('This contract already has a signature on file \u2014 it looks like the customer already signed (in person or online). Sending an e-sign link is not needed, and asks them to sign again. Send an e-sign link anyway?', '\u26a0 Already Signed');
         }
+        // A contract may NEVER go to the bride without the consultant's signature.
+        // Accepts: signature captured this session, a non-blank consultant pad, or
+        // the selected consultant's saved signature (adopted automatically).
+        function consultantSigReady() {
+            if (currentOrder.consultantSignatureData) return true;
+            if (typeof sigPadConsultant !== 'undefined' && sigPadConsultant?.canvas && !isCanvasBlank(sigPadConsultant.canvas)) {
+                currentOrder.consultantSignatureData = sigPadConsultant.canvas.toDataURL();
+                return true;
+            }
+            const selId = $('yConsultantSelect')?.value;
+            const selName = currentOrder.consultant || $('yConsultantSelect')?.selectedOptions?.[0]?.text || '';
+            const con = (data.consultants || []).find(c => (selId && String(c.ID) === String(selId)) || (selName && c.Name === selName));
+            if (con && con.Signature && String(con.Signature).startsWith('data:image')) {
+                currentOrder.consultantSignatureData = con.Signature;
+                return true;
+            }
+            return false;
+        }
+
+        function requireConsultantSig() {
+            if (consultantSigReady()) return true;
+            toast('Consultant signature required before sending the contract', 'error');
+            try { goToStep(5); } catch (e) {}
+            return false;
+        }
+
         async function sendForESign(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) { toast('Order not found', 'error'); return; }
+            // Never send a contract that lacks the consultant's signature.
+            if (!(order.ConsultantSignature && String(order.ConsultantSignature).startsWith('data:image'))) {
+                toast('Consultant signature missing on this contract — open ✏️ Edit and add it first', 'error');
+                return;
+            }
             if (!(await confirmESignOverwrite(order))) return;
             
             const client = order.ClientID ? getClient(order.ClientID) : null;
@@ -17108,6 +17139,7 @@ The {storeName} Team`
         }
         
         function sendESignFromStep6() {
+            if (!requireConsultantSig()) return;
             // Find the most recent order for this client (just created by finalizeContract)
             const clientOrders = data.orders
                 .filter(o => String(o.ClientID) === String(currentClient.ID))
@@ -19330,14 +19362,17 @@ The {storeName} Team`
         function saveCurrentStepData() {
             if (yStep === 1) {
                 // Save measurements when leaving step 1
-                currentOrder.measurements = { 
+                currentOrder.measurements = {
                     bust: $('mBust').value,
+                    overBust: $('mOverBust').value,
+                    underBust: $('mUnderBust').value,
                     cup: $('mCup').value,
-                    waist: $('mWaist').value, 
-                    hip: $('mHip').value, 
-                    height: $('mHeight').value, 
+                    waist: $('mWaist').value,
+                    hip: $('mHip').value,
+                    highHip: $('mHighHip').value,
+                    height: $('mHeight').value,
                     waistToFloor: $('mWaistToFloor').value,
-                    heels: $('mHeels').value, 
+                    heels: $('mHeels').value,
                     notes: $('mNotes').value,
                     unit: measUnit,
                     custom: [...customMeasurements],
@@ -21058,14 +21093,17 @@ p{margin:6px 0;}
             
             // Ensure measurements are saved from form if on step 1 or navigated back
             if (!o.measurements || !o.measurements.bust) {
-                o.measurements = { 
+                o.measurements = {
                     bust: $('mBust').value,
+                    overBust: $('mOverBust').value,
+                    underBust: $('mUnderBust').value,
                     cup: $('mCup').value,
-                    waist: $('mWaist').value, 
-                    hip: $('mHip').value, 
-                    height: $('mHeight').value, 
+                    waist: $('mWaist').value,
+                    hip: $('mHip').value,
+                    highHip: $('mHighHip').value,
+                    height: $('mHeight').value,
                     waistToFloor: $('mWaistToFloor').value,
-                    heels: $('mHeels').value, 
+                    heels: $('mHeels').value,
                     notes: $('mNotes').value,
                     unit: measUnit,
                     custom: [...customMeasurements],
@@ -21438,6 +21476,7 @@ p{margin:6px 0;}
         async function saveAndSendSigned() {
             const c = currentClient;
             if (!c) return;
+            if (!requireConsultantSig()) return;
             
             const email = c.Email;
             if (!email) { toast('No email address for this client. Add their email first.', 'error'); return; }
@@ -21627,6 +21666,7 @@ www.estrellebridal.com`;
         async function saveAndSendESign() {
             const c = currentClient;
             if (!c) return;
+            if (!requireConsultantSig()) return;
 
             // GUARD: if the customer already signed in person, sending an e-sign link would
             // blank their signature (this flow saves the order without one). Confirm first.
@@ -21826,6 +21866,7 @@ www.estrellebridal.com`;
 
         async function sendContractEmail() {
             const c = currentClient;
+            if (!requireConsultantSig()) return;
             const brideEmail = $('emailTo').value;
             
             if (!brideEmail) { toast('No email address', 'error'); return; }
