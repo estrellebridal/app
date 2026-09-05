@@ -17284,7 +17284,7 @@ The {storeName} Team`
             $('cMeasurements').innerHTML = measurements.map((m, idx) => {
                 const entries = measurementEntries(m);
                 const gridHtml = entries.length
-                    ? entries.map(x => `<div><span style="color:var(--taupe)">${x.label === 'Waist to Floor' ? 'WtF' : x.label}:</span> ${x.value}${x.unit ? ' ' + x.unit : ''}</div>`).join('')
+                    ? entries.map(x => { const short = { 'Waist to Floor': 'WtF', 'Hip (Low Hip)': 'Hip', 'High Hip (Hip bone)': 'High Hip' }[x.label] || x.label; return `<div><span style="color:var(--taupe)">${short}:</span> ${x.value}${x.unit ? ' ' + x.unit : ''}</div>`; }).join('')
                     : '<div style="color:var(--taupe)">No values</div>';
                 return `
                 <div style="background:var(--cream);padding:10px;border-radius:5px;margin-bottom:8px;position:relative;cursor:pointer" onclick="editMeasurement(${idx})">
@@ -17321,8 +17321,8 @@ The {storeName} Team`
             customs.filter(isBust).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
             if (m.cup) e.push({ label: 'Cup', value: m.cup, unit: '' });
             if (m.waist) e.push({ label: 'Waist', value: m.waist, unit });
-            if (m.hip) e.push({ label: 'Hip', value: m.hip, unit });
-            if (m.highHip) e.push({ label: 'High Hip', value: m.highHip, unit });
+            if (m.hip) e.push({ label: 'Hip (Low Hip)', value: m.hip, unit });
+            if (m.highHip) e.push({ label: 'High Hip (Hip bone)', value: m.highHip, unit });
             customs.filter(isHip).forEach(c => e.push({ label: c.name, value: c.value, unit: cu(c) }));
             if (m.height) e.push({ label: 'Height', value: m.height, unit: 'in' });
             if (m.heels) e.push({ label: 'Heels', value: m.heels, unit: 'in' });
