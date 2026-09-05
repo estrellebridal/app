@@ -19235,6 +19235,7 @@ The {storeName} Team`
             $('ySaveOnly').style.display = yStep === 5 ? 'inline-flex' : 'none';
             if ($('ySaveAndESign')) $('ySaveAndESign').style.display = yStep === 5 ? 'inline-flex' : 'none';
             if ($('ySaveAndSend')) $('ySaveAndSend').style.display = yStep === 5 ? 'inline-flex' : 'none';
+            if (yStep === 5) setTimeout(updateStep5SendButtons, 250);
             if ($('yDone')) $('yDone').style.display = 'none';
             
             if (yStep === 5) {
@@ -19322,6 +19323,23 @@ The {storeName} Team`
                 }
             }
         }
+
+        // Step 5 send buttons follow the customer signature: once the bride has
+        // signed in person, "Save & Send E-Sign" disappears (it would blank her
+        // signature); "Save & Send Signed Copy" is the natural action. Clearing the
+        // pad brings e-sign back.
+        function updateStep5SendButtons() {
+            if (yStep !== 5) return;
+            const signed = (currentOrder.signatureData && String(currentOrder.signatureData).startsWith('data:image')) ||
+                (typeof sigPadCustomer !== 'undefined' && sigPadCustomer?.canvas && !isCanvasBlank(sigPadCustomer.canvas));
+            if ($('ySaveAndESign')) $('ySaveAndESign').style.display = signed ? 'none' : 'inline-flex';
+            if ($('ySaveAndSend')) $('ySaveAndSend').style.display = signed ? 'inline-flex' : 'none';
+        }
+        ['pointerup', 'touchend'].forEach(ev => document.addEventListener(ev, () => {
+            if (document.getElementById('modal-yes')?.classList.contains('active') && yStep === 5) {
+                setTimeout(updateStep5SendButtons, 150);
+            }
+        }));
 
         function yNext() {
             // Always capture what's on the current step before moving on, so going
