@@ -18840,6 +18840,31 @@ The {storeName} Team`
 
         // Persist Say-Yes measurement fields the moment staff leave a field (fix A).
         // Copies the form into currentOrder.measurements and triggers the existing
+        // Typing alone (no blur) also syncs, debounced — a killed app or closed
+        // tab mid-entry can otherwise lose the focused field's value.
+        let _measSyncTimer = null;
+        document.addEventListener('input', (e) => {
+            const id = e.target && e.target.id || '';
+            if (/^m(Bust|OverBust|UnderBust|Cup|Waist|Hip|HighHip|Height|Heels|WaistToFloor|Notes|TakenBy)$/.test(id)) {
+                clearTimeout(_measSyncTimer);
+                _measSyncTimer = setTimeout(() => { try { syncMeasurementsToOrder(); } catch (err) {} }, 800);
+            }
+        });
+
+        // If the tab hides or closes while the Say Yes wizard is open, capture the
+        // form and persist the draft immediately — an exit can never lose input.
+        function saveDraftIfWizardOpen() {
+            try {
+                if (document.getElementById('modal-yes')?.classList.contains('active')) {
+                    syncMeasurementsToOrder();
+                    saveCurrentStepData();
+                    autoSaveDraft();
+                }
+            } catch (e) {}
+        }
+        document.addEventListener('visibilitychange', () => { if (document.hidden) saveDraftIfWizardOpen(); });
+        window.addEventListener('pagehide', saveDraftIfWizardOpen);
+
         // draft autosave so nothing is lost without clicking Save or Next.
         function syncMeasurementsToOrder() {
             if (!currentClient) return;
