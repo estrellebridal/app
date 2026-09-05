@@ -8694,7 +8694,7 @@ The Estrelle Bridal Team`;
             lines.push(`${o.PO ? 'PO ' + o.PO + ' — ' : ''}${getStoreInfo().name || 'Estrelle Bridal'}`);
             lines.push(`Client: ${o.ClientName || (client ? client.FirstName + ' ' + client.LastName : '')}`);
             if (client && client.WeddingDate) lines.push(`Wedding date: ${fmtDate(client.WeddingDate)}`);
-            if (o.ArrivalDate) lines.push(`Need by: ${fmtDate(o.ArrivalDate)}`);
+            if (o.ArrivalDate) lines.push(`Arrival date: ${fmtDate(o.ArrivalDate)}`);
             lines.push('');
             let items = [];
             try { items = o.Items ? JSON.parse(o.Items) : []; } catch (e) {}
