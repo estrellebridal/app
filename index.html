@@ -6494,8 +6494,9 @@ Stephane Rolland $10,000- $17,000
 Corston Couture $6,000- $9,000
 Tina Valerdi $3,900-$6,000
 Enaura Bridal $6,000- $10,000
+Danielle Frankel $8,000- $15,000
 
-*Please note that most of our dresses are customizable* 
+*Please note that most of our dresses are customizable*
 
 Parking:
 There is paid underground parking in the Yorkville Village building, look for the Wholefoods.
@@ -6513,6 +6514,27 @@ Best regards,
 The Estrelle Bridal Team`;
 
         const CONFIRM_TEMPLATE_KEY = 'estrelle_confirm_template';
+
+        // One-time: saved templates live per-device, so add Danielle Frankel to the
+        // designer list of an already-customized template (right below Enaura).
+        (function () {
+            try {
+                const raw = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
+                if (!raw || raw.includes('Danielle Frankel')) return;
+                const anchor = 'Enaura Bridal $6,000- $10,000';
+                const t = JSON.parse(raw);
+                let changed = false;
+                if (t && t.text && t.text.includes(anchor)) {
+                    t.text = t.text.replace(anchor, anchor + '\nDanielle Frankel $8,000- $15,000');
+                    changed = true;
+                }
+                if (t && t.html && t.html.includes(anchor)) {
+                    t.html = t.html.replace(anchor, anchor + '<br>Danielle Frankel $8,000- $15,000');
+                    changed = true;
+                }
+                if (changed) localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
+            } catch (e) {}
+        })();
 
         function getConfirmTemplate() {
             const saved = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
@@ -7158,19 +7180,11 @@ The Estrelle Bridal Team`;
                 else markConfirmed(apptId);
             };
 
-            sendEmailViaPreferredMethod(to, subject, body, () => {
-                if (getEmailMode() === 'gmail') {
-                    // Gmail opens a compose window — the app can't see whether it was
-                    // actually sent, so ask before marking.
-                    showChoiceDialog(kind === 'followup' ? 'Follow-up sent?' : 'Confirmation sent?', '', [
-                        { label: kind === 'followup' ? '✓ Mark done' : '✓ Mark confirmed', style: 'primary', action: () => { closeModal('choice'); markIt(); } },
-                        { label: 'Not yet', style: 'secondary', action: () => closeModal('choice') }
-                    ]);
-                } else {
-                    // Direct send succeeded — mark it right away.
-                    markIt();
-                }
-            });
+            // Mark immediately in both modes. (A per-send "did you send it?" dialog
+            // could not survive back-to-back sends — the shared dialog box got
+            // replaced by the next send, silently dropping the first mark.) The
+            // toast's Undo covers a Gmail compose that was abandoned.
+            sendEmailViaPreferredMethod(to, subject, body, markIt);
         }
 
         // ========== FOLLOW-UP EMAILS ==========
