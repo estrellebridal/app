@@ -3176,6 +3176,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('orderDetails')">Cancel</button>
+                <button class="btn btn-secondary" onclick="copyOrderForDesigner()">📋 Copy for Designer</button>
                 <button class="btn btn-secondary" id="btnViewContract" onclick="viewOrderContract()" style="display:none">📄 View Contract</button>
                 <button class="btn btn-secondary" id="btnResendContract" onclick="resendContract()" style="display:none">📧 Re-send</button>
                 <div style="flex:1"></div>
@@ -8682,6 +8683,55 @@ The Estrelle Bridal Team`;
             updateOrderSelection();
         }
         
+        // One-tap copy of the order + measurements, formatted to paste into an
+        // email or message to the designer. No pricing included.
+        function copyOrderForDesigner(orderId) {
+            const id = orderId || $('editOrderId').value;
+            const o = data.orders.find(x => String(x.ID) === String(id));
+            if (!o) { toast('Order not found', 'error'); return; }
+            const client = o.ClientID ? getClient(o.ClientID) : null;
+            const lines = [];
+            lines.push(`${o.PO ? 'PO ' + o.PO + ' — ' : ''}${getStoreInfo().name || 'Estrelle Bridal'}`);
+            lines.push(`Client: ${o.ClientName || (client ? client.FirstName + ' ' + client.LastName : '')}`);
+            if (client && client.WeddingDate) lines.push(`Wedding date: ${fmtDate(client.WeddingDate)}`);
+            if (o.ArrivalDate) lines.push(`Need by: ${fmtDate(o.ArrivalDate)}`);
+            lines.push('');
+            let items = [];
+            try { items = o.Items ? JSON.parse(o.Items) : []; } catch (e) {}
+            const dressItems = items.filter(i => i.type === 'dress' || i.type === 'accessory' || i.type === 'inhouse' || i.type === 'custom');
+            if (dressItems.length) {
+                dressItems.forEach(i => {
+                    const label = i.type === 'dress' ? 'Dress' : (i.type === 'accessory' ? 'Accessory' : 'Item');
+                    lines.push(`${label}: ${i.designer ? i.designer + ' — ' : ''}${i.name}${i.size ? ', Size ' + i.size : ''}${i.color ? ', ' + i.color : ''}`);
+                    (i.customizations || []).forEach(cu => lines.push(`  • Customization: ${cu.name}`));
+                });
+            } else {
+                if (o.Dress) lines.push(`Dress: ${o.Designer ? o.Designer + ' — ' : ''}${o.Dress}${o.Size ? ', Size ' + o.Size : ''}`);
+                if (o.Customization) lines.push(`Customizations: ${o.Customization}`);
+                if (o.Accessories) lines.push(`Accessories: ${o.Accessories}`);
+            }
+            if (o.Notes) lines.push(`Notes: ${o.Notes}`);
+            // Measurements: the order's own, else the client's latest record
+            let m = null;
+            try { m = o.Measurements ? JSON.parse(o.Measurements) : null; } catch (e) {}
+            if ((!m || !(m.bust || m.waist || m.hip)) && client) {
+                try {
+                    const hist = client.MeasurementHistory ? JSON.parse(client.MeasurementHistory) : [];
+                    if (hist.length) m = hist.sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+                } catch (e) {}
+            }
+            if (m && (m.bust || m.waist || m.hip)) {
+                lines.push('');
+                lines.push('MEASUREMENTS' + (m.date ? ` (${fmtDate(m.date)})` : ''));
+                lines.push(...measurementLines(m));
+                if (m.notes) lines.push(`Notes: ${m.notes}`);
+            }
+            const text = lines.join('\n');
+            navigator.clipboard.writeText(text)
+                .then(() => toast('Copied for designer!', 'success'))
+                .catch(() => prompt('Copy:', text));
+        }
+
         function updateEditOrderTax() {
             const pre = parseFloat(String($('editOrderPreTax').value).replace(/[$,]/g, '')) || 0;
             const tax = $('editOrderTaxType').value === 'hst' ? Math.round(pre * 0.13 * 100) / 100 : 0;
