@@ -3839,7 +3839,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                         <!-- Delivery chooser (only when NOT signed in person) -->
                         <div id="yStep6DeliveryChooser">
                             <!-- Method toggle -->
-                            <div style="display:flex;gap:8px;margin-bottom:14px">
+                            <div id="yDeliveryToggle" style="display:flex;gap:8px;margin-bottom:14px">
                                 <button type="button" id="yDeliveryESignBtn" onclick="setStep6Delivery('esign')" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid #C4A265;background:#C4A265;color:white;font-size:12px;font-weight:600;cursor:pointer">📱 E-Sign link</button>
                                 <button type="button" id="yDeliveryPdfBtn" onclick="setStep6Delivery('pdf')" style="flex:1;padding:10px;border-radius:8px;border:1.5px solid var(--border);background:white;color:var(--taupe);font-size:12px;font-weight:600;cursor:pointer">📄 PDF by email</button>
                             </div>
@@ -9160,6 +9160,17 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
         function resendContractById(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) { toast('Order not found', 'error'); return; }
+            // Consultant signature is a hard requirement; a missing bride
+            // signature asks for confirmation (paper flows exist).
+            const brideSigned = (order.CustomerSignature && String(order.CustomerSignature).startsWith('data:image')) || !!order.ESignedDate;
+            const consultantSigned = order.ConsultantSignature && String(order.ConsultantSignature).startsWith('data:image');
+            if (!consultantSigned) {
+                toast('Consultant signature missing — open ✏️ Edit and add it first', 'error');
+                return;
+            }
+            if (!brideSigned && !confirm('Customer has not signed. Re-send the contract without her signature?')) {
+                return;
+            }
             
             const client = order.ClientID ? getClient(order.ClientID) : null;
             const email = client?.Email || order.Email;
@@ -17023,6 +17034,15 @@ The {storeName} Team`
             return false;
         }
 
+        function customerSigReady() {
+            if (currentOrder.signatureData && String(currentOrder.signatureData).startsWith('data:image')) return true;
+            if (typeof sigPadCustomer !== 'undefined' && sigPadCustomer?.canvas && !isCanvasBlank(sigPadCustomer.canvas)) {
+                currentOrder.signatureData = sigPadCustomer.canvas.toDataURL();
+                return true;
+            }
+            return false;
+        }
+
         function requireConsultantSig() {
             if (consultantSigReady()) return true;
             toast('Consultant signature required before sending the contract', 'error');
@@ -21441,7 +21461,10 @@ p{margin:6px 0;}
             // when e-sign is still the next step; hide it once signed in person.
             if (savedBanner) savedBanner.style.display = signedInPerson ? 'none' : 'block';
             // Default the delivery method to e-sign whenever the chooser is shown.
-            if (!signedInPerson) setStep6Delivery('esign');
+            if (!signedInPerson) {
+                if ($('yDeliveryToggle')) $('yDeliveryToggle').style.display = 'flex';
+                setStep6Delivery('esign');
+            }
         }
 
         // Toggle the Step 6 delivery method between e-sign link (default) and PDF email.
@@ -21531,6 +21554,12 @@ p{margin:6px 0;}
             const c = currentClient;
             if (!c) return;
             if (!requireConsultantSig()) return;
+            // A "signed copy" normally carries the bride's signature — confirm
+            // before sending without it (paper-signing flows are the exception).
+            if (!customerSigReady()) {
+                const ok = await appConfirm('Customer has not signed. Send the contract without her signature?', 'No customer signature');
+                if (!ok) { try { goToStep(5); } catch (e) {} return; }
+            }
             
             const email = c.Email;
             if (!email) { toast('No email address for this client. Add their email first.', 'error'); return; }
@@ -21921,6 +21950,10 @@ www.estrellebridal.com`;
         async function sendContractEmail() {
             const c = currentClient;
             if (!requireConsultantSig()) return;
+            if (!(currentOrder._capturedSigData || customerSigReady())) {
+                const ok = await appConfirm('Customer has not signed. Email the contract without her signature?', 'No customer signature');
+                if (!ok) return;
+            }
             const brideEmail = $('emailTo').value;
             
             if (!brideEmail) { toast('No email address', 'error'); return; }
