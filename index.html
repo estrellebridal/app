@@ -6517,23 +6517,29 @@ The Estrelle Bridal Team`;
         const CONFIRM_TEMPLATE_KEY = 'estrelle_confirm_template';
 
         // One-time: saved templates live per-device, so add Danielle Frankel to the
-        // designer list of an already-customized template (right below Enaura).
+        // designer list of an already-customized template (right below any Enaura
+        // line, however it was edited).
         (function () {
             try {
                 const raw = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
                 if (!raw || raw.includes('Danielle Frankel')) return;
-                const anchor = 'Enaura Bridal $6,000- $10,000';
-                const t = JSON.parse(raw);
-                let changed = false;
-                if (t && t.text && t.text.includes(anchor)) {
-                    t.text = t.text.replace(anchor, anchor + '\nDanielle Frankel $8,000- $15,000');
-                    changed = true;
+                const DF = 'Danielle Frankel $8,000- $15,000';
+                let t = null;
+                try { t = JSON.parse(raw); } catch (e) {}
+                if (t && typeof t === 'object') {
+                    let changed = false;
+                    if (t.text && /Enaura/.test(t.text)) {
+                        t.text = t.text.replace(/^(.*Enaura[^\n]*)$/m, '$1\n' + DF);
+                        changed = true;
+                    }
+                    if (t.html && /Enaura/.test(t.html)) {
+                        t.html = t.html.replace(/(Enaura[^<]*)/, '$1<br>' + DF);
+                        changed = true;
+                    }
+                    if (changed) localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
+                } else if (/Enaura/.test(raw)) {
+                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw.replace(/^(.*Enaura[^\n]*)$/m, '$1\n' + DF));
                 }
-                if (t && t.html && t.html.includes(anchor)) {
-                    t.html = t.html.replace(anchor, anchor + '<br>Danielle Frankel $8,000- $15,000');
-                    changed = true;
-                }
-                if (changed) localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
             } catch (e) {}
         })();
 
