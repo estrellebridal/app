@@ -22794,12 +22794,19 @@ www.estrellebridal.com`;
                 if (!tag) return;
                 if (_appVersionTag === null) { _appVersionTag = tag; return; }
                 if (tag !== _appVersionTag && !document.getElementById('updateBanner')) {
+                    const reloadNow = () => { location.href = location.pathname + '?v=' + Date.now() + location.hash; };
+                    // Mid-work (any modal open or a field focused): tap-to-refresh
+                    // pill only. Idle: update automatically after a short notice —
+                    // staff should never unknowingly run an old version.
+                    const busy = document.querySelector('.modal-overlay.active') ||
+                        ['INPUT', 'TEXTAREA', 'SELECT'].includes((document.activeElement || {}).tagName || '');
                     const b = document.createElement('div');
                     b.id = 'updateBanner';
-                    b.textContent = '⬆️ Update ready — tap to refresh';
+                    b.textContent = busy ? '⬆️ Update ready — tap to refresh' : '⬆️ Updating…';
                     b.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9999;background:var(--taupe,#a68b6a);color:#fff;padding:10px 22px;border-radius:22px;font-weight:600;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,0.25)';
-                    b.onclick = () => { location.href = location.pathname + '?v=' + Date.now() + location.hash; };
+                    b.onclick = reloadNow;
                     document.body.appendChild(b);
+                    if (!busy) setTimeout(reloadNow, 3000);
                 }
             } catch (e) { /* offline — try again later */ }
         }
