@@ -4296,7 +4296,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             return data.clients.find(function(c) { return String(c.ID) === String(id); });
         };
         const toast = (msg, type='', showUndo=false) => { 
-            const t = $('toast'); 
+            let t = $('toast');
+            if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; document.body.appendChild(t); }
+            
             if (showUndo) {
                 t.innerHTML = `${msg} <button onclick="performUndo();$('toast').className='toast'" style="margin-left:12px;background:white;color:var(--charcoal);border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">↩ Undo</button>`;
             } else {
@@ -6681,12 +6683,15 @@ The Estrelle Bridal Team`;
         }
         
         function toastWithUndo(message) {
-            // Remove existing toast
-            const existing = document.querySelector('.toast');
-            if (existing) existing.remove();
-            
+            // Hide the shared #toast; remove only previous undo-toasts. (Removing
+            // the permanent #toast element made every later toast() throw — which
+            // silently killed the mark-after-send of the NEXT confirmation email.)
+            const shared = $('toast');
+            if (shared) shared.className = 'toast';
+            document.querySelectorAll('.undo-toast').forEach(el => el.remove());
+
             const div = document.createElement('div');
-            div.className = 'toast show';
+            div.className = 'toast show undo-toast';
             div.innerHTML = `
                 <span>${message}</span>
                 <button onclick="undoLastAction();this.parentElement.remove()" style="margin-left:12px;background:rgba(255,255,255,0.2);border:none;color:white;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:12px">Undo</button>
@@ -14010,16 +14015,16 @@ The {StoreName} Team
             if (getEmailMode() === 'gmail') {
                 const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
                 window.open(gmailUrl, '_blank');
-                toast('Email opened in Gmail', 'success');
-                if (onSuccess) onSuccess();
+                if (onSuccess) { try { onSuccess(); } catch (e) { console.error('post-send callback failed:', e); } }
+                try { toast('Email opened in Gmail', 'success'); } catch (e) {}
             } else {
-                // Direct send via API (for future use)
                 api('POST', { action: 'sendEmail', to, subject, body })
                     .then(() => {
-                        toast('Email sent!', 'success');
-                        if (onSuccess) onSuccess();
+                        // Mark FIRST — a cosmetic toast failure must never lose a mark.
+                        if (onSuccess) { try { onSuccess(); } catch (e) { console.error('post-send callback failed:', e); } }
+                        try { toast('Email sent!', 'success'); } catch (e) {}
                     })
-                    .catch(e => toast('Failed to send email', 'error'));
+                    .catch(e => { try { toast('Failed to send email', 'error'); } catch (err) {} });
             }
         }
         
