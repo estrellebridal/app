@@ -6498,7 +6498,7 @@ Stephane Rolland $10,000- $17,000
 Corston Couture $6,000- $9,000
 Tina Valerdi $3,900-$6,000
 Enaura Bridal $6,000- $10,000
-Danielle Frankel $8,000- $15,000
+Danielle Frankel $8,000- $18,000
 
 *Please note that most of our dresses are customizable*
 
@@ -6524,9 +6524,14 @@ The Estrelle Bridal Team`;
         // line, however it was edited).
         (function () {
             try {
-                const raw = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
+                let raw = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
+                // Price correction for saved templates patched with the old range
+                if (raw && raw.includes('Danielle Frankel $8,000- $15,000')) {
+                    raw = raw.split('Danielle Frankel $8,000- $15,000').join('Danielle Frankel $8,000- $18,000');
+                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw);
+                }
                 if (!raw || raw.includes('Danielle Frankel')) return;
-                const DF = 'Danielle Frankel $8,000- $15,000';
+                const DF = 'Danielle Frankel $8,000- $18,000';
                 let t = null;
                 try { t = JSON.parse(raw); } catch (e) {}
                 if (t && typeof t === 'object') {
