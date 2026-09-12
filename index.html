@@ -6519,34 +6519,36 @@ The Estrelle Bridal Team`;
 
         const CONFIRM_TEMPLATE_KEY = 'estrelle_confirm_template';
 
-        // One-time: saved templates live per-device, so add Danielle Frankel to the
-        // designer list of an already-customized template (right below any Enaura
-        // line, however it was edited).
+        // One-time, self-repairing: saved templates live per-device. Adds the
+        // Danielle Frankel line below Enaura, corrects the old $15,000 range, and
+        // repairs lines corrupted by an earlier patch (a "$1" in the inserted text
+        // was expanded as a regex back-reference). All replacements use functions
+        // so "$" in designer prices can never be treated as a pattern again.
         (function () {
             try {
                 let raw = localStorage.getItem(CONFIRM_TEMPLATE_KEY);
-                // Price correction for saved templates patched with the old range
-                if (raw && raw.includes('Danielle Frankel $8,000- $15,000')) {
-                    raw = raw.split('Danielle Frankel $8,000- $15,000').join('Danielle Frankel $8,000- $18,000');
-                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw);
-                }
-                if (!raw || raw.includes('Danielle Frankel')) return;
+                if (!raw) return;
                 const DF = 'Danielle Frankel $8,000- $18,000';
+                const fixed = raw
+                    .replace(/Danielle Frankel \$8,000- Enaura[^\n<"\\]*/g, () => DF)
+                    .split('Danielle Frankel $8,000- $15,000').join(DF);
+                if (fixed !== raw) { localStorage.setItem(CONFIRM_TEMPLATE_KEY, fixed); raw = fixed; }
+                if (raw.includes('Danielle Frankel')) return;
                 let t = null;
                 try { t = JSON.parse(raw); } catch (e) {}
                 if (t && typeof t === 'object') {
                     let changed = false;
                     if (t.text && /Enaura/.test(t.text)) {
-                        t.text = t.text.replace(/^(.*Enaura[^\n]*)$/m, '$1\n' + DF);
+                        t.text = t.text.replace(/^(.*Enaura[^\n]*)$/m, m => m + '\n' + DF);
                         changed = true;
                     }
                     if (t.html && /Enaura/.test(t.html)) {
-                        t.html = t.html.replace(/(Enaura[^<]*)/, '$1<br>' + DF);
+                        t.html = t.html.replace(/(Enaura[^<]*)/, m => m + '<br>' + DF);
                         changed = true;
                     }
                     if (changed) localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
                 } else if (/Enaura/.test(raw)) {
-                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw.replace(/^(.*Enaura[^\n]*)$/m, '$1\n' + DF));
+                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw.replace(/^(.*Enaura[^\n]*)$/m, m => m + '\n' + DF));
                 }
             } catch (e) {}
         })();
