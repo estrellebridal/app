@@ -5855,21 +5855,18 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         
         function formatBudget(input) {
             let val = input.value;
-            
-            // Check if it's a range (contains - or "to" between numbers)
-            const rangeMatch = val.match(/(\d[\d,]*)\s*(?:-|to)\s*(\d[\d,]*)/i);
+
+            // Range: any dash type (iPad keyboards substitute en/em dashes), "to", or "~"
+            const rangeMatch = val.match(/(\d[\d,]*)\s*(?:[-\u2013\u2014~]|to)\s*(\d[\d,]*)/i);
             if (rangeMatch) {
-                // Format both parts of the range
                 const low = parseInt(rangeMatch[1].replace(/,/g, ''));
                 const high = parseInt(rangeMatch[2].replace(/,/g, ''));
                 input.value = '$' + low.toLocaleString() + ' - $' + high.toLocaleString();
-            } else {
-                // Single value - extract numbers
-                const num = val.replace(/[^0-9]/g, '');
-                if (num) {
-                    input.value = '$' + parseInt(num).toLocaleString();
-                }
-                // If no numbers, leave as-is (allows typing)
+            } else if (/^\s*\$?\s*\d[\d,]*\s*$/.test(val)) {
+                // A single plain number — format it. Anything else is left exactly
+                // as typed: stripping digits out of mixed text concatenated ranges
+                // into nonsense like "50006000".
+                input.value = '$' + parseInt(val.replace(/[^0-9]/g, '')).toLocaleString();
             }
         }
 
