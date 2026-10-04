@@ -9059,7 +9059,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             let itemsHtml = '';
             items.forEach(item => {
                 if (item.type === 'dress' || item.type === 'accessory') {
-                    itemsHtml += `<tr><td>${item.name || ''}</td><td>${item.designer || '—'}</td><td>${item.size || '—'}${item.color ? ', '+item.color : ''}</td><td>—</td><td>${money(item.price||0)}</td></tr>`;
+                    itemsHtml += `<tr><td>${item.name || ''}</td><td>${item.designer || '—'}</td><td>${contractItemCells(item).details}</td><td>${contractItemCells(item).note}</td><td>${money(item.price||0)}</td></tr>`;
                     if (item.customizations) {
                         item.customizations.forEach(c => {
                             itemsHtml += `<tr style="font-size:10px;color:#666"><td style="padding-left:15px">↳ ${c.name}</td><td>${item.designer||''}</td><td>${c.delivery==='ondress'?'On dress':'Separate'}</td><td>Customization</td><td>${money(c.price||0)}</td></tr>`;
@@ -16936,12 +16936,14 @@ The {storeName} Team`
                 // Show different primary action based on status
                 let primaryAction = '';
                 if (isSigned) {
-                    primaryAction = `<button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View Signed</button>
+                    primaryAction = `<button class="btn btn-sm btn-secondary" onclick="viewOrderDetails('${o.ID}')" style="font-size:10px;padding:4px 10px">📦 Order</button>
+                        <button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View Signed</button>
                         <button class="btn btn-sm btn-secondary" onclick="resendContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📧 Re-send</button>
                         <button class="btn btn-sm btn-secondary" onclick="editContract('${o.ID}')" style="font-size:10px;padding:4px 10px">✏️ Edit</button>
                         <button class="btn btn-sm btn-secondary" onclick="deleteOrderFromContracts('${o.ID}')" style="font-size:10px;padding:4px 10px;color:#c00">🗑</button>`;
                 } else {
                     primaryAction = `<button class="btn btn-sm" onclick="sendForESign('${o.ID}')" style="font-size:10px;padding:5px 14px;background:#C4A265;color:white;border:none;border-radius:6px;font-weight:600">📱 Send for E-Sign</button>
+                        <button class="btn btn-sm btn-secondary" onclick="viewOrderDetails('${o.ID}')" style="font-size:10px;padding:4px 10px">📦 Order</button>
                         <button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View</button>
                         <button class="btn btn-sm btn-secondary" onclick="copyESignLink('${o.ID}')" style="font-size:10px;padding:4px 10px" title="Copy signing link">🔗 Link</button>
                         <button class="btn btn-sm btn-secondary" onclick="editContract('${o.ID}')" style="font-size:10px;padding:4px 10px">✏️ Edit</button>
@@ -20365,6 +20367,18 @@ The {storeName} Team`
             }
         }
 
+        // Details + Notes cells for a dress/accessory contract row. "As sampled"
+        // colour is spelled out so the bride knows exactly what she is signing for.
+        function contractItemCells(item) {
+            let details = item.size ? 'Size ' + item.size : '—';
+            let note = '—';
+            if (item.color) {
+                details += ' · Colour: ' + item.color;
+                if (/sampl/i.test(item.color)) note = 'Colour as per the store sample tried on';
+            }
+            return { details: details, note: note };
+        }
+
         function genContract() {
             const c = currentClient;
             const o = currentOrder;
@@ -20417,8 +20431,8 @@ The {storeName} Team`
                     itemsHtml += `<tr>
                         <td>${item.name}</td>
                         <td>${item.designer || '—'}</td>
-                        <td>${item.size || '—'}${item.color ? ', ' + item.color : ''}</td>
-                        <td>—</td>
+                        <td>${contractItemCells(item).details}</td>
+                        <td>${contractItemCells(item).note}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                     // Add customizations as sub-items
@@ -21047,8 +21061,8 @@ p{margin:6px 0;}
                     itemsHtml += `<tr>
                         <td>${item.name}</td>
                         <td>${item.designer || '—'}</td>
-                        <td>${item.size || '—'}${item.color ? ', ' + item.color : ''}</td>
-                        <td>—</td>
+                        <td>${contractItemCells(item).details}</td>
+                        <td>${contractItemCells(item).note}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                     if (item.customizations && item.customizations.length > 0) {
@@ -21332,8 +21346,8 @@ p{margin:6px 0;}
                     itemsHtml += `<tr>
                         <td>${item.name}</td>
                         <td>${item.designer || '—'}</td>
-                        <td>${item.size || '—'}${item.color ? ', ' + item.color : ''}</td>
-                        <td>—</td>
+                        <td>${contractItemCells(item).details}</td>
+                        <td>${contractItemCells(item).note}</td>
                         <td>${money(item.price)}</td>
                     </tr>`;
                     if (item.customizations && item.customizations.length > 0) {
