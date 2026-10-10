@@ -4837,6 +4837,36 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         // ========== NAV ==========
         // Page navigation history for back button
         let pageHistory = ['dashboard'];
+
+        // Remember how far down each page was scrolled, so the back button returns
+        // staff to the row they were looking at instead of the top of the list.
+        // Keyed by page name, or client-<id> for a client profile.
+        const pageScroll = {};
+
+        function pageScrollKey(name, clientForPage) {
+            if (name !== 'consult') return name;
+            const c = clientForPage !== undefined ? clientForPage : currentClient;
+            return c ? 'client-' + c.ID : 'consult';
+        }
+
+        function savePageScroll() {
+            const id = document.querySelector('.section.active')?.id;
+            if (!id) return;
+            pageScroll[pageScrollKey(id.replace(/^page-/, ''))] = window.scrollY || window.pageYOffset || 0;
+        }
+
+        function restorePageScroll(key) {
+            const y = pageScroll[key] || 0;
+            if (!y) return;
+            // Scroll straight away, then again once layout has settled: a freshly
+            // re-rendered page can still be short for a moment, and the browser would
+            // clamp us back to the top. Don't rely on requestAnimationFrame alone —
+            // it never fires while the tab is in the background.
+            const apply = () => window.scrollTo(0, y);
+            apply();
+            setTimeout(apply, 0);
+            setTimeout(apply, 80);
+        }
         
         function goBack() {
             if (pageHistory.length > 1) {
@@ -4844,13 +4874,14 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 const previousPage = pageHistory[pageHistory.length - 1];
                 if (previousPage === 'consult' && currentClient) {
                     // Going back to consult page - already have client
-                    showPage('consult', true);
+                    showPage('consult', true, true);
                 } else if (previousPage.startsWith('client-')) {
-                    // Going back to a specific client
-                    const clientId = previousPage.split('-')[1];
-                    openClient(parseInt(clientId), true);
+                    // Going back to a specific client (IDs can be non-numeric, keep the raw string)
+                    const clientId = previousPage.slice('client-'.length);
+                    if (getClient(clientId)) openClient(clientId, true);
+                    else showPage('clients', true);
                 } else {
-                    showPage(previousPage, true);
+                    showPage(previousPage, true, true);
                 }
             } else {
                 showPage('clients', true);
@@ -4864,8 +4895,11 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             $('floatingBack').classList.toggle('visible', shouldShow);
         }
         
-        function showPage(name, skipUnsavedCheck = false) {
+        function showPage(name, skipUnsavedCheck = false, restoreScroll = false) {
           try {
+            // Remember where we were on the page we're leaving, before anything
+            // clears currentClient or swaps the active section out.
+            savePageScroll();
             // Auto-save unsaved notes when leaving consult page
             const currentPage = document.querySelector('.section.active')?.id;
             const leavingConsult = currentPage === 'page-consult' && name !== 'consult';
@@ -4895,9 +4929,12 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             $('page-' + name)?.classList.add('active');
             document.querySelector(`.nav-item[data-page="${name}"]`)?.classList.add('active');
             
-            // Scroll to top
-            window.scrollTo(0, 0);
-            document.querySelector('.main')?.scrollTo(0, 0);
+            // Scroll to top — unless this is a back navigation, where we restore the
+            // previous scroll position below once the page has re-rendered.
+            if (!restoreScroll) {
+                window.scrollTo(0, 0);
+                document.querySelector('.main')?.scrollTo(0, 0);
+            }
             
             // Render page content from cached data (no server calls)
             try {
@@ -4908,7 +4945,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 else if (name === 'reporting') renderReporting();
                 else if (name === 'settings') renderSettings();
             } catch(e) { console.error('Page render error:', e); }
-            
+
+            if (restoreScroll) restorePageScroll(pageScrollKey(name));
+
             updateFloatingBackButton();
           } catch(e) {
             console.error('showPage error:', e);
@@ -15928,8 +15967,10 @@ The {storeName} Team`
             if ($('btnClientContract')) $('btnClientContract').style.display = hasContractOrder ? 'inline-flex' : 'none';
             
             // Track page history
-            if (!fromHistory && pageHistory[pageHistory.length - 1] !== 'consult') {
-                pageHistory.push('consult');
+            // Record which client, not just 'consult', so Back can reopen this exact
+            // profile even after currentClient was cleared by visiting another page.
+            if (!fromHistory && pageHistory[pageHistory.length - 1] !== 'client-' + c.ID) {
+                pageHistory.push('client-' + c.ID);
                 if (pageHistory.length > 20) pageHistory.shift();
             }
             
@@ -15940,16 +15981,19 @@ The {storeName} Team`
             renderClientMeasurements();
             renderClientContracts();
             renderVisitHistory();
-            showPage('consult', true); // true = skip unsaved check since we're opening
+            showPage('consult', true, fromHistory); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
 
             // Reflect the open client in the URL so a browser refresh restores this
             // profile instead of bouncing back to the dashboard.
             try { location.hash = 'client/' + encodeURIComponent(id); } catch(e) {}
 
-            // Scroll to top of page
-            window.scrollTo(0, 0);
-            $('page-consult')?.scrollTo(0, 0);
+            // Scroll to top of page — but when we got here via the back button,
+            // showPage has already restored the previous scroll position.
+            if (!fromHistory) {
+                window.scrollTo(0, 0);
+                $('page-consult')?.scrollTo(0, 0);
+            }
         }
 
         // Restore the view from the URL after a browser refresh so staff land back
