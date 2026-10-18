@@ -2966,13 +2966,13 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                         <div class="form-group" style="margin:0">
                             <label class="form-label" style="font-size:11px">Submitted by</label>
-                            <select class="form-input" id="newOrderSubmittedBy" style="font-size:12px">
+                            <select class="form-input" id="newOrderSubmittedBy" style="font-size:12px" onchange="syncStatusFromSubmission('newOrder')">
                                 <option value="">Not submitted yet</option>
                             </select>
                         </div>
                         <div class="form-group" style="margin:0">
                             <label class="form-label" style="font-size:11px">Date submitted</label>
-                            <input type="date" class="form-input" id="newOrderSubmittedDate" style="font-size:12px">
+                            <input type="date" class="form-input" id="newOrderSubmittedDate" style="font-size:12px" onchange="syncStatusFromSubmission('newOrder')">
                         </div>
                     </div>
                 </div>
@@ -3143,13 +3143,13 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
                         <div class="form-group" style="margin:0">
                             <label class="form-label" style="font-size:11px">Submitted by</label>
-                            <select class="form-input" id="editOrderSubmittedBy" style="font-size:12px">
+                            <select class="form-input" id="editOrderSubmittedBy" style="font-size:12px" onchange="syncStatusFromSubmission('editOrder')">
                                 <option value="">Not submitted yet</option>
                             </select>
                         </div>
                         <div class="form-group" style="margin:0">
                             <label class="form-label" style="font-size:11px">Date submitted</label>
-                            <input type="date" class="form-input" id="editOrderSubmittedDate" style="font-size:12px">
+                            <input type="date" class="form-input" id="editOrderSubmittedDate" style="font-size:12px" onchange="syncStatusFromSubmission('editOrder')">
                         </div>
                     </div>
                     <div id="orderSubmittedStatus" style="font-size:11px;margin-top:8px;color:var(--taupe)"></div>
@@ -8793,6 +8793,33 @@ The Estrelle Bridal Team`;
             $('editOrderTaxPreview').textContent = pre ? `Tax ${money(tax)} · With tax ${money(pre + tax)}` : '';
         }
 
+        // An order confirmed as submitted to the designer is in production. Advances the
+        // Status dropdown from 'pending submission' once both submission fields are
+        // filled (never downgrades a later status), and refreshes the submitted note.
+        function submissionStatus(status, submittedBy, submittedDate) {
+            return (submittedBy && submittedDate && status === 'pending submission') ? 'in production' : status;
+        }
+        function syncStatusFromSubmission(prefix) {
+            const by = $(prefix + 'SubmittedBy')?.value || '';
+            const date = $(prefix + 'SubmittedDate')?.value || '';
+            const statusSel = $(prefix + 'Status');
+            let advanced = false;
+            if (statusSel) {
+                const next = submissionStatus(statusSel.value, by, date);
+                advanced = next !== statusSel.value;
+                statusSel.value = next;
+            }
+            const statusEl = prefix === 'editOrder' ? $('orderSubmittedStatus') : null;
+            if (!statusEl) return;
+            if (by && date) {
+                statusEl.innerHTML = `<span style="color:#27ae60">✓ Submitted by ${by} on ${fmtDate(date)}${advanced ? ' — status set to in production' : ''}</span>`;
+            } else if (by || date) {
+                statusEl.innerHTML = `<span style="color:#e67e22">⚠️ Incomplete - please fill both fields</span>`;
+            } else {
+                statusEl.innerHTML = `<span style="color:#e74c3c">⚠️ Not yet submitted to designer</span>`;
+            }
+        }
+
         function viewOrderDetails(orderId) {
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) return;
@@ -8885,15 +8912,8 @@ The Estrelle Bridal Team`;
             submittedBySelect.value = order.SubmittedBy || '';
             $('editOrderSubmittedDate').value = order.SubmittedDate || '';
             
-            // Show submitted status
-            const statusEl = $('orderSubmittedStatus');
-            if (order.SubmittedBy && order.SubmittedDate) {
-                statusEl.innerHTML = `<span style="color:#27ae60">✓ Submitted by ${order.SubmittedBy} on ${fmtDate(order.SubmittedDate)}</span>`;
-            } else if (order.SubmittedBy || order.SubmittedDate) {
-                statusEl.innerHTML = `<span style="color:#e67e22">⚠️ Incomplete - please fill both fields</span>`;
-            } else {
-                statusEl.innerHTML = `<span style="color:#e74c3c">⚠️ Not yet submitted to designer</span>`;
-            }
+            // Show submitted status (and advance a stale 'pending submission')
+            syncStatusFromSubmission('editOrder');
             
             // Handle client linking
             $('editOrderClientId').value = order.ClientID || '';
@@ -9391,7 +9411,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 Dress: $('editOrderDress').value,
                 Designer: $('editOrderDesigner').value,
                 Size: $('editOrderSize').value,
-                Status: $('editOrderStatus').value,
+                Status: submissionStatus($('editOrderStatus').value, $('editOrderSubmittedBy').value, $('editOrderSubmittedDate').value),
                 ArrivalDate: $('editOrderArrival').value,
                 Customization: $('editOrderCustomization').value,
                 Accessories: $('editOrderAccessories').value,
@@ -9679,7 +9699,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 Subtotal: subtotal,
                 HST: hst,
                 Total: total,
-                Status: $('newOrderStatus').value,
+                Status: submissionStatus($('newOrderStatus').value, $('newOrderSubmittedBy').value, $('newOrderSubmittedDate').value),
                 ArrivalDate: $('newOrderArrival').value,
                 WeddingDate: $('newOrderWedding').value || (clientId ? (getClient(clientId)?.WeddingDate || '') : ''),
                 SubmittedBy: $('newOrderSubmittedBy').value,
