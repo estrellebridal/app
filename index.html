@@ -4254,6 +4254,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         const fmtDateLong = d => new Date(d+'T00:00:00').toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
         const initials = (f,l) => (f?.[0]||'') + (l?.[0]||'');
         const money = n => '$' + Number(n||0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        // Round to whole cents. Summing item prices in floating point gives values like
+        // 19494.059999999998; anything stored or shown as a dollar figure goes through this.
+        const cents = n => Math.round((Number(n) || 0) * 100) / 100;
         
         // Format price input as user types (e.g., $12,020)
         function formatPriceInput(input) {
@@ -8840,7 +8843,7 @@ The Estrelle Bridal Team`;
 
             // Price fields — pre-fill from stored money or the items' prices
             const preTaxVal = getOrderPreTax(order);
-            $('editOrderPreTax').value = preTaxVal ? String(preTaxVal) : '';
+            $('editOrderPreTax').value = preTaxVal ? String(cents(preTaxVal)) : '';
             const storedTax = parseFloat(order.HST);
             $('editOrderTaxType').value = (!isNaN(storedTax) && storedTax === 0 && preTaxVal) ? 'none' : 'hst';
             updateEditOrderTax();
@@ -9425,10 +9428,10 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             // the box never wipes existing figures.
             const preTax = parseFloat(String($('editOrderPreTax').value).replace(/[$,]/g, ''));
             if (!isNaN(preTax) && preTax > 0) {
-                const taxAmt = $('editOrderTaxType').value === 'hst' ? Math.round(preTax * 0.13 * 100) / 100 : 0;
-                updates.Subtotal = preTax;
+                const taxAmt = $('editOrderTaxType').value === 'hst' ? cents(preTax * 0.13) : 0;
+                updates.Subtotal = cents(preTax);
                 updates.HST = taxAmt;
-                updates.Total = Math.round((preTax + taxAmt) * 100) / 100;
+                updates.Total = cents(preTax + taxAmt);
             }
             
             // Update Items JSON if we have items
@@ -9675,10 +9678,10 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             }));
             
             // Calculate totals
-            const subtotal = items.reduce((s, i) => s + (i.price || 0), 0);
+            const subtotal = cents(items.reduce((s, i) => s + (i.price || 0), 0));
             const taxRate = parseFloat($('newOrderTaxRate')?.value) || 13;
-            const hst = subtotal * (taxRate / 100);
-            const total = subtotal + hst;
+            const hst = cents(subtotal * (taxRate / 100));
+            const total = cents(subtotal + hst);
             
             // Determine Dress and Accessories fields
             const dressItems = items.filter(i => i.type === 'Dress');
@@ -13602,7 +13605,7 @@ The {StoreName} Team
                     }, 0);
                 } catch(e) {}
             }
-            return preTax;
+            return cents(preTax);
         }
 
         // Tax for an order. Orders made before the app tracked tax never stored an HST
@@ -20909,8 +20912,9 @@ The {storeName} Team`
                 }
             });
             
-            const hst = o.hst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
-            const total = subtotal + hst;
+            subtotal = cents(subtotal);
+            const hst = o.hst ? cents(subtotal * 0.13) : 0;
+            const total = cents(subtotal + hst);
             const clientName = `${c.FirstName} ${c.LastName}`;
             
             // Prepare fitting photos - get from client's recently added photos
