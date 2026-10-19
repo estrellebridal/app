@@ -4499,7 +4499,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 return out;
             }
             // --- Email / contract / e-sign-email actions run on the Google Apps Script (Gmail + PDF + Drive) ---
-            if (body.action === 'sendEmail' || body.action === 'sendContract' || body.action === 'sendESignEmail') {
+            if (body.action === 'sendEmail' || body.action === 'sendContract' || body.action === 'sendESignEmail' || body.action === 'voidContractPdf') {
                 const gsRes = await fetch(ESIGN_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -17177,6 +17177,13 @@ The {storeName} Team`
             else voided.ContractSigned = '';
             const r = await updateRecord(sheet, rec.ID, voided);
             if (!r || r.ok === false) { toast('Could not void the signature \u2014 nothing was sent', 'error'); return false; }
+            // Mark the superseded signed PDF in Drive as VOID (server owns the folder).
+            // Best effort: an older script without this action just leaves the name alone.
+            if (rec.DriveLink) {
+                api('POST', { action: 'voidContractPdf', fileUrl: rec.DriveLink })
+                    .then(res => { if (res && res.success) toast('Old signed PDF renamed "' + res.name + '" in Drive', 'success'); })
+                    .catch(() => {});
+            }
             return true;
         }
         // A contract may NEVER go to the bride without the consultant's signature.
