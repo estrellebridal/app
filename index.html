@@ -17185,7 +17185,8 @@ The {storeName} Team`
         async function confirmESignOverwrite(rec, sheet = 'Orders') {
             if (!_contractIsSigned(rec)) return true;
             const signedOn = String(rec.ESignedDate || rec.SignatureTimestamp || '').split('T')[0];
-            const ok = await appConfirmDanger(`A signature is already on file${signedOn ? ' (signed ' + fmtDate(signedOn) + ')' : ''}. Void it and send a new link to sign the current contract? The old signed PDF stays in Drive.`, '\u270d Replace signature?');
+            const first = String(rec.ClientName || '').split(' ')[0] || 'The customer';
+            const ok = await appConfirmDanger(`${first}'s signature${signedOn ? ' from ' + fmtDate(signedOn) : ''} will be voided and ${first === 'The customer' ? 'they' : 'she'} will get a new link to sign the current contract. The old signed PDF stays in Drive, marked VOID.`, '\u270d New signature', 'Void & send new link');
             if (!ok) return false;
             return await voidSignature(rec, sheet);
         }
@@ -19034,7 +19035,7 @@ The {storeName} Team`
         }
         
         // Danger confirm (for deletes)
-        function appConfirmDanger(message, title = 'Are you sure?') {
+        function appConfirmDanger(message, title = 'Are you sure?', okLabel = 'Delete') {
             return new Promise((resolve) => {
                 $('choiceTitle').textContent = title;
                 $('choiceMessage').textContent = message;
@@ -19043,7 +19044,7 @@ The {storeName} Team`
                 $('choiceButtons').innerHTML = `
                     <div style="display:flex;gap:10px">
                         <button class="btn btn-secondary" style="flex:1;padding:12px" onclick="closeModal('choice'); window._choiceResolve(false)">Cancel</button>
-                        <button class="btn" style="flex:1;padding:12px;background:#e74c3c;color:white;border-color:#e74c3c" onclick="closeModal('choice'); window._choiceResolve(true)">Delete</button>
+                        <button class="btn" style="flex:1;padding:12px;background:#e74c3c;color:white;border-color:#e74c3c" onclick="closeModal('choice'); window._choiceResolve(true)">${okLabel}</button>
                     </div>
                 `;
                 window._choiceResolve = resolve;
