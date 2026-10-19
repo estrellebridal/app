@@ -3180,6 +3180,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 <button class="btn btn-secondary" onclick="copyOrderForDesigner()">📋 Copy for Designer</button>
                 <button class="btn btn-secondary" id="btnViewContract" onclick="viewOrderContract()" style="display:none">📄 View Contract</button>
                 <button class="btn btn-secondary" id="btnResendContract" onclick="resendContract()" style="display:none">📧 Re-send</button>
+                <button class="btn btn-secondary" id="btnNewSignature" onclick="sendForESign($('btnViewContract').dataset.orderId)" style="display:none" title="Void the signature on file and send a new link to sign the current contract">✍️ New signature</button>
                 <div style="flex:1"></div>
                 <button class="btn btn-primary" onclick="saveOrderDetails()">💾 Save</button>
             </div>
@@ -8954,6 +8955,7 @@ The Estrelle Bridal Team`;
             $('btnResendContract').style.display = ((hasContract || hasItems) && (client?.Email || order.Email)) ? 'inline-flex' : 'none';
             $('btnViewContract').dataset.orderId = order.ID;
             $('btnResendContract').dataset.orderId = order.ID;
+            if ($('btnNewSignature')) $('btnNewSignature').style.display = _contractIsSigned(order) ? 'inline-flex' : 'none';
             
             openModal('orderDetails');
         }
@@ -17007,6 +17009,7 @@ The {storeName} Team`
                     primaryAction = `<button class="btn btn-sm btn-secondary" onclick="viewOrderDetails('${o.ID}')" style="font-size:10px;padding:4px 10px">📦 Order</button>
                         <button class="btn btn-sm btn-secondary" onclick="viewOrderContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📄 View Signed</button>
                         <button class="btn btn-sm btn-secondary" onclick="resendContractById('${o.ID}')" style="font-size:10px;padding:4px 10px">📧 Re-send</button>
+                        <button class="btn btn-sm btn-secondary" onclick="sendForESign('${o.ID}')" style="font-size:10px;padding:4px 10px" title="Void the signature on file and send a new link to sign the current contract">✍️ New signature</button>
                         <button class="btn btn-sm btn-secondary" onclick="editContract('${o.ID}')" style="font-size:10px;padding:4px 10px">✏️ Edit</button>
                         <button class="btn btn-sm btn-secondary" onclick="deleteOrderFromContracts('${o.ID}')" style="font-size:10px;padding:4px 10px;color:#c00">🗑</button>`;
                 } else {
@@ -17152,9 +17155,29 @@ The {storeName} Team`
             var s = String(rec.CustomerSignature || '');
             return s.indexOf('data:image') === 0 || String(rec.ESignedDate || '').length > 5;
         }
-        async function confirmESignOverwrite(rec) {
+        // A signature is already on file: offer to void it so the customer can sign the
+        // CURRENT contract again (e.g. after a correction). The server refuses to show the
+        // signing page while a signature exists, so without voiding a re-sent link only
+        // reaches an "Already Signed" page. The old signed PDF stays in Drive and its link
+        // is kept on the record for the audit trail.
+        async function confirmESignOverwrite(rec, sheet = 'Orders') {
             if (!_contractIsSigned(rec)) return true;
-            return await appConfirmDanger('This contract already has a signature on file \u2014 it looks like the customer already signed (in person or online). Sending an e-sign link is not needed, and asks them to sign again. Send an e-sign link anyway?', '\u26a0 Already Signed');
+            const signedOn = String(rec.ESignedDate || rec.SignatureTimestamp || '').split('T')[0];
+            const ok = await appConfirmDanger(`A signature is already on file${signedOn ? ' (signed ' + fmtDate(signedOn) + ')' : ''}. Void it and send a new link to sign the current contract? The old signed PDF stays in Drive.`, '\u270d Replace signature?');
+            if (!ok) return false;
+            const voided = {
+                CustomerSignature: '', ESignedDate: '', InitialSignature: '', Initials: '', SignatureTimestamp: '',
+                ESignLinkSent: '', DriveLink: '',
+                SignatureVoidedAt: new Date().toISOString(),
+                VoidedDriveLink: rec.DriveLink || rec.VoidedDriveLink || ''
+            };
+            // Orders regenerate their contract from the record; the stored HTML was the
+            // signed (or pre-signing) snapshot. Alterations keep theirs — it is their source.
+            if (sheet === 'Orders') voided.ContractHtml = '';
+            else voided.ContractSigned = '';
+            const r = await updateRecord(sheet, rec.ID, voided);
+            if (!r || r.ok === false) { toast('Could not void the signature \u2014 nothing was sent', 'error'); return false; }
+            return true;
         }
         // A contract may NEVER go to the bride without the consultant's signature.
         // Accepts: signature captured this session, a non-blank consultant pad, or
@@ -22599,7 +22622,7 @@ www.estrellebridal.com`;
             
             const alt = (data.alterations||[]).find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
             if (!alt) { toast('No alteration record found', 'error'); return; }
-            if (!(await confirmESignOverwrite(alt))) return;
+            if (!(await confirmESignOverwrite(alt, 'Alterations'))) return;
             
             // Save dates back
             const weddingDate = $('altContractWeddingDate').value;
@@ -22716,7 +22739,7 @@ www.estrellebridal.com`;
                         <div style="font-size:11px;color:var(--taupe)">${o.Designer||''} ${o.Dress||''} · ${fmtDate(o.OrderDate)}${total>0?' · '+money(total):''}</div>
                     </div>
                     <div style="display:flex;gap:6px">
-                        ${o._isSigned && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button>` : ''}
+                        ${o._isSigned && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')" title="Void the signature on file and send a new link to sign the current contract">✍️ New signature</button>` : ''}
                         ${o._isSigned && o._type === 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewAltContractById('${o.ID}')">View</button>` : ''}
                         ${!o._isSigned && !o._isEsign && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')">Send E-Sign</button>` : ''}
                     </div>
