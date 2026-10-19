@@ -9009,8 +9009,12 @@ The Estrelle Bridal Team`;
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) { toast('Order not found', 'error'); return; }
             
-            let contractBody = order.ContractHtml;
-            if (!contractBody) contractBody = regenerateContractFromOrder(order);
+            // For an order signed through the e-sign link, the stored HTML is the
+            // pre-signing snapshot — rebuild from the record so the signature and
+            // figures match the signed PDF the bride received.
+            const eSigned = !!order.ESignedDate;
+            let contractBody = (!eSigned && order.ContractHtml) ? order.ContractHtml : '';
+            if (!contractBody) contractBody = regenerateContractFromOrder(order) || order.ContractHtml;
             if (!contractBody) { toast('No contract data available for this order', 'error'); return; }
             
             const clientName = order.ClientName || 'Client';
@@ -9103,18 +9107,15 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             }
             
             const subtotal = parseFloat(order.Subtotal) || getOrderPreTax(order) || 0;
-            // Try saved HST, then calculate from total-subtotal, then default 13% if subtotal exists
-            let hst = parseFloat(order.HST) || 0;
-            if (!hst && subtotal > 0) {
+            // Tax exactly as recorded on the order. A stored 0 means no tax; only an
+            // order with no HST field at all (legacy) falls back to Total minus Subtotal.
+            // Never assume 13% — a contract must show what was actually agreed.
+            let hst = cents(order.HST);
+            if ((order.HST === undefined || order.HST === null || order.HST === '') && subtotal > 0) {
                 const savedTotal = parseFloat(order.Total) || 0;
-                if (savedTotal > subtotal) {
-                    hst = Math.round((savedTotal - subtotal) * 100) / 100;
-                } else {
-                    // Default to 13% HST for Canadian orders
-                    hst = Math.round(subtotal * 0.13 * 100) / 100;
-                }
+                hst = savedTotal > subtotal ? cents(savedTotal - subtotal) : 0;
             }
-            const total = subtotal + hst;
+            const total = cents(subtotal + hst);
             const unit = measurements.unit || 'in';
             
             // Build items table
@@ -18702,6 +18703,7 @@ The {storeName} Team`
             if ($('taxCustom')) $('taxCustom').checked = false;
             if ($('taxNone')) $('taxNone').checked = false;
             if ($('customTaxRate')) $('customTaxRate').value = '';
+            try { updateTaxOption(); } catch(e) {}
             if ($('orderSubtotal')) $('orderSubtotal').style.display = 'none';
             if ($('orderHstRow')) $('orderHstRow').style.display = 'none';
             if ($('yDate')) $('yDate').value = today();
@@ -20396,6 +20398,19 @@ The {storeName} Team`
             }
         }
         
+        // Tax for the Say Yes wizard, read from the tax radios staff see on screen.
+        // The preview, the stored contract and the saved HST/Total must all come from
+        // this one source so the copies of a contract can never disagree.
+        function wizardTax(subtotal) {
+            let info = null;
+            try { info = getTaxInfo(); } catch(e) {}
+            if (!info) {
+                const rate = (currentOrder && currentOrder.taxRate != null) ? currentOrder.taxRate : ((currentOrder && currentOrder.hst) ? 0.13 : 0);
+                info = { rate: rate, label: rate === 0.13 ? 'HST (13%)' : ('Tax (' + Math.round(rate * 100) + '%)') };
+            }
+            return { rate: info.rate, label: info.label, amount: cents(subtotal * info.rate) };
+        }
+
         function updateTaxOption() {
             renderOrderItems();
         }
@@ -20913,7 +20928,7 @@ The {storeName} Team`
             });
             
             subtotal = cents(subtotal);
-            const hst = o.hst ? cents(subtotal * 0.13) : 0;
+            const hst = wizardTax(subtotal).amount;
             const total = cents(subtotal + hst);
             const clientName = `${c.FirstName} ${c.LastName}`;
             
@@ -21109,17 +21124,18 @@ p{margin:6px 0;}
                 }
             });
             
-            const hst = o.hst ? Math.round(subtotal * 0.13 * 100) / 100 : 0;
-            const total = subtotal + hst;
+            const tax = wizardTax(subtotal);
+            const hst = tax.amount;
+            const total = cents(subtotal + hst);
             const unit = o.measurements.unit || 'in';
             const initials = o.initials || {};
             const isSample = currentSaleType === 'sample-sale';
             
             let hstRows = '';
-            if (o.hst) {
+            if (hst > 0) {
                 hstRows = `
                     <tr><td colspan="5" style="text-align:right">Subtotal</td><td>${money(subtotal)}</td></tr>
-                    <tr><td colspan="5" style="text-align:right">HST (13%)</td><td>${money(hst)}</td></tr>
+                    <tr><td colspan="5" style="text-align:right">${tax.label}</td><td>${money(hst)}</td></tr>
                 `;
             }
             
