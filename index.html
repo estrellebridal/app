@@ -9472,12 +9472,25 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 updates.ClientID = clientId;
             }
             
+            // Signed contract: a change to goods or money needs the customer's signature again.
+            let resignAfterSave = false;
+            const orderBefore = data.orders.find(o => String(o.ID) === String(orderId));
+            if (orderBefore && _contractIsSigned(orderBefore) && agreementKey(Object.assign({}, orderBefore, updates)) !== agreementKey(orderBefore)) {
+                const pick = await askSignedContractChange();
+                if (pick === 'cancel') return;
+                resignAfterSave = pick === 'resign';
+            }
+
             try {
-                updateRecord('Orders', orderId, updates);
+                await updateRecord('Orders', orderId, updates);
                 
                 closeModal('orderDetails');
                 renderOrders();
                 toast('Order updated!', 'success');
+                if (resignAfterSave) {
+                    const fresh = data.orders.find(o => String(o.ID) === String(orderId)) || orderBefore;
+                    if (await voidSignature(fresh, 'Orders')) sendForESign(orderId);
+                }
             } catch (e) {
                 console.error('Failed to save order:', e);
                 toast('Failed to save order', 'error');
@@ -17174,6 +17187,40 @@ The {storeName} Team`
             const signedOn = String(rec.ESignedDate || rec.SignatureTimestamp || '').split('T')[0];
             const ok = await appConfirmDanger(`A signature is already on file${signedOn ? ' (signed ' + fmtDate(signedOn) + ')' : ''}. Void it and send a new link to sign the current contract? The old signed PDF stays in Drive.`, '\u270d Replace signature?');
             if (!ok) return false;
+            return await voidSignature(rec, sheet);
+        }
+
+        // Promise wrapper around showChoiceDialog so save flows can await the pick.
+        function appChoice(title, message, options) {
+            return new Promise(resolve => showChoiceDialog(title, message, options.map(op => ({
+                label: op.label, style: op.style || 'secondary',
+                action: () => { closeModal('choice'); resolve(op.value); }
+            }))));
+        }
+
+        // What the customer agreed to: the goods and the money. Anything outside this
+        // (PO, ETA, status, notes, seamstress, submission) may change after signing;
+        // a change inside it needs her signature again.
+        function agreementKey(rec) {
+            let items = [];
+            try { items = typeof rec.Items === 'string' ? JSON.parse(rec.Items || '[]') : (rec.Items || []); } catch(e) {}
+            const norm = (items || []).map(i => [i.type || '', i.name || '', i.designer || '', i.size || '', i.color || '', cents(i.price),
+                (i.customizations || []).map(c => [c.name || '', cents(c.price), c.delivery || ''])]);
+            return JSON.stringify({ items: norm, sub: cents(rec.Subtotal), hst: cents(rec.HST), total: cents(rec.Total), sale: rec.SaleType || '' });
+        }
+
+        // Returns 'resign' | 'save' | 'cancel'.
+        async function askSignedContractChange() {
+            return await appChoice('\u270d Signed contract changed', 'This contract is signed. The change affects what the customer agreed to.', [
+                { label: '\ud83d\udcbe Save & request new signature', style: 'primary', value: 'resign' },
+                { label: 'Save only', style: 'secondary', value: 'save' },
+                { label: 'Cancel', style: 'secondary', value: 'cancel' }
+            ]);
+        }
+
+        // Clears the signature on file (the old PDF link is kept for the audit trail)
+        // and marks the superseded PDF VOID in Drive.
+        async function voidSignature(rec, sheet = 'Orders') {
             const voided = {
                 CustomerSignature: '', ESignedDate: '', InitialSignature: '', Initials: '', SignatureTimestamp: '',
                 ESignLinkSent: '', DriveLink: '',
@@ -21005,6 +21052,23 @@ The {storeName} Team`
             
             // Get existing measurements and add new one (only if not a duplicate)
             const existingMeasurements = getClientMeasurements();
+
+            // Editing a signed contract: if the goods or money changed and the old
+            // signature would simply be carried over onto the new figures, ask first.
+            let resignAfterSave = false;
+            if (o._editingOrderId) {
+                const before = data.orders.find(r => String(r.ID) === String(o._editingOrderId));
+                const carriedSig = !!before && !!o.signatureData && o.signatureData === before.CustomerSignature;
+                const after = { Items: JSON.stringify(o.items), Subtotal: subtotal, HST: hst, Total: total, SaleType: currentSaleType || 'made-to-order' };
+                if (before && _contractIsSigned(before) && carriedSig && agreementKey(after) !== agreementKey(before)) {
+                    const pick = await askSignedContractChange();
+                    if (pick === 'cancel') { toast('Not saved', 'error'); return false; }
+                    if (pick === 'resign') {
+                        resignAfterSave = true;
+                        o.signatureData = ''; o.initialSignature = ''; o.initials = null; o._capturedContractHtml = '';
+                    }
+                }
+            }
             
             // Check if these exact measurements already exist (same bust/waist/hip/date)
             const isDuplicate = existingMeasurements.some(m => 
@@ -21058,6 +21122,10 @@ The {storeName} Team`
                     const idx = data.orders.findIndex(r => String(r.ID) === String(o._editingOrderId));
                     if (idx >= 0) Object.assign(data.orders[idx], record);
                     toast('Order updated!', 'success');
+                    if (resignAfterSave) {
+                        const editedId = o._editingOrderId;
+                        if (await voidSignature(data.orders[idx] || { ID: editedId }, 'Orders')) setTimeout(() => sendForESign(editedId), 800);
+                    }
                 } else {
                     // Create new order
                     await saveRecord('Orders', record);
