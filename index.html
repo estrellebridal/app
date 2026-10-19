@@ -9011,13 +9011,22 @@ The Estrelle Bridal Team`;
             const order = data.orders.find(o => String(o.ID) === String(orderId));
             if (!order) { toast('Order not found', 'error'); return; }
             
-            // For an order signed through the e-sign link, the stored HTML is the
-            // pre-signing snapshot — rebuild from the record so the signature and
-            // figures match the signed PDF the bride received.
+            // What counts as "the signed contract" is the HTML that actually carries the
+            // customer's signature: in-person signing stores it, and the e-sign server
+            // writes it back after the bride signs. Older e-signed orders only have the
+            // pre-signing snapshot, so we rebuild from the record — WITHOUT her signature,
+            // because she never signed that document — and say so.
+            const stored = order.ContractHtml || '';
+            const storedHasCustomerSig = /Customer Signature:[\s\S]{0,300}?<img/i.test(stored);
             const eSigned = !!order.ESignedDate;
-            let contractBody = (!eSigned && order.ContractHtml) ? order.ContractHtml : '';
-            if (!contractBody) contractBody = regenerateContractFromOrder(order) || order.ContractHtml;
+            let contractBody = (!eSigned || storedHasCustomerSig) ? stored : '';
+            let rebuilt = false;
+            if (!contractBody) {
+                contractBody = regenerateContractFromOrder(eSigned ? Object.assign({}, order, { CustomerSignature: '' }) : order) || stored;
+                rebuilt = eSigned && !!contractBody;
+            }
             if (!contractBody) { toast('No contract data available for this order', 'error'); return; }
+            const rebuiltNotice = rebuilt ? `<div style="background:#fff4e5;border:1px solid #f0c27a;color:#7a4b00;padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:12px">Rebuilt from the order record \u2014 this is not the document the customer signed, so her signature is not shown. The signed PDF${order.DriveLink ? ` is <a href="${order.DriveLink}" target="_blank">in Drive</a>` : ' is in Drive'}.</div>` : '';
             
             const clientName = order.ClientName || 'Client';
             const signDate = order.SignatureTimestamp ? new Date(order.SignatureTimestamp).toLocaleDateString() : (order.OrderDate ? fmtDate(order.OrderDate) : '');
@@ -9055,7 +9064,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
     <button class="btn-print" onclick="window.print()">🖨 Print</button>
     <button class="btn-close" onclick="window.close()">✕ Close</button>
 </div>
-<div class="contract">${contractBody}
+<div class="contract">${rebuiltNotice}${contractBody}
     <div class="watermark">Estrelle Bridal · 55 Avenue Road #201.5, Toronto · estrelle.com</div>
 </div>
 </body></html>`;
