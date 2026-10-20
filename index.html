@@ -2187,7 +2187,13 @@
 
                 <!-- Fitting Log -->
                 <div style="margin-bottom:16px">
-                    <h3 style="font-size:12px;font-weight:600;margin-bottom:8px">📋 Fitting Log</h3>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <h3 style="font-size:12px;font-weight:600">📋 Fitting Log</h3>
+                        <div style="display:flex;gap:6px">
+                            <button class="btn btn-sm btn-secondary" onclick="copyAltLog(currentAltClientId)" style="font-size:10px;padding:4px 10px">📋 Copy</button>
+                            <button class="btn btn-sm btn-secondary" onclick="printAltLog(currentAltClientId)" style="font-size:10px;padding:4px 10px">🖨 Print / PDF</button>
+                        </div>
+                    </div>
                     <div id="altLog"></div>
                 </div>
                 
@@ -12030,57 +12036,116 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
 
         // Day-by-day log of an alteration: which fitting it was, what was added,
         // marked done or flagged for change, and the note left on that fitting.
-        function buildAltLogHtml(clientId, items, altRec) {
-            const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+        // Returns plain-text lines; the HTML and text views both render from this.
+        function buildAltLogData(clientId, items) {
             const pad = n => String(n).padStart(2, '0');
             const dayOf = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
             const days = {};
-            const day = k => days[k] || (days[k] = { fitting: null, lines: [] });
+            const day = k => days[k] || (days[k] = { head: '', lines: [] });
             const fittings = (data.appointments || [])
                 .filter(ap => String(ap.ClientID) === String(clientId) && /fitting/i.test(ap.Type || ''))
                 .sort((x, y) => String(x.Date).localeCompare(String(y.Date)));
             fittings.forEach((f, i) => {
                 const k = getDateStr(f.Date); if (!k) return;
-                const d = day(k); d.fitting = { num: i + 1, f: f };
-                if (f.FittingNote && f.FittingNote.trim()) d.lines.push({ t: 'note', text: f.FittingNote.trim() });
+                const d = day(k); d.head = `Fitting #${i + 1}${f.Consultant ? ' with ' + f.Consultant : ''}`;
+                if (f.FittingNote && f.FittingNote.trim()) d.lines.push('📝 ' + f.FittingNote.trim());
             });
+            const line = (e, name) => {
+                if (e.event === 'added') return '➕ Added: ' + name;
+                if (e.event === 'change') return '✎ Change for ' + name + ': ' + (e.text || '');
+                if (e.event === 'status') {
+                    if (e.text === 'done') return '✓ Done: ' + name;
+                    if (e.text === 'needs-adjustment') return '⚠ Needs adjustment: ' + name;
+                    if (e.text === 'in-progress') return '▶ In progress: ' + name;
+                    return '↺ ' + (e.text || '') + ': ' + name;
+                }
+                return e.text || '';
+            };
             const undated = [];
             (items || []).forEach(it => {
                 const hasLog = Array.isArray(it.log) && it.log.length > 0;
                 const log = hasLog ? it.log : (it.addedAt ? [{ at: it.addedAt, event: 'added' }] : []);
-                log.forEach(e => { const k = dayOf(e.at); if (k) day(k).lines.push({ t: e.event, item: it.name, text: e.text }); });
+                log.forEach(e => { const k = dayOf(e.at); if (k) day(k).lines.push(line(e, it.name)); });
                 if (!(hasLog && it.log.some(e => e.event === 'change')) && Array.isArray(it.adjustments)) {
-                    it.adjustments.filter(n => n && String(n).trim()).forEach((n, i) => undated.push(`${esc(it.name)}: change ${i + 1} — ${esc(n)}`));
+                    it.adjustments.filter(n => n && String(n).trim()).forEach((n, i) => undated.push(`${it.name}: change ${i + 1} — ${n}`));
                 }
             });
-            const line = l => {
-                if (l.t === 'note') return `📝 ${esc(l.text)}`;
-                if (l.t === 'added') return `➕ Added: ${esc(l.item)}`;
-                if (l.t === 'change') return `✎ Change for ${esc(l.item)}: ${esc(l.text)}`;
-                if (l.t === 'status') {
-                    if (l.text === 'done') return `✓ Done: ${esc(l.item)}`;
-                    if (l.text === 'needs-adjustment') return `⚠ Needs adjustment: ${esc(l.item)}`;
-                    if (l.text === 'in-progress') return `▶ In progress: ${esc(l.item)}`;
-                    return `↺ ${esc(l.text)}: ${esc(l.item)}`;
-                }
-                return esc(l.text || '');
-            };
-            const keys = Object.keys(days).sort();
-            if (!keys.length && !undated.length) return '<div style="font-size:11px;color:var(--taupe)">No log yet — it fills in as items are added, marked done or flagged for changes, and as fitting notes are written.</div>';
-            let html = keys.map(k => {
-                const d = days[k];
-                const head = fmtDate(k) + (d.fitting ? ` · Fitting #${d.fitting.num}${d.fitting.f.Consultant ? ' with ' + esc(d.fitting.f.Consultant) : ''}` : '');
-                const body = d.lines.length ? d.lines.map(l => `<div style="font-size:11px;padding-left:10px">${line(l)}</div>`).join('') : '<div style="font-size:11px;color:var(--taupe);padding-left:10px">No notes recorded</div>';
-                return `<div style="padding:5px 0;border-bottom:1px solid var(--blush)"><div style="font-size:11px;font-weight:600">${head}</div>${body}</div>`;
-            }).join('');
-            if (undated.length) html += `<div style="padding:5px 0"><div style="font-size:11px;font-weight:600;color:var(--taupe)">Earlier changes (no date recorded)</div>${undated.map(u => `<div style="font-size:11px;padding-left:10px">${u}</div>`).join('')}</div>`;
+            return { days: Object.keys(days).sort().map(k => ({ date: k, head: days[k].head, lines: days[k].lines })), undated: undated };
+        }
+
+        const ALT_LOG_EMPTY = 'No log yet — it fills in as items are added, marked done or flagged for changes, and as fitting notes are written.';
+
+        function buildAltLogHtml(clientId, items) {
+            const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+            const d = buildAltLogData(clientId, items);
+            if (!d.days.length && !d.undated.length) return `<div style="font-size:11px;color:var(--taupe)">${ALT_LOG_EMPTY}</div>`;
+            let html = d.days.map(x => `<div style="padding:5px 0;border-bottom:1px solid var(--blush)"><div style="font-size:11px;font-weight:600">${fmtDate(x.date)}${x.head ? ' · ' + esc(x.head) : ''}</div>${x.lines.length ? x.lines.map(l => `<div style="font-size:11px;padding-left:10px">${esc(l)}</div>`).join('') : '<div style="font-size:11px;color:var(--taupe);padding-left:10px">No notes recorded</div>'}</div>`).join('');
+            if (d.undated.length) html += `<div style="padding:5px 0"><div style="font-size:11px;font-weight:600;color:var(--taupe)">Earlier changes (no date recorded)</div>${d.undated.map(u => `<div style="font-size:11px;padding-left:10px">${esc(u)}</div>`).join('')}</div>`;
             return html;
+        }
+
+        // Full log as plain text (clipboard / email / notes), with a header line.
+        function buildAltLogText(clientId, items, altRec) {
+            const c = getClient(clientId);
+            const name = c ? `${c.FirstName} ${c.LastName}` : (altRec && altRec.ClientName) || 'Client';
+            const out = [`FITTING LOG — ${name}`];
+            const meta = [altRec && altRec.Items ? altRec.Items : '', altRec && altRec.Seamstress ? 'Seamstress: ' + altRec.Seamstress : '', c && c.WeddingDate ? 'Wedding: ' + fmtDate(c.WeddingDate) : ''].filter(Boolean).join(' · ');
+            if (meta) out.push(meta);
+            const list = items || [];
+            if (list.length) {
+                out.push('', 'ITEMS');
+                list.forEach(i => out.push(`- ${i.name}${i.details ? ' (' + i.details + ')' : ''} — ${i.status === 'done' ? 'done' : i.status === 'needs-adjustment' ? 'needs adjustment' : i.status === 'in-progress' ? 'in progress' : 'pending'}`));
+            }
+            const d = buildAltLogData(clientId, list);
+            out.push('', 'LOG');
+            if (!d.days.length && !d.undated.length) out.push(ALT_LOG_EMPTY);
+            d.days.forEach(x => { out.push(`${fmtDate(x.date)}${x.head ? ' · ' + x.head : ''}`); (x.lines.length ? x.lines : ['No notes recorded']).forEach(l => out.push('  ' + l)); });
+            if (d.undated.length) { out.push('Earlier changes (no date recorded)'); d.undated.forEach(u => out.push('  ' + u)); }
+            return out.join('\n');
+        }
+
+        function _altLogSource(clientId, altId) {
+            let rec = null, items = null;
+            if (altId) {
+                rec = (data.alterations || []).find(a => String(a.ID) === String(altId)) || null;
+                try { items = rec && rec.AlterationItems ? JSON.parse(rec.AlterationItems) : []; } catch(e) { items = []; }
+            } else {
+                items = currentAltItems || [];
+                rec = (data.alterations || []).find(a => String(a.ClientID) === String(clientId) && a.Status !== 'complete') || null;
+            }
+            return { rec, items };
+        }
+
+        function copyAltLog(clientId, altId) {
+            const { rec, items } = _altLogSource(clientId, altId);
+            const text = buildAltLogText(clientId, items, rec);
+            navigator.clipboard.writeText(text)
+                .then(() => toast('Fitting log copied', 'success'))
+                .catch(() => prompt('Copy:', text));
+        }
+
+        function printAltLog(clientId, altId) {
+            const { rec, items } = _altLogSource(clientId, altId);
+            const c = getClient(clientId);
+            const name = c ? `${c.FirstName} ${c.LastName}` : (rec && rec.ClientName) || 'Client';
+            const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+            const w = window.open('', '_blank');
+            if (!w) { toast('Pop-up blocked — allow pop-ups to print', 'error'); return; }
+            w.document.open();
+            w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Fitting log — ${esc(name)}</title>
+<style>body{font-family:Georgia,serif;font-size:12px;line-height:1.5;max-width:720px;margin:0 auto;padding:28px;color:#2c2825}h1{font-size:18px;margin:0 0 4px}.meta{color:#8a837a;margin-bottom:16px}pre{white-space:pre-wrap;font-family:inherit}.bar{position:fixed;top:0;right:0;padding:10px}.bar button{padding:8px 16px;border-radius:6px;border:none;background:#C4A265;color:#fff;font-weight:600;cursor:pointer}@media print{.bar{display:none}}</style></head><body>
+<div class="bar"><button onclick="window.print()">🖨 Print / Save PDF</button></div>
+<h1>Fitting log — ${esc(name)}</h1>
+<div class="meta">${esc([rec && rec.Items ? rec.Items : '', rec && rec.Seamstress ? 'Seamstress: ' + rec.Seamstress : '', c && c.WeddingDate ? 'Wedding: ' + fmtDate(c.WeddingDate) : '', 'Printed ' + fmtDate(today())].filter(Boolean).join(' · '))}</div>
+<pre>${esc(buildAltLogText(clientId, items, rec).split('\n').slice(1).join('\n'))}</pre>
+</body></html>`);
+            w.document.close();
         }
 
         function renderAltLog() {
             const el = $('altLog');
             if (!el || !currentAltClientId) return;
-            el.innerHTML = buildAltLogHtml(currentAltClientId, currentAltItems || [], null);
+            el.innerHTML = buildAltLogHtml(currentAltClientId, currentAltItems || []);
         }
 
         // item.note always mirrors the OPEN change(s) — the bride email and status
@@ -17146,7 +17211,7 @@ The {storeName} Team`
                     ${itemRows}
                     ${notes.length ? `<div style="font-size:11px;margin-top:6px">${notes.join('<br>')}</div>` : ''}
                     ${fitLine}
-                    <details style="margin-top:6px"><summary style="font-size:11px;cursor:pointer;color:var(--taupe)">📋 Fitting log</summary><div style="margin-top:4px">${buildAltLogHtml(cid, items, a)}</div></details>
+                    <details style="margin-top:6px"><summary style="font-size:11px;cursor:pointer;color:var(--taupe)">📋 Fitting log</summary><div style="display:flex;gap:6px;margin:6px 0"><button class="btn btn-sm btn-secondary" onclick="copyAltLog('${cid}','${a.ID}')" style="font-size:10px;padding:4px 10px">📋 Copy log</button><button class="btn btn-sm btn-secondary" onclick="printAltLog('${cid}','${a.ID}')" style="font-size:10px;padding:4px 10px">🖨 Print / PDF</button></div><div>${buildAltLogHtml(cid, items)}</div></details>
                 </div>`;
             }).join('');
         }
