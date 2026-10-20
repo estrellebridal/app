@@ -1944,6 +1944,10 @@
                             <div class="card-header"><h2 class="card-title">📄 Contracts</h2><button class="btn btn-sm btn-secondary" onclick="sheSaidYes()">+ New</button></div>
                             <div class="card-body" id="cContracts"></div>
                         </div>
+                        <div class="card" id="alterationsCard" style="margin-bottom:12px;display:none">
+                            <div class="card-header"><h2 class="card-title">🧵 Alterations</h2></div>
+                            <div class="card-body" id="cAlterations"></div>
+                        </div>
                         <div class="card" style="margin-bottom:12px">
                             <div class="card-header"><h2 class="card-title">📸 Photos</h2><button class="btn btn-sm btn-secondary" onclick="openPhotoUpload()">+ Add</button></div>
                             <div class="card-body" id="cPhotos" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px"></div>
@@ -16028,6 +16032,7 @@ The {storeName} Team`
             renderClientPhotos();
             renderClientMeasurements();
             renderClientContracts();
+            renderClientAlterations();
             renderVisitHistory();
             showPage('consult', true, fromHistory); // true = skip unsaved check since we're opening
             updateFloatingBackButton();
@@ -16985,6 +16990,76 @@ The {storeName} Team`
             }
         }
         
+        // Every alteration record for this bride — active and completed — so the
+        // history (items, change rounds, seamstress, fittings) stays reachable after
+        // pickup, when the Alterations tab no longer lists her.
+        function renderClientAlterations() {
+            const card = $('alterationsCard'), body = $('cAlterations');
+            if (!card || !body || !currentClient) return;
+            const cid = String(currentClient.ID);
+            const alts = (data.alterations || []).filter(a => String(a.ClientID) === cid);
+            if (!alts.length) { card.style.display = 'none'; body.innerHTML = ''; return; }
+            card.style.display = 'block';
+            const when = a => a.ContractSigned || a.StartDate || a.DueDate || '';
+            alts.sort((a, b) => {
+                const aActive = a.Status !== 'complete', bActive = b.Status !== 'complete';
+                if (aActive !== bActive) return aActive ? -1 : 1;
+                return String(when(b)).localeCompare(String(when(a)));
+            });
+            const fittings = (data.appointments || [])
+                .filter(ap => String(ap.ClientID) === cid && /fitting/i.test(ap.Type || ''))
+                .sort((x, y) => String(x.Date).localeCompare(String(y.Date)));
+            const STATUS = {
+                'done': ['✓ Done', '#27ae60'],
+                'in-progress': ['In progress', '#2980b9'],
+                'needs-adjustment': ['Needs adjustment', '#e67e22']
+            };
+            const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+            body.innerHTML = alts.map(a => {
+                let items = [];
+                try { items = a.AlterationItems ? JSON.parse(a.AlterationItems) : []; } catch(e) {}
+                const active = a.Status !== 'complete';
+                const done = items.filter(i => i.status === 'done').length;
+                const total = parseFloat(a.AlterationTotal) || parseFloat(a.Total) || 0;
+                const badge = active
+                    ? '<span style="background:#e3f2fd;color:#1565c0;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">In alterations</span>'
+                    : '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600">✓ Completed</span>';
+                const meta = [
+                    a.Seamstress ? 'Seamstress: ' + esc(a.Seamstress) : 'No seamstress assigned',
+                    a.ContractSigned ? 'Contract signed ' + fmtDate(a.ContractSigned) : (a.ESignLinkSent ? 'Sent for e-sign' : ''),
+                    a.DueDate ? 'Due ' + fmtDate(a.DueDate) : '',
+                    total ? money(total) : ''
+                ].filter(Boolean).join(' · ');
+                const itemRows = items.length ? items.map(i => {
+                    const st = STATUS[i.status] || ['Pending', '#999'];
+                    const rounds = (i.adjustments && i.adjustments.length ? i.adjustments : (i.note ? [i.note] : [])).filter(n => n && String(n).trim());
+                    return `<div style="padding:6px 0;border-bottom:1px solid var(--blush)">
+                        <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+                            <span style="font-size:12px">${esc(i.name)}${i.details ? ` <span style="color:var(--taupe)">— ${esc(i.details)}</span>` : ''}</span>
+                            <span style="font-size:10px;font-weight:600;color:${st[1]};white-space:nowrap">${st[0]}</span>
+                        </div>
+                        ${rounds.map((n, k) => `<div style="font-size:11px;color:var(--taupe);padding-left:10px">${rounds.length > 1 ? 'Change ' + (k + 1) + ': ' : 'Change: '}${esc(n)}</div>`).join('')}
+                    </div>`;
+                }).join('') : '<div style="font-size:11px;color:var(--taupe)">No items recorded</div>';
+                const notes = [a.Notes ? '<b>Seamstress notes:</b> ' + esc(a.Notes) : '', a.BrideNotes ? '<b>Bride notes:</b> ' + esc(a.BrideNotes) : ''].filter(Boolean);
+                const fitLine = fittings.length ? `<div style="font-size:11px;color:var(--taupe);margin-top:6px">Fittings: ${fittings.map(f => fmtDate(f.Date)).join(', ')}</div>` : '';
+                const hasContract = !!(a.ContractHtml || a.ContractSigned);
+                return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                        <div style="font-weight:600;font-size:13px">${esc(a.Items || 'Alterations')} ${badge} <span style="font-size:10px;color:var(--taupe);font-weight:400">${done}/${items.length} done</span></div>
+                        <div style="display:flex;gap:6px">
+                            ${active ? `<button class="btn btn-sm btn-secondary" onclick="openAlterationForClient('${cid}')" style="font-size:10px;padding:4px 10px">🧵 Open</button>` : ''}
+                            ${hasContract ? `<button class="btn btn-sm btn-secondary" onclick="viewAltContractById('${a.ID}')" style="font-size:10px;padding:4px 10px">📄 Contract</button>` : ''}
+                        </div>
+                    </div>
+                    <div style="font-size:11px;color:var(--taupe);margin:2px 0 6px">${meta}</div>
+                    ${itemRows}
+                    ${notes.length ? `<div style="font-size:11px;margin-top:6px">${notes.join('<br>')}</div>` : ''}
+                    ${fitLine}
+                </div>`;
+            }).join('');
+        }
+
         function renderClientContracts() {
             if (!currentClient) return;
             const clientOrders = data.orders.filter(o => String(o.ClientID) === String(currentClient.ID));
