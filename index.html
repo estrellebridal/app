@@ -3934,6 +3934,30 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
 
         // ========== DATA ==========
         const CACHE_KEY = 'estrelle_data_cache';
+
+        // localStorage write that never throws. Browsers (iPad Safari especially) cap
+        // storage at ~5 MB; when a write is refused, drop the big data cache first —
+        // it is only a boot-time convenience — then measurement snapshots, and retry.
+        function lsSet(key, value) {
+            const attempt = () => { localStorage.setItem(key, value); return true; };
+            try { return attempt(); } catch (e1) {
+                try { localStorage.removeItem(CACHE_KEY); return attempt(); } catch (e2) {
+                    try {
+                        Object.keys(localStorage).filter(k => k.startsWith('meas_backup_')).forEach(k => localStorage.removeItem(k));
+                        return attempt();
+                    } catch (e3) { console.warn('localStorage write refused for', key, e3); return false; }
+                }
+            }
+        }
+
+        // The data cache only needs what the UI shows at boot. Contract HTML and
+        // initials images are the bulk of the payload and are never needed before the
+        // live fetch replaces the cache, so they are left out.
+        function slimForCache(d) {
+            const HEAVY = ['ContractHtml', 'ESignInitials', 'InitialSignature', 'FittingPhotos'];
+            const strip = rows => (rows || []).map(r => { const o = Object.assign({}, r); HEAVY.forEach(k => { if (k in o) delete o[k]; }); return o; });
+            return Object.assign({}, d, { orders: strip(d.orders), alterations: strip(d.alterations) });
+        }
         let data = { clients: [], appointments: [], topoptions: [], orders: [], alterations: [], designers: [], consultants: [], visitnotes: [], announcements: [] };
         let currentClient = null;
         let currentOrder = { items: [], measurements: {} };
@@ -4041,9 +4065,9 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                     // Restore alteration data
                     if (action.alts && action.record.ClientID) {
-                        if (action.alts.items) localStorage.setItem(`alts_${action.record.ClientID}`, action.alts.items);
-                        if (action.alts.notes) localStorage.setItem(`alts_notes_${action.record.ClientID}`, action.alts.notes);
-                        if (action.alts.neededby) localStorage.setItem(`alts_neededby_${action.record.ClientID}`, action.alts.neededby);
+                        if (action.alts.items) lsSet(`alts_${action.record.ClientID}`, action.alts.items);
+                        if (action.alts.notes) lsSet(`alts_notes_${action.record.ClientID}`, action.alts.notes);
+                        if (action.alts.neededby) lsSet(`alts_neededby_${action.record.ClientID}`, action.alts.neededby);
                     }
                     
                     renderOrders();
@@ -4072,7 +4096,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                             }
                         }
                         if (action.prevLocalItemsJson) {
-                            try { localStorage.setItem(`alts_${action.clientId}`, action.prevLocalItemsJson); } catch (e) {}
+                            try { lsSet(`alts_${action.clientId}`, action.prevLocalItemsJson); } catch (e) {}
                         }
                     } else if (action.altRecordId && action.previousAltStatus) {
                         const altRecord = data.alterations?.find(a => a.ID == action.altRecordId);
@@ -4103,10 +4127,10 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                     
                     // Restore localStorage data
                     if (action.localData && action.record.ClientID) {
-                        if (action.localData.items) localStorage.setItem(`alts_${action.record.ClientID}`, action.localData.items);
-                        if (action.localData.notes) localStorage.setItem(`alts_notes_${action.record.ClientID}`, action.localData.notes);
-                        if (action.localData.bridenotes) localStorage.setItem(`alts_bridenotes_${action.record.ClientID}`, action.localData.bridenotes);
-                        if (action.localData.neededby) localStorage.setItem(`alts_neededby_${action.record.ClientID}`, action.localData.neededby);
+                        if (action.localData.items) lsSet(`alts_${action.record.ClientID}`, action.localData.items);
+                        if (action.localData.notes) lsSet(`alts_notes_${action.record.ClientID}`, action.localData.notes);
+                        if (action.localData.bridenotes) lsSet(`alts_bridenotes_${action.record.ClientID}`, action.localData.bridenotes);
+                        if (action.localData.neededby) lsSet(`alts_neededby_${action.record.ClientID}`, action.localData.neededby);
                     }
                     
                     renderAlts();
@@ -4401,7 +4425,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             // rotated it since this one loaded. Trusting the in-memory copy is what
             // used to sign every tab out — see refreshSession below.
             load(){ this.session = JSON.parse(localStorage.getItem('estrelle_session') || 'null'); return this.session; },
-            save(s){ this.session = s; localStorage.setItem('estrelle_session', JSON.stringify(s)); },
+            save(s){ this.session = s; lsSet('estrelle_session', JSON.stringify(s)); },
             clear(){ this.session = null; localStorage.removeItem('estrelle_session'); },
             token(){ return this.session && this.session.access_token; }
         };
@@ -4605,7 +4629,14 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
         
         function saveCachedData() {
             try {
-                localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(slimForCache(data)));
+                } catch (e) {
+                    // Too big for this browser: make sure a stale oversized copy is not
+                    // left behind hogging the quota for everything else.
+                    try { localStorage.removeItem(CACHE_KEY); } catch (e2) {}
+                    console.log('Cache write skipped (storage full):', e && e.name);
+                }
             } catch (e) {
                 console.log('Cache write error:', e);
             }
@@ -4709,14 +4740,14 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
                 // Also sync localStorage alteration data from Google Sheets
                 (data.alterations || []).forEach(alt => {
                     if (alt.AlterationItems) {
-                        localStorage.setItem(`alts_${alt.ClientID}`, alt.AlterationItems);
+                        lsSet(`alts_${alt.ClientID}`, alt.AlterationItems);
                     }
                     if (alt.Notes) {
-                        localStorage.setItem(`alts_notes_${alt.ClientID}`, alt.Notes);
+                        lsSet(`alts_notes_${alt.ClientID}`, alt.Notes);
                     }
                     if (alt.DueDate) {
                         const dueDate = typeof alt.DueDate === 'string' ? alt.DueDate.split('T')[0] : alt.DueDate;
-                        if (dueDate) localStorage.setItem(`alts_neededby_${alt.ClientID}`, dueDate);
+                        if (dueDate) lsSet(`alts_neededby_${alt.ClientID}`, dueDate);
                     }
                 });
                 
@@ -5416,7 +5447,7 @@ Tip: Click the tags below to insert dynamic fields that auto-fill with client da
             const year = new Date().getFullYear();
             const key = `${clientId}_${year}`;
             emails[key] = { status, date, updatedAt: new Date().toISOString() };
-            localStorage.setItem(ANNIVERSARY_EMAILS_KEY, JSON.stringify(emails));
+            lsSet(ANNIVERSARY_EMAILS_KEY, JSON.stringify(emails));
         }
         
         function getAnniversaryEmailStatus(clientId) {
@@ -6588,7 +6619,7 @@ The Estrelle Bridal Team`;
                 const fixed = raw
                     .replace(/Danielle Frankel \$8,000- Enaura[^\n<"\\]*/g, () => DF)
                     .split('Danielle Frankel $8,000- $15,000').join(DF);
-                if (fixed !== raw) { localStorage.setItem(CONFIRM_TEMPLATE_KEY, fixed); raw = fixed; }
+                if (fixed !== raw) { lsSet(CONFIRM_TEMPLATE_KEY, fixed); raw = fixed; }
                 if (raw.includes('Danielle Frankel')) return;
                 let t = null;
                 try { t = JSON.parse(raw); } catch (e) {}
@@ -6602,9 +6633,9 @@ The Estrelle Bridal Team`;
                         t.html = t.html.replace(/(Enaura[^<]*)/, m => m + '<br>' + DF);
                         changed = true;
                     }
-                    if (changed) localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
+                    if (changed) lsSet(CONFIRM_TEMPLATE_KEY, JSON.stringify(t));
                 } else if (/Enaura/.test(raw)) {
-                    localStorage.setItem(CONFIRM_TEMPLATE_KEY, raw.replace(/^(.*Enaura[^\n]*)$/m, m => m + '\n' + DF));
+                    lsSet(CONFIRM_TEMPLATE_KEY, raw.replace(/^(.*Enaura[^\n]*)$/m, m => m + '\n' + DF));
                 }
             } catch (e) {}
         })();
@@ -6672,7 +6703,7 @@ The Estrelle Bridal Team`;
                 version: 2
             };
             
-            localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
+            lsSet(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
             console.log('Template saved to localStorage with HTML formatting');
             toast('Template saved!', 'success');
         }
@@ -7229,7 +7260,7 @@ The Estrelle Bridal Team`;
                 () => {
                     const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
                     sentEmails[`${clientId}-${new Date().getFullYear()}`] = today();
-                    localStorage.setItem('estrelle_anniversary_sent', JSON.stringify(sentEmails));
+                    lsSet('estrelle_anniversary_sent', JSON.stringify(sentEmails));
                     renderAnniversaries();
                 }
             );
@@ -8186,7 +8217,7 @@ The Estrelle Bridal Team`;
             // Save dress needed by date for fitting appointments
             const apptType = record.Type.toLowerCase();
             if (apptType.includes('fitting') && $('aDressNeededBy') && $('aDressNeededBy').value) {
-                localStorage.setItem(`alts_neededby_${clientId}`, $('aDressNeededBy').value);
+                lsSet(`alts_neededby_${clientId}`, $('aDressNeededBy').value);
             }
             
             if (id) {
@@ -10669,7 +10700,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             }
             
             saved[name] = { subject, body };
-            localStorage.setItem('estrelle_email_templates', JSON.stringify(saved));
+            lsSet('estrelle_email_templates', JSON.stringify(saved));
             
             $('newTemplateName').value = '';
             loadSavedTemplatesList();
@@ -11437,7 +11468,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 try {
                     currentAltItems = JSON.parse(altRecord.AlterationItems);
                     // Also update localStorage for offline use
-                    localStorage.setItem(`alts_${clientId}`, altRecord.AlterationItems);
+                    lsSet(`alts_${clientId}`, altRecord.AlterationItems);
                     console.log(`[ALTS] Loaded ${currentAltItems.length} items from Google Sheets for client ${clientId}`);
                 } catch (e) {
                     console.error('[ALTS] Failed to parse Google Sheets items:', e);
@@ -11503,7 +11534,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             let notes = '';
             if (altRecord && altRecord.Notes) {
                 notes = altRecord.Notes;
-                localStorage.setItem(`alts_notes_${clientId}`, notes);
+                lsSet(`alts_notes_${clientId}`, notes);
             } else {
                 notes = localStorage.getItem(`alts_notes_${clientId}`) || '';
             }
@@ -11519,7 +11550,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             let brideNotes = '';
             if (altRecord && altRecord.BrideNotes) {
                 brideNotes = altRecord.BrideNotes;
-                localStorage.setItem(`alts_bridenotes_${clientId}`, brideNotes);
+                lsSet(`alts_bridenotes_${clientId}`, brideNotes);
             } else {
                 brideNotes = localStorage.getItem(`alts_bridenotes_${clientId}`) || '';
             }
@@ -11530,7 +11561,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             if (altRecord && altRecord.DueDate) {
                 neededBy = typeof altRecord.DueDate === 'string' ? altRecord.DueDate.split('T')[0] : String(altRecord.DueDate);
                 if (neededBy && neededBy !== 'undefined' && neededBy !== 'null') {
-                    localStorage.setItem(`alts_neededby_${clientId}`, neededBy);
+                    lsSet(`alts_neededby_${clientId}`, neededBy);
                 } else {
                     neededBy = '';
                 }
@@ -11587,7 +11618,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function saveAltNeededBy() {
             if (!currentAltClientId) return;
             const neededBy = $('altDressNeededBy').value;
-            localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
+            lsSet(`alts_neededby_${currentAltClientId}`, neededBy);
             updateNeededByCountdown();
         }
         
@@ -11815,7 +11846,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
         function saveAltItemsLocal() {
             if (!currentAltClientId) return;
             const json = JSON.stringify(currentAltItems);
-            localStorage.setItem(`alts_${currentAltClientId}`, json);
+            lsSet(`alts_${currentAltClientId}`, json);
             renderAltLog();
             // Also sync to Google Sheets
             const altRecord = data.alterations?.find(a => String(a.ClientID) === String(currentAltClientId) && a.Status !== 'complete');
@@ -12224,10 +12255,10 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             const neededBy = $('altDressNeededBy').value;
             
             // ALWAYS save to localStorage FIRST
-            localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
-            localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
-            localStorage.setItem(`alts_bridenotes_${currentAltClientId}`, brideNotes);
-            if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
+            lsSet(`alts_${currentAltClientId}`, itemsJson);
+            lsSet(`alts_notes_${currentAltClientId}`, notes);
+            lsSet(`alts_bridenotes_${currentAltClientId}`, brideNotes);
+            if (neededBy) lsSet(`alts_neededby_${currentAltClientId}`, neededBy);
             
             console.log(`[ALTS] Saved to localStorage for client ${currentAltClientId}:`, {
                 items: currentAltItems.length,
@@ -12320,10 +12351,10 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
             const neededBy = $('altDressNeededBy').value;
             
             // Save to localStorage
-            localStorage.setItem(`alts_${currentAltClientId}`, itemsJson);
-            localStorage.setItem(`alts_notes_${currentAltClientId}`, notes);
-            localStorage.setItem(`alts_bridenotes_${currentAltClientId}`, brideNotes);
-            if (neededBy) localStorage.setItem(`alts_neededby_${currentAltClientId}`, neededBy);
+            lsSet(`alts_${currentAltClientId}`, itemsJson);
+            lsSet(`alts_notes_${currentAltClientId}`, notes);
+            lsSet(`alts_bridenotes_${currentAltClientId}`, brideNotes);
+            if (neededBy) lsSet(`alts_neededby_${currentAltClientId}`, neededBy);
             
             // Sync to Google Sheets
             try {
@@ -12387,7 +12418,7 @@ ${getStoreInfo().name || 'Estrelle Bridal'}`
                 it.openCount = 0;
             });
             const itemsJson = JSON.stringify(items);
-            if (items.length) localStorage.setItem(`alts_${clientId}`, itemsJson);
+            if (items.length) lsSet(`alts_${clientId}`, itemsJson);
 
             // Update order status to "picked up"
             if (order) {
@@ -13746,7 +13777,7 @@ The {StoreName} Team
             settings.feeInvoice = parseFloat($('feeInvoice')?.value) || 2.8;
             settings.feeIntl = parseFloat($('feeIntl')?.value) || 4.2;
             settings.feeOther = parseFloat($('feeOther')?.value) || 0;
-            localStorage.setItem('estrelle_commission', JSON.stringify(settings));
+            lsSet('estrelle_commission', JSON.stringify(settings));
             renderCommission();
         }
         
@@ -14210,7 +14241,7 @@ The {StoreName} Team
             }
             
             savedItems.push(name);
-            localStorage.setItem('estrelle_alt_items', JSON.stringify(savedItems));
+            lsSet('estrelle_alt_items', JSON.stringify(savedItems));
             $('newSavedAltItem').value = '';
             renderSavedAltItems();
             toast('Item saved!', 'success');
@@ -14219,7 +14250,7 @@ The {StoreName} Team
         function removeSavedAltItem(idx) {
             const savedItems = JSON.parse(localStorage.getItem('estrelle_alt_items') || '[]');
             savedItems.splice(idx, 1);
-            localStorage.setItem('estrelle_alt_items', JSON.stringify(savedItems));
+            lsSet('estrelle_alt_items', JSON.stringify(savedItems));
             renderSavedAltItems();
             toast('Item removed', 'success');
         }
@@ -14255,7 +14286,7 @@ The {StoreName} Team
         }
         
         function setEmailMode(mode) {
-            localStorage.setItem('estrelle_email_mode', mode);
+            lsSet('estrelle_email_mode', mode);
         }
         
         // Helper to send email - uses Gmail or direct based on setting
@@ -14308,7 +14339,7 @@ The {StoreName} Team
                     
                     // Only save back if something actually changed
                     if (changed) {
-                        localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+                        lsSet('estrelle_service_types', JSON.stringify(types));
                     }
                     
                     return types;
@@ -15171,7 +15202,7 @@ The {StoreName} Team
                 instagram: $('setStoreInstagram').value.trim(),
                 tiktok: $('setStoreTiktok').value.trim()
             };
-            localStorage.setItem('estrelle_store_info', JSON.stringify(storeInfo));
+            lsSet('estrelle_store_info', JSON.stringify(storeInfo));
             toast('Store info saved!', 'success');
         }
         
@@ -15229,21 +15260,21 @@ The {StoreName} Team
                     text: template,
                     version: 2
                 };
-                localStorage.setItem(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
+                lsSet(CONFIRM_TEMPLATE_KEY, JSON.stringify(templateData));
                 toast('Confirmation template saved!', 'success');
             } else if (type === 'anniversary') {
                 const template = {
                     subject: $('templateAnnSubject').value,
                     body: $('templateAnnBody').value
                 };
-                localStorage.setItem('estrelle_anniversary_template', JSON.stringify(template));
+                lsSet('estrelle_anniversary_template', JSON.stringify(template));
                 toast('Anniversary template saved!', 'success');
             } else if (type === 'followup') {
                 const template = {
                     subject: $('templateFollowupSubject').value,
                     body: $('templateFollowupBody').value
                 };
-                localStorage.setItem('estrelle_followup_template', JSON.stringify(template));
+                lsSet('estrelle_followup_template', JSON.stringify(template));
                 toast('Follow-up template saved!', 'success');
             }
         }
@@ -15308,7 +15339,7 @@ The {StoreName} Team
             
             const saved = JSON.parse(localStorage.getItem('estrelle_email_templates') || '{}');
             saved[name] = { subject, body };
-            localStorage.setItem('estrelle_email_templates', JSON.stringify(saved));
+            lsSet('estrelle_email_templates', JSON.stringify(saved));
             
             // Clear form
             $('newOrderTemplateName').value = '';
@@ -15339,7 +15370,7 @@ The {StoreName} Team
             
             const saved = JSON.parse(localStorage.getItem('estrelle_email_templates') || '{}');
             delete saved[name];
-            localStorage.setItem('estrelle_email_templates', JSON.stringify(saved));
+            lsSet('estrelle_email_templates', JSON.stringify(saved));
             
             renderOrderTemplatesList();
             toast('Template deleted', 'success');
@@ -15399,7 +15430,7 @@ The {StoreName} Team
                         const types = getServiceTypes();
                         const [moved] = types.splice(fromIdx, 1);
                         types.splice(toIdx, 0, moved);
-                        localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+                        lsSet('estrelle_service_types', JSON.stringify(types));
                         renderServiceTypes();
                     }
                 });
@@ -15421,7 +15452,7 @@ The {StoreName} Team
             }
             
             types.push(name);
-            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            lsSet('estrelle_service_types', JSON.stringify(types));
             $('newServiceType').value = '';
             renderServiceTypes();
             toast('Service type added!', 'success');
@@ -15436,7 +15467,7 @@ The {StoreName} Team
             const confirmed = await appConfirmDanger(`Delete "${types[idx]}"?`, 'Delete Service Type');
             if (!confirmed) return;
             types.splice(idx, 1);
-            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            lsSet('estrelle_service_types', JSON.stringify(types));
             renderServiceTypes();
             toast('Service type removed', 'success');
         }
@@ -15457,7 +15488,7 @@ The {StoreName} Team
             
             const trimmedNewName = newName.trim();
             types[idx] = trimmedNewName;
-            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            lsSet('estrelle_service_types', JSON.stringify(types));
             
             // Migrate existing appointments with the old type name
             const oldNameLower = oldName.toLowerCase();
@@ -15516,7 +15547,7 @@ The {StoreName} Team
             
             // Swap
             [types[idx], types[newIdx]] = [types[newIdx], types[idx]];
-            localStorage.setItem('estrelle_service_types', JSON.stringify(types));
+            lsSet('estrelle_service_types', JSON.stringify(types));
             renderServiceTypes();
         }
         
@@ -15531,7 +15562,7 @@ The {StoreName} Team
             });
             
             if (toFix.length === 0) {
-                localStorage.setItem('estrelle_types_cleaned', '1');
+                lsSet('estrelle_types_cleaned', '1');
                 return;
             }
             
@@ -15554,7 +15585,7 @@ The {StoreName} Team
             }
             
             saveCachedData();
-            localStorage.setItem('estrelle_types_cleaned', '1');
+            lsSet('estrelle_types_cleaned', '1');
             console.log(`Cleaned up ${updated} appointment type(s)`);
             
             // Silently re-render
@@ -15847,7 +15878,7 @@ The {storeName} Team`
                 // Track sent email
                 const sentEmails = JSON.parse(localStorage.getItem('estrelle_anniversary_sent') || '{}');
                 sentEmails[`${clientId}-${new Date().getFullYear()}`] = today();
-                localStorage.setItem('estrelle_anniversary_sent', JSON.stringify(sentEmails));
+                lsSet('estrelle_anniversary_sent', JSON.stringify(sentEmails));
                 renderAnniversaries();
             });
         }
@@ -15864,7 +15895,7 @@ The {storeName} Team`
                 subject: $('annTemplateSubject').value,
                 body: $('annTemplateBody').value
             };
-            localStorage.setItem('estrelle_anniversary_template', JSON.stringify(template));
+            lsSet('estrelle_anniversary_template', JSON.stringify(template));
             closeModal('anniversaryTemplate');
             toast('Template saved!', 'success');
         }
@@ -16404,7 +16435,7 @@ The {storeName} Team`
             }
         }
         function saveDesignerData() {
-            localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
+            lsSet('estrelle_designers', JSON.stringify(designerData));
             // Save the shared designer list to Supabase so all staff/devices stay in sync
             saveDesignersToServer();
         }
@@ -16432,7 +16463,7 @@ The {storeName} Team`
                     const parsed = JSON.parse(config.Details);
                     if (Array.isArray(parsed) && parsed.length > 0) {
                         designerData = parsed;
-                        localStorage.setItem('estrelle_designers', JSON.stringify(designerData));
+                        lsSet('estrelle_designers', JSON.stringify(designerData));
                         console.log('Loaded designers from Google Sheets:', designerData.length);
                         return true;
                     }
@@ -17130,7 +17161,7 @@ The {storeName} Team`
                 const list = JSON.parse(localStorage.getItem(key) || '[]');
                 list.push({ ts: new Date().toISOString(), json: json || '' });
                 while (list.length > 10) list.shift();
-                localStorage.setItem(key, JSON.stringify(list));
+                lsSet(key, JSON.stringify(list));
             } catch (e) {}
         }
 
@@ -22277,7 +22308,7 @@ www.estrellebridal.com`;
                     // Save with placeholders restored
                     const tplSubj = subj.replace(new RegExp(firstName, 'g'), '{firstName}').replace(new RegExp(clientName, 'g'), '{clientName}');
                     const tplBod = bod.replace(new RegExp(firstName, 'g'), '{firstName}').replace(new RegExp(clientName, 'g'), '{clientName}');
-                    localStorage.setItem('estrelle_signed_contract_email', JSON.stringify({ subject: tplSubj, body: tplBod }));
+                    lsSet('estrelle_signed_contract_email', JSON.stringify({ subject: tplSubj, body: tplBod }));
                     toast('Template saved!', 'success');
                 }},
                 { label: 'Cancel', style: 'secondary', action: () => closeModal('choice') }
