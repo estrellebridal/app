@@ -9524,7 +9524,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
             let resignAfterSave = false;
             const orderBefore = data.orders.find(o => String(o.ID) === String(orderId));
             if (orderBefore && _contractIsSigned(orderBefore) && agreementKey(Object.assign({}, orderBefore, updates)) !== agreementKey(orderBefore)) {
-                const pick = await askSignedContractChange();
+                const pick = await askSignedContractChange(orderBefore.ESignedDate || orderBefore.SignatureTimestamp);
                 if (pick === 'cancel') return;
                 resignAfterSave = pick === 'resign';
             }
@@ -17313,6 +17313,7 @@ The {storeName} Team`
                     </div>
                     <div style="font-size:11px;color:var(--taupe)">${dress} · ${fmtDate(o.OrderDate)} · ${money(total)}${signedDate}</div>
                     ${statusNote}
+                    ${voidHistoryHtml(o)}
                     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
                         ${primaryAction}
                     </div>
@@ -17449,7 +17450,7 @@ The {storeName} Team`
             if (!_contractIsSigned(rec)) return true;
             const signedOn = String(rec.ESignedDate || rec.SignatureTimestamp || '').split('T')[0];
             const first = String(rec.ClientName || '').split(' ')[0] || 'The customer';
-            const ok = await appConfirmDanger(`${first}'s signature${signedOn ? ' from ' + fmtDate(signedOn) : ''} will be voided and ${first === 'The customer' ? 'they' : 'she'} will get a new link to sign the current contract. The old signed PDF stays in Drive, marked VOID.`, '\u270d New signature', 'Void & send new link');
+            const ok = await appConfirmDanger(`${first}'s signature${signedOn ? ' from ' + fmtDate(signedOn) : ''} will be voided and ${first === 'The customer' ? 'they' : 'she'} will get a new link to sign the current contract. The email and the new contract will tell her the contract signed${signedOn ? ' on ' + fmtDate(signedOn) : ' earlier'} is void once she signs. The old PDF stays in Drive, marked VOID.`, '\u270d New signature', 'Void & send new link');
             if (!ok) return false;
             return await voidSignature(rec, sheet);
         }
@@ -17474,8 +17475,9 @@ The {storeName} Team`
         }
 
         // Returns 'resign' | 'save' | 'cancel'.
-        async function askSignedContractChange() {
-            return await appChoice('\u270d Signed contract changed', 'This contract is signed. The change affects what the customer agreed to.', [
+        async function askSignedContractChange(signedOn) {
+            const when = signedOn ? ' on ' + fmtDate(String(signedOn).split('T')[0]) : '';
+            return await appChoice('\u270d Signed contract changed', `This contract was signed${when}, and the change affects what the bride agreed to. "Save & request new signature" voids that signature and sends her a new link \u2014 the email and the new contract tell her the contract signed${when} is void once she signs.`, [
                 { label: '\ud83d\udcbe Save & request new signature', style: 'primary', value: 'resign' },
                 { label: 'Save only', style: 'secondary', value: 'save' },
                 { label: 'Cancel', style: 'secondary', value: 'cancel' }
@@ -17485,6 +17487,27 @@ The {storeName} Team`
         // A re-sent contract replaces one the bride already signed: the date of that
         // earlier signature is kept on the order (VoidedSignedDate) so the new email and
         // the new contract can say so. Brand-new contracts have no such date.
+        // Earlier signed versions of an order's contract that were voided, oldest
+        // first. Orders voided before this history existed are reconstructed from the
+        // single VoidedDriveLink / SignatureVoidedAt fields.
+        function voidHistory(order) {
+            if (!order) return [];
+            try {
+                const list = order.VoidedContracts ? JSON.parse(order.VoidedContracts) : null;
+                if (Array.isArray(list)) return list;
+            } catch(e) {}
+            if (order.SignatureVoidedAt || order.VoidedDriveLink) {
+                return [{ signedDate: order.VoidedSignedDate || '', voidedAt: order.SignatureVoidedAt || '', driveLink: order.VoidedDriveLink || '', total: '' }];
+            }
+            return [];
+        }
+        function voidHistoryHtml(order) {
+            return voidHistory(order).map(v => `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--taupe);margin-top:6px;padding:6px 10px;background:#fafafa;border:1px dashed var(--border);border-radius:8px">
+                <span style="background:#eee;color:#555;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:0.5px">VOID</span>
+                <span>${v.signedDate ? 'Signed ' + fmtDate(v.signedDate) : 'Earlier version'}${v.voidedAt ? ' · voided ' + fmtDate(String(v.voidedAt).split('T')[0]) : ''}${v.total ? ' · ' + money(v.total) : ''}</span>
+                ${v.driveLink ? `<a href="${v.driveLink}" target="_blank" style="color:var(--taupe)">📄 PDF</a>` : ''}
+            </div>`).join('');
+        }
         function priorSignedDateFor(order) {
             return (order && order.VoidedSignedDate) ? String(order.VoidedSignedDate).split('T')[0] : '';
         }
@@ -17506,7 +17529,13 @@ The {storeName} Team`
                 ESignLinkSent: '', DriveLink: '',
                 SignatureVoidedAt: new Date().toISOString(),
                 VoidedSignedDate: String(rec.ESignedDate || rec.SignatureTimestamp || rec.VoidedSignedDate || '').split('T')[0],
-                VoidedDriveLink: rec.DriveLink || rec.VoidedDriveLink || ''
+                VoidedDriveLink: rec.DriveLink || rec.VoidedDriveLink || '',
+                VoidedContracts: JSON.stringify(voidHistory(rec).concat([{
+                    signedDate: String(rec.ESignedDate || rec.SignatureTimestamp || '').split('T')[0],
+                    voidedAt: new Date().toISOString(),
+                    driveLink: rec.DriveLink || '',
+                    total: rec.Total || ''
+                }]))
             };
             // Orders regenerate their contract from the record; the stored HTML was the
             // signed (or pre-signing) snapshot. Alterations keep theirs — it is their source.
@@ -21353,7 +21382,7 @@ ${supersedesNote ? `<p style="font-size:14px;color:#555;line-height:1.6;margin:0
                 const carriedSig = !!before && !!o.signatureData && o.signatureData === before.CustomerSignature;
                 const after = { Items: JSON.stringify(o.items), Subtotal: subtotal, HST: hst, Total: total, SaleType: currentSaleType || 'made-to-order' };
                 if (before && _contractIsSigned(before) && carriedSig && agreementKey(after) !== agreementKey(before)) {
-                    const pick = await askSignedContractChange();
+                    const pick = await askSignedContractChange(before.ESignedDate || before.SignatureTimestamp);
                     if (pick === 'cancel') { toast('Not saved', 'error'); return false; }
                     if (pick === 'resign') {
                         resignAfterSave = true;
@@ -23115,7 +23144,7 @@ www.estrellebridal.com`;
                     <div class="avatar">${name.split(' ').map(n=>n[0]).join('').substring(0,2)}</div>
                     <div style="flex:1">
                         <div style="font-weight:600">${name} ${badge}${typeBadge}</div>
-                        <div style="font-size:11px;color:var(--taupe)">${o.Designer||''} ${o.Dress||''} · ${fmtDate(o.OrderDate)}${total>0?' · '+money(total):''}</div>
+                        <div style="font-size:11px;color:var(--taupe)">${o.Designer||''} ${o.Dress||''} · ${fmtDate(o.OrderDate)}${total>0?' · '+money(total):''}${o._type !== 'alteration' && voidHistory(o).length ? ` · <span style="color:#555">⛔ ${voidHistory(o).length} earlier version${voidHistory(o).length > 1 ? 's' : ''} void</span>` : ''}</div>
                     </div>
                     <div style="display:flex;gap:6px">
                         ${o._isSigned && o._type !== 'alteration' ? `<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();viewOrderContractById('${o.ID}')">View</button><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();sendForESign('${o.ID}')" title="Void the signature on file and send a new link to sign the current contract">✍️ New signature</button>` : ''}
