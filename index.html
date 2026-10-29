@@ -9288,6 +9288,7 @@ body { font-family: 'Georgia', 'Times New Roman', serif; color: #1a1a1a; backgro
                 <h2>PARTIES</h2>
                 <p>This ${contractLabel} (hereinafter referred to as the "Contract") is entered into on <b>${orderDate}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${clientName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
                 
+                ${supersedesClause(priorSignedDateFor(order))}
                 <h2>GOODS AND PRICE</h2>
                 <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
                 <table>
@@ -17481,6 +17482,22 @@ The {storeName} Team`
             ]);
         }
 
+        // A re-sent contract replaces one the bride already signed: the date of that
+        // earlier signature is kept on the order (VoidedSignedDate) so the new email and
+        // the new contract can say so. Brand-new contracts have no such date.
+        function priorSignedDateFor(order) {
+            return (order && order.VoidedSignedDate) ? String(order.VoidedSignedDate).split('T')[0] : '';
+        }
+        function wizardPriorSignedDate() {
+            const o = currentOrder || {};
+            if (o._supersedesDate) return String(o._supersedesDate).split('T')[0];
+            if (o._editingOrderId) return priorSignedDateFor((data.orders || []).find(r => String(r.ID) === String(o._editingOrderId)));
+            return '';
+        }
+        function supersedesClause(priorDate) {
+            return priorDate ? `<p><b>This Contract replaces the contract signed on ${fmtDate(priorDate)}.</b> Once this Contract is signed, that earlier contract is void and of no further effect.</p>` : '';
+        }
+
         // Clears the signature on file (the old PDF link is kept for the audit trail)
         // and marks the superseded PDF VOID in Drive.
         async function voidSignature(rec, sheet = 'Orders') {
@@ -17488,6 +17505,7 @@ The {storeName} Team`
                 CustomerSignature: '', ESignedDate: '', InitialSignature: '', Initials: '', SignatureTimestamp: '',
                 ESignLinkSent: '', DriveLink: '',
                 SignatureVoidedAt: new Date().toISOString(),
+                VoidedSignedDate: String(rec.ESignedDate || rec.SignatureTimestamp || rec.VoidedSignedDate || '').split('T')[0],
                 VoidedDriveLink: rec.DriveLink || rec.VoidedDriveLink || ''
             };
             // Orders regenerate their contract from the record; the stored HTML was the
@@ -17557,6 +17575,7 @@ The {storeName} Team`
             const clientName = order.ClientName || '';
             const firstName = clientName.split(' ')[0] || '';
             const signLink = getESignLink(orderId);
+            const supersedesNote = esignSupersedesNote(order);
             const dress = order.Dress || order.Designer || getDressFromItems(order) || 'Order';
             const total = parseFloat(order.Total) || parseFloat(order.Subtotal) || getOrderPreTax(order) || 0;
             
@@ -17567,6 +17586,7 @@ The {storeName} Team`
 <div style="background:white;border-radius:12px;padding:32px;border:1px solid #eee">
 <p style="font-size:16px;margin:0 0 16px">Hi ${firstName},</p>
 <p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 20px">Thank you for choosing Estrelle Bridal! Please review and sign your contract by tapping the button below.</p>
+${supersedesNote ? `<p style="font-size:14px;color:#555;line-height:1.6;margin:0 0 20px">${supersedesNote}</p>` : ''}
 <div style="text-align:center;margin:24px 0">
 <a href="${signLink}" style="display:inline-block;background:#C4A265;color:white;text-decoration:none;padding:14px 32px;border-radius:8px;font-family:sans-serif;font-size:15px;font-weight:600;letter-spacing:0.5px" target="_blank">Review & Sign Contract</a>
 </div>
@@ -17577,7 +17597,7 @@ The {storeName} Team`
 <p style="text-align:center;color:#aaa;font-size:11px;margin-top:24px">Estrelle Bridal · 55 Avenue Road #201.5, Toronto · estrelle.com</p>
 </div>`;
             
-            const emailBodyPlain = 'Hi ' + firstName + ',\n\nThank you for choosing Estrelle Bridal! Please review and sign your contract using the link below:\n\n' + signLink + '\n\nWarmly,\nThe Estrelle Team';
+            const emailBodyPlain = 'Hi ' + firstName + ',\n\nThank you for choosing Estrelle Bridal! Please review and sign your contract using the link below:' + (supersedesNote ? '\n\n' + supersedesNote : '') + '\n\n' + signLink + '\n\nWarmly,\nThe Estrelle Team';
             
             showChoiceDialog(
                 '📱 Send E-Sign Link',
@@ -17606,8 +17626,15 @@ The {storeName} Team`
             }, 50);
         }
         
+        // Sentence for the e-sign email when this contract replaces a signed one.
+        function esignSupersedesNote(order) {
+            const d = priorSignedDateFor(order);
+            return d ? `This is an updated contract. Once you sign it, the contract you signed on ${fmtDate(d)} is void and replaced by this one.` : '';
+        }
+
         function doSendESign(orderId, email, clientName, emailBody, signLink) {
             console.log('doSendESign called:', { orderId, email, clientName });
+            const supersedesNote = esignSupersedesNote((data.orders || []).find(o => String(o.ID) === String(orderId)));
             toast('📧 Sending e-sign link to ' + email + '...', 'success');
             
             // Use dedicated backend endpoint — it builds the email with proper link formatting
@@ -17616,7 +17643,8 @@ The {storeName} Team`
                 orderId: orderId, 
                 token: generateSignToken(orderId),
                 brideEmail: email, 
-                brideName: clientName 
+                brideName: clientName,
+                note: supersedesNote
             })
                 .then(res => {
                     console.log('E-sign send SUCCESS:', res);
@@ -20948,6 +20976,7 @@ The {storeName} Team`
                 <h3>PARTIES</h3>
                 <p>This ${currentSaleType === 'sample-sale' ? 'Sample Sale Contract' : 'Sales Contract'} (hereinafter referred to as the "Contract") is entered into on <b>${fmtDate(today())}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${c.FirstName} ${c.LastName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
                 
+                ${supersedesClause(wizardPriorSignedDate())}
                 <h3>GOODS AND PRICE</h3>
                 <p>The goods that the Seller is selling to the Customer are enlisted below with their quantities (hereinafter referred to as the "Goods").</p>
                 <table><tr><th>Product</th><th>Designer/Source</th><th>Size</th><th>Colour</th><th>Notes</th><th>Price</th></tr>
@@ -21328,6 +21357,7 @@ The {storeName} Team`
                     if (pick === 'cancel') { toast('Not saved', 'error'); return false; }
                     if (pick === 'resign') {
                         resignAfterSave = true;
+                        o._supersedesDate = String(before.ESignedDate || before.SignatureTimestamp || '').split('T')[0];
                         o.signatureData = ''; o.initialSignature = ''; o.initials = null; o._capturedContractHtml = '';
                     }
                 }
@@ -21638,6 +21668,7 @@ p{margin:6px 0;}
                 <h2>PARTIES</h2>
                 <p>This ${currentSaleType === 'sample-sale' ? 'Sample Sale Contract' : 'Sales Contract'} (hereinafter referred to as the "Contract") is entered into on <b>${fmtDate(today())}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${c.FirstName} ${c.LastName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
                 
+                ${supersedesClause(wizardPriorSignedDate())}
                 <h2>GOODS AND PRICE</h2>
                 <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
                 <table>
@@ -21945,6 +21976,7 @@ p{margin:6px 0;}
                 <h2>PARTIES</h2>
                 <p>This ${currentSaleType === 'sample-sale' ? 'Sample Sale Contract' : 'Sales Contract'} (hereinafter referred to as the "Contract") is entered into on <b>${fmtDate(contractDate)}</b> (the "Effective Date"), by and between Estrelle Bridal (ESTR INC.) with an address of 55 Avenue Road, #201.5, Toronto, Canada, M5R 3L2 (hereinafter referred to as the "Seller"), and <b>${c.FirstName} ${c.LastName}</b> (hereinafter referred to as the "Customer") (collectively referred to as the "Parties").</p>
                 
+                ${supersedesClause(wizardPriorSignedDate())}
                 <h2>GOODS AND PRICE</h2>
                 <p>The goods that the Seller is selling to the Customer are enlisted below (hereinafter referred to as the "Goods").</p>
                 <table>
